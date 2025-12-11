@@ -1,26 +1,40 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PrismaService } from '../prisma/prisma.service';
 import { Storage } from '@google-cloud/storage';
+import { LlmAgent, Gemini } from '@google/adk';
+import { z } from 'zod';
+import { FLASHCARD_GENERATION_PROMPT } from './prompts';
+
+// Define schemas for structured output
+const QuestionSchema = z.object({
+    question: z.string(),
+    options: z.array(z.string()).length(4),
+    correctIndex: z.number().min(0).max(3),
+    explanation: z.string().optional(),
+    hint: z.string().optional(),
+});
+
+const ObjectiveSchema = z.object({
+    title: z.string(),
+    difficulty: z.enum(['easy', 'medium', 'hard']),
+    questions: z.array(QuestionSchema),
+});
+
+const FlashcardsOutputSchema = z.object({
+    objectives: z.array(ObjectiveSchema),
+});
 
 @Injectable()
 export class PdfsService {
-    private genAI: GoogleGenerativeAI;
     private storage: Storage;
     private bucketName: string;
+    private flashcardAgent: LlmAgent;
 
     constructor(
         private readonly prisma: PrismaService,
         private readonly configService: ConfigService,
     ) {
-        // Initialize Gemini
-        const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
-        if (!apiKey) {
-            throw new Error('GOOGLE_API_KEY is not set');
-        }
-        this.genAI = new GoogleGenerativeAI(apiKey);
-
         // Initialize GCS
         const projectId = this.configService.get<string>('GCP_PROJECT_ID');
         const clientEmail = this.configService.get<string>('GCP_CLIENT_EMAIL');
@@ -35,6 +49,25 @@ export class PdfsService {
         });
 
         this.bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
+
+        // Initialize ADK Agent for flashcard generation
+        const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
+        if (!apiKey) {
+            throw new Error('GOOGLE_API_KEY is not set');
+        }
+
+        // Create Gemini 2.5 Flash model
+        const model = new Gemini({
+            model: 'gemini-2.5-flash',
+            apiKey,
+        });
+
+        // Create LLM Agent
+        this.flashcardAgent = new LlmAgent({
+            name: 'flashcard-generator',
+            description: 'Generates educational flashcards from PDF content',
+            model,
+        });
     }
 
     async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
@@ -53,77 +86,45 @@ export class PdfsService {
         // 2. Download PDF content from GCS
         const filePath = pdf.content; // This is the GCS path
         const file = this.storage.bucket(this.bucketName).file(filePath);
-        const [fileBuffer] = await file.download();
+        await file.download(); // Download for future PDF parsing
 
         // TODO: Extract text from PDF using pdf-parse
         // For now, using placeholder text
         const pdfText = `Sample PDF content from ${pdf.filename}. This would be the extracted text from the PDF.`;
 
-        // 3. Generate flashcards using Gemini 2.5 Flash
-        const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // 3. Generate flashcards using ADK Agent
+        const prompt = FLASHCARD_GENERATION_PROMPT(userPrompt, pdfText);
 
-        const prompt = `
-You are an expert educator creating study flashcards from educational content.
-
-USER REQUEST: ${userPrompt}
-
-PDF CONTENT:
-${pdfText}
-
-Based on the user's request and the PDF content, generate multiple-choice questions in the following JSON format:
-
-{
-  "objectives": [
-    {
-      "title": "Learning objective title",
-      "difficulty": "easy|medium|hard",
-      "questions": [
-        {
-          "question": "The question text",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correctIndex": 0,
-          "explanation": "Why this answer is correct",
-          "hint": "A helpful hint (optional)"
+        // Invoke the agent directly
+        const events: any[] = [];
+        for await (const event of this.flashcardAgent.invokeAsync({
+            prompt,
+        })) {
+            events.push(event);
         }
-      ]
-    }
-  ]
-}
 
-IMPORTANT:
-- Parse the user's request to determine number of questions and difficulty
-- Create engaging, educational questions
-- Ensure options are plausible but only one is correct
-- Provide clear explanations
-- Group questions by learning objectives
-- Return ONLY valid JSON, no markdown formatting
-`;
+        // Get the last response
+        const lastEvent = events[events.length - 1];
+        const responseText = lastEvent.content?.[0]?.text || '{}';
 
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
-
-        // Parse the JSON response
-        let flashcardsData;
+        // Parse JSON response
+        let flashcardsData: z.infer<typeof FlashcardsOutputSchema>;
         try {
-            // Remove markdown code blocks if present
-            const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            flashcardsData = JSON.parse(cleanedText);
+            flashcardsData = JSON.parse(responseText);
         } catch (error) {
-            console.error('Failed to parse Gemini response:', text);
+            console.error('Failed to parse response:', responseText);
             throw new Error('Failed to parse AI response. Please try again.');
         }
 
-        // 4. Save to database
-        const objectives = [];
-        for (const obj of flashcardsData.objectives) {
-            const objective = await this.prisma.objective.create({
+        // 4. Save to database (in parallel for better performance)
+        const objectivePromises = flashcardsData.objectives.map(async (obj) => {
+            return this.prisma.objective.create({
                 data: {
                     title: obj.title,
                     difficulty: obj.difficulty,
                     pdfId: pdfId,
                     mcqs: {
-                        create: obj.questions.map((q: any) => ({
+                        create: obj.questions.map((q) => ({
                             question: q.question,
                             options: q.options,
                             correctIdx: q.correctIndex,
@@ -136,8 +137,10 @@ IMPORTANT:
                     mcqs: true,
                 },
             });
-            objectives.push(objective);
-        }
+        });
+
+        // Execute all database saves in parallel
+        const objectives = await Promise.all(objectivePromises);
 
         return {
             message: 'Flashcards generated successfully',
