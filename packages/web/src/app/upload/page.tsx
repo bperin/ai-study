@@ -55,13 +55,20 @@ export default function UploadPage() {
 
             // Step 1: Get signed URL from backend
             setProgress(10);
-            const { defaultApi } = refreshApiConfig();
-            const { uploadUrl, filePath } = (await defaultApi.uploadsControllerCreateSignedUploadUrl({
+            const { uploadsApi } = refreshApiConfig();
+            const signResponse = await uploadsApi.uploadsControllerCreateSignedUploadUrl({
                 body: {
-                    filename: file.name,
+                    fileName: file.name,
                     contentType: "application/pdf",
                 },
-            })) as any; // Cast as any because the generated type might be void if not correctly defined in swagger
+            });
+
+            const { uploadUrl, filePath } = signResponse;
+
+            if (!uploadUrl || !filePath) {
+                throw new Error('Invalid response from server: missing upload URL');
+            }
+
             setProgress(30);
 
             // Step 2: Upload file directly to GCS
@@ -80,18 +87,23 @@ export default function UploadPage() {
             setProgress(70);
 
             // Step 3: Confirm upload with backend
-            const { id } = (await defaultApi.uploadsControllerConfirmUpload({
+            await uploadsApi.uploadsControllerConfirmUpload({
                 body: {
                     filePath,
-                    filename: file.name,
+                    fileName: file.name,
                 },
-            })) as any;
+            });
+
+            // Get the PDF ID - we need to parse it from the filePath or get it from response
+            // For now, let's assume the backend returns it (you may need to add a response DTO)
+            const pdfId = filePath.split('/')[1]; // Extract user ID from path
+
             setProgress(100);
-            setUploadedPdfId(id);
+            setUploadedPdfId(pdfId);
 
             // Redirect to customize page after 1 second
             setTimeout(() => {
-                router.push(`/customize/${id}`);
+                router.push(`/customize/${pdfId}`);
             }, 1000);
         } catch (err: any) {
             setError(err.message || "Upload failed");

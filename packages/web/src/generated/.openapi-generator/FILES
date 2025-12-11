@@ -1,6 +1,7 @@
 apis/AuthApi.ts
 apis/DefaultApi.ts
 apis/TestsApi.ts
+apis/UploadsApi.ts
 apis/UsersApi.ts
 apis/index.ts
 docs/AnswerDto.md
@@ -11,6 +12,8 @@ docs/DefaultApi.md
 docs/LoginDto.md
 docs/SubmitTestDto.md
 docs/TestsApi.md
+docs/UploadUrlResponseDto.md
+docs/UploadsApi.md
 docs/UsersApi.md
 index.ts
 models/AnswerDto.ts
@@ -18,5 +21,6 @@ models/AuthResponseDto.ts
 models/CreateUserDto.ts
 models/LoginDto.ts
 models/SubmitTestDto.ts
+models/UploadUrlResponseDto.ts
 models/index.ts
 runtime.ts

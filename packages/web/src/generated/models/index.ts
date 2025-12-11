@@ -5,3 +5,4 @@ export * from './AuthResponseDto';
 export * from './CreateUserDto';
 export * from './LoginDto';
 export * from './SubmitTestDto';
+export * from './UploadUrlResponseDto';
