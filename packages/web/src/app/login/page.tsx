@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { authApi } from '../../api-client'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -15,18 +16,11 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const res = await fetch('http://localhost:3000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const data = await authApi.authControllerSignIn({
+        loginDto: { email, password }
       })
 
-      if (!res.ok) {
-        throw new Error('Invalid credentials')
-      }
-
-      const data = await res.json()
-      localStorage.setItem('access_token', data.access_token)
+      localStorage.setItem('access_token', data.accessToken)
       router.push('/')
     } catch (err) {
       setError('Login failed. Please check your credentials.')
