@@ -19,6 +19,7 @@
     "codegen": "openapi-generator-cli generate -i ../../openapi.json -g typescript-fetch -o src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.18.0",
     "@google/generative-ai": "^0.1.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",
