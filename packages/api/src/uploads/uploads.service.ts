@@ -22,9 +22,9 @@ export class UploadsService {
             credentials:
                 clientEmail && privateKey
                     ? {
-                        client_email: clientEmail,
-                        private_key: privateKey,
-                    }
+                          client_email: clientEmail,
+                          private_key: privateKey,
+                      }
                     : undefined,
         });
 

@@ -5,9 +5,11 @@
 I've created a comprehensive architecture for your AI Study application with **two root agents**:
 
 ### ✅ Agent 1: Test Setup Agent (Enhanced)
+
 **Current Status**: Foundation exists, needs HITL enhancements
 
 **What it does**:
+
 - User uploads PDF
 - User provides free-form preferences (difficulty, question count, picture cards, etc.)
 - Agent analyzes PDF and proposes a detailed plan
@@ -16,14 +18,17 @@ I've created a comprehensive architecture for your AI Study application with **t
 - Supports picture cards (AI-generated images)
 
 **Key Files**:
+
 - `/packages/api/src/pdfs/gemini.service.ts` - Existing agent implementation
 - `/packages/api/src/pdfs/tools.ts` - Existing tools (needs picture card tool)
 - `/packages/api/src/pdfs/prompts.ts` - Agent instructions
 
 ### ✅ Agent 2: Test Taking Agent (New)
+
 **Current Status**: Fully designed and implemented
 
 **What it does**:
+
 - Loads test configuration
 - Presents questions sequentially with dynamic prompts
 - **Maintains in-memory state** tracking correct/incorrect answers
@@ -32,6 +37,7 @@ I've created a comprehensive architecture for your AI Study application with **t
 - Generates comprehensive feedback at the end
 
 **Key Files**:
+
 - `/packages/api/src/tests/test-taking.service.ts` - **NEW** implementation
 
 ---
@@ -60,6 +66,7 @@ The Test Taking Agent maintains a `TestSessionState` object in memory for each a
 Dynamic prompts use brackets that get replaced with real-time values:
 
 **Available Brackets**:
+
 - `[CURRENT_SCORE]` → "15/20"
 - `[CORRECT_COUNT]` → "15"
 - `[INCORRECT_COUNT]` → "5"
@@ -71,9 +78,10 @@ Dynamic prompts use brackets that get replaced with real-time values:
 - `[CURRENT_TOPIC]` → "Respiration"
 
 **Example**:
+
 ```typescript
-Template: "🔥 On fire! [CURRENT_STREAK] correct in a row! [PROGRESS]"
-Output:   "🔥 On fire! 5 correct in a row! Question 12 of 20"
+Template: "🔥 On fire! [CURRENT_STREAK] correct in a row! [PROGRESS]";
+Output: "🔥 On fire! 5 correct in a row! Question 12 of 20";
 ```
 
 ---
@@ -99,7 +107,7 @@ model PdfSession {
 // Extend existing Mcq model
 model Mcq {
   // ... existing fields ...
-  
+
   // NEW: Picture card support
   hasPicture    Boolean  @default(false)
   pictureUrl    String?
@@ -109,7 +117,7 @@ model Mcq {
 // Extend existing UserAnswer model
 model UserAnswer {
   // ... existing fields ...
-  
+
   // NEW: Engagement metrics
   timeSpent   Int @default(0)  // seconds
   hintsUsed   Int @default(0)
@@ -119,7 +127,7 @@ model UserAnswer {
 // Extend existing TestAttempt model
 model TestAttempt {
   // ... existing fields ...
-  
+
   // NEW: Detailed feedback
   percentage Float?
   feedback   Json?  // Stores detailed analysis
@@ -131,6 +139,7 @@ model TestAttempt {
 ## 🚀 Next Steps to Implement
 
 ### Phase 1: Update Database Schema
+
 ```bash
 cd packages/api
 # Edit prisma/schema.prisma with the new fields above
@@ -139,6 +148,7 @@ npx prisma generate
 ```
 
 ### Phase 2: Enhance Test Setup Agent
+
 1. Add `PdfSession` CRUD operations
 2. Create `propose_test_plan` tool
 3. Add HITL approval workflow
@@ -146,16 +156,18 @@ npx prisma generate
 5. Update frontend for plan review
 
 ### Phase 3: Integrate Test Taking Agent
+
 1. Create `test-taking` module in NestJS
 2. Add controller endpoints:
-   - `POST /test-attempts` - Start test
-   - `POST /test-attempts/:id/answer` - Submit answer
-   - `GET /test-attempts/:id/state` - Get current state
-   - `POST /test-attempts/:id/complete` - Finish test
+    - `POST /test-attempts` - Start test
+    - `POST /test-attempts/:id/answer` - Submit answer
+    - `GET /test-attempts/:id/state` - Get current state
+    - `POST /test-attempts/:id/complete` - Finish test
 3. Build frontend test interface
 4. Create results dashboard
 
 ### Phase 4: Connect the Flow
+
 1. Seamless transition from setup → taking
 2. Session state management
 3. Progress persistence
@@ -189,7 +201,7 @@ npx prisma generate
    Agent: "You scored 16/20 (80%)! 🌟
           Strong areas: Photosynthesis, Respiration
           Needs work: Genetics (50% correct)
-          
+
           Here's what happened with your wrong answers..."
 ```
 
@@ -223,21 +235,25 @@ docs/
 ## 💡 Key Design Decisions
 
 ### 1. In-Memory State vs Database
+
 - **In-memory**: Fast, real-time updates for active sessions
 - **Database**: Persistent storage for completed tests
 - **Hybrid**: Best of both worlds
 
 ### 2. Bracket Notation
+
 - Simple, readable template system
 - Easy to extend with new metrics
 - No complex templating engine needed
 
 ### 3. Human-in-the-Loop
+
 - Critical for user trust and customization
 - Iterative plan refinement
 - Explicit approval step
 
 ### 4. Dual Agent Architecture
+
 - **Setup Agent**: Focuses on planning and generation
 - **Taking Agent**: Focuses on interaction and feedback
 - Clear separation of concerns
@@ -247,6 +263,7 @@ docs/
 ## 🎯 Success Criteria
 
 ### Test Setup Agent
+
 - [ ] User can provide free-form preferences
 - [ ] Agent proposes clear, detailed plan
 - [ ] User can approve/modify plan iteratively
@@ -254,6 +271,7 @@ docs/
 - [ ] Plan matches user expectations
 
 ### Test Taking Agent
+
 - [ ] Dynamic prompts use bracket notation correctly
 - [ ] State updates in real-time
 - [ ] Encouragement messages are contextual

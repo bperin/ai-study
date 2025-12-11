@@ -11,7 +11,7 @@ import { UploadsService } from "./uploads.service";
 @Controller("uploads")
 @UseGuards(JwtAuthGuard)
 export class UploadsController {
-    constructor(private readonly uploadsService: UploadsService) { }
+    constructor(private readonly uploadsService: UploadsService) {}
 
     @Post("sign")
     @ApiResponse({ status: 201, type: UploadUrlResponseDto })
