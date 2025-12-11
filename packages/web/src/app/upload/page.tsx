@@ -73,7 +73,7 @@ export default function UploadPage() {
             const { uploadUrl, filePath } = signResponse;
 
             if (!uploadUrl || !filePath) {
-                throw new Error('Invalid response from server: missing upload URL');
+                throw new Error("Invalid response from server: missing upload URL");
             }
 
             setProgress(30);
