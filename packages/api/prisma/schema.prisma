@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pdfs      Pdf[]
+}
+
+model Pdf {
+  id         String      @id @default(uuid())
+  filename   String
+  content    String?     @db.Text
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  createdAt  DateTime    @default(now())
+  objectives Objective[]
+}
+
+model Objective {
+  id         String   @id @default(uuid())
+  title      String
+  difficulty String
+  pdfId      String
+  pdf        Pdf      @relation(fields: [pdfId], references: [id])
+  mcqs       Mcq[]
+}
+
+model Mcq {
+  id          String    @id @default(uuid())
+  question    String
+  options     String[]
+  correctIdx  Int
+  explanation String?
+  objectiveId String
+  objective   Objective @relation(fields: [objectiveId], references: [id])
+}
