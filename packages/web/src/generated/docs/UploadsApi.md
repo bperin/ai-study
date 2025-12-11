@@ -11,7 +11,7 @@ All URIs are relative to *http://localhost*
 
 ## uploadsControllerConfirmUpload
 
-> uploadsControllerConfirmUpload(body)
+> ConfirmUploadResponseDto uploadsControllerConfirmUpload(body)
 
 
 
@@ -54,7 +54,7 @@ example().catch(console.error);
 
 ### Return type
 
-`void` (Empty response body)
+[**ConfirmUploadResponseDto**](ConfirmUploadResponseDto.md)
 
 ### Authorization
 
@@ -63,7 +63,7 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: `application/json`
-- **Accept**: Not defined
+- **Accept**: `application/json`
 
 
 ### HTTP response details

@@ -5,6 +5,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ROOT_AGENT_INSTRUCTION } from "./prompts";
 import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from "./tools";
 
+// Model constant for orchestrator
+const GEMINI_ORCHESTRATOR_MODEL = "gemini-2.5-flash";
+
 @Injectable()
 export class GeminiService {
     constructor(
@@ -31,7 +34,7 @@ export class GeminiService {
         const orchestratorAgent = new LlmAgent({
             name: "flashcard_orchestrator",
             description: "Orchestrates the generation of educational flashcards from PDF content",
-            model: "gemini-2.5-flash",
+            model: GEMINI_ORCHESTRATOR_MODEL,
             instruction: ROOT_AGENT_INSTRUCTION,
             tools,
         });
@@ -46,10 +49,26 @@ export class GeminiService {
         let completionData: any = null;
         let objectivesCreated = 0;
 
+        const sessionId = `pdf-${pdfId}-${Date.now()}`;
+        const userId = "system";
+
+        // Create the session first (matching Python ADK pattern)
+        const session = await runner.sessionService.createSession({
+            appName: "flashcard-generator",
+            userId,
+            sessionId,
+            state: {
+                pdfId,
+                pdfFilename,
+                gcsPath,
+                userPrompt,
+            },
+        });
+
         // Run the agent with the user's request
         for await (const event of runner.runAsync({
-            userId: "system",
-            sessionId: `pdf-${pdfId}-${Date.now()}`,
+            userId,
+            sessionId: session.id,
             newMessage: {
                 role: "user",
                 parts: [{ text: userPrompt }],

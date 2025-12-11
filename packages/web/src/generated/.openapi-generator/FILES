@@ -7,6 +7,7 @@ apis/index.ts
 docs/AnswerDto.md
 docs/AuthApi.md
 docs/AuthResponseDto.md
+docs/ConfirmUploadResponseDto.md
 docs/CreateUserDto.md
 docs/DefaultApi.md
 docs/LoginDto.md
@@ -18,6 +19,7 @@ docs/UsersApi.md
 index.ts
 models/AnswerDto.ts
 models/AuthResponseDto.ts
+models/ConfirmUploadResponseDto.ts
 models/CreateUserDto.ts
 models/LoginDto.ts
 models/SubmitTestDto.ts

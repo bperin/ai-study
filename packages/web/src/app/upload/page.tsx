@@ -56,12 +56,19 @@ export default function UploadPage() {
             // Step 1: Get signed URL from backend
             setProgress(10);
             const { uploadsApi } = refreshApiConfig();
-            const signResponse = await uploadsApi.uploadsControllerCreateSignedUploadUrl({
-                body: {
-                    fileName: file.name,
-                    contentType: "application/pdf",
-                },
-            });
+
+            let signResponse;
+            try {
+                signResponse = await uploadsApi.uploadsControllerCreateSignedUploadUrl({
+                    body: {
+                        fileName: file.name,
+                        contentType: "application/pdf",
+                    },
+                });
+            } catch (err: any) {
+                console.error("Failed to get signed URL:", err);
+                throw new Error(`Failed to get upload URL: ${err.message}`);
+            }
 
             const { uploadUrl, filePath } = signResponse;
 
@@ -72,27 +79,41 @@ export default function UploadPage() {
             setProgress(30);
 
             // Step 2: Upload file directly to GCS
-            const uploadResponse = await fetch(uploadUrl, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/pdf",
-                },
-                body: file,
-            });
+            let uploadResponse;
+            try {
+                uploadResponse = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/pdf",
+                    },
+                    body: file,
+                });
+            } catch (err: any) {
+                console.error("Failed to upload to GCS:", err);
+                throw new Error(`Failed to upload to cloud storage: ${err.message}`);
+            }
 
             if (!uploadResponse.ok) {
+                const errorText = await uploadResponse.text();
+                console.error("GCS upload failed:", errorText);
                 throw new Error("Failed to upload file to cloud storage");
             }
 
             setProgress(70);
 
             // Step 3: Confirm upload with backend
-            const confirmResponse = await uploadsApi.uploadsControllerConfirmUpload({
-                body: {
-                    filePath,
-                    fileName: file.name,
-                },
-            });
+            let confirmResponse;
+            try {
+                confirmResponse = await uploadsApi.uploadsControllerConfirmUpload({
+                    body: {
+                        filePath,
+                        fileName: file.name,
+                    },
+                });
+            } catch (err: any) {
+                console.error("Failed to confirm upload:", err);
+                throw new Error(`Failed to confirm upload: ${err.message}`);
+            }
 
             const { id } = confirmResponse;
             setProgress(100);
