@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Storage } from '@google-cloud/storage';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Storage } from "@google-cloud/storage";
 
 @Injectable()
 export class GcsService {
@@ -8,19 +8,22 @@ export class GcsService {
     private bucketName: string;
 
     constructor(private readonly configService: ConfigService) {
-        const projectId = this.configService.get<string>('GCP_PROJECT_ID');
-        const clientEmail = this.configService.get<string>('GCP_CLIENT_EMAIL');
-        const privateKey = this.configService.get<string>('GCP_PRIVATE_KEY')?.replace(/\\n/g, '\n');
+        const projectId = this.configService.get<string>("GCP_PROJECT_ID");
+        const clientEmail = this.configService.get<string>("GCP_CLIENT_EMAIL");
+        const privateKey = this.configService.get<string>("GCP_PRIVATE_KEY")?.replace(/\\n/g, "\n");
 
         this.storage = new Storage({
             projectId,
-            credentials: clientEmail && privateKey ? {
-                client_email: clientEmail,
-                private_key: privateKey,
-            } : undefined,
+            credentials:
+                clientEmail && privateKey
+                    ? {
+                          client_email: clientEmail,
+                          private_key: privateKey,
+                      }
+                    : undefined,
         });
 
-        this.bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
+        this.bucketName = this.configService.get<string>("GCP_BUCKET_NAME") ?? "missing-bucket";
     }
 
     /**
