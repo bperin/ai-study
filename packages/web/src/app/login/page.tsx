@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { authApi } from '../../api-client'
 
 export default function LoginPage() {
@@ -21,8 +22,10 @@ export default function LoginPage() {
       })
 
       localStorage.setItem('access_token', data.accessToken)
+      toast.success('Login successful')
       router.push('/')
     } catch (err) {
+      toast.error('Login failed. Please check your credentials.')
       setError('Login failed. Please check your credentials.')
     }
   }

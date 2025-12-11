@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { authApi } from '../../api-client'
 
 export default function RegisterPage() {
@@ -22,8 +23,10 @@ export default function RegisterPage() {
       })
 
       localStorage.setItem('access_token', data.accessToken)
+      toast.success('Registration successful')
       router.push('/')
     } catch (err) {
+      toast.error('Registration failed. Please try again.')
       setError('Registration failed. Please try again.')
     }
   }
