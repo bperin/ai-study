@@ -67,26 +67,37 @@ export class PdfsService {
 
     async listPdfs(userId: string, page: number = 1, limit: number = 10) {
         const skip = (page - 1) * limit;
-        return this.prisma.pdf.findMany({
-            where: { userId },
-            orderBy: { createdAt: "desc" },
-            skip,
-            take: limit,
-            select: {
-                id: true,
-                filename: true,
-                createdAt: true,
-                objectives: {
-                    select: {
-                        title: true,
-                        difficulty: true,
-                        _count: {
-                            select: { mcqs: true },
+        const [data, total] = await Promise.all([
+            this.prisma.pdf.findMany({
+                where: { userId },
+                orderBy: { createdAt: "desc" },
+                skip,
+                take: limit,
+                select: {
+                    id: true,
+                    filename: true,
+                    createdAt: true,
+                    objectives: {
+                        select: {
+                            title: true,
+                            difficulty: true,
+                            _count: {
+                                select: { mcqs: true },
+                            },
                         },
                     },
                 },
-            },
-        });
+            }),
+            this.prisma.pdf.count({ where: { userId } }),
+        ]);
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
     }
 
     async forkPdf(pdfId: string, userId: string, newTitle?: string) {
