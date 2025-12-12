@@ -5,9 +5,17 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { getPdfsApi } from "@/api-client";
 import { McqDto, ObjectiveResponseDto, TestAnalysisResponseDto } from "@/generated";
 import { getTestTakingApi } from "@/api-client";
+import { MessageCircle, Send, X } from "lucide-react";
+import { useRef } from "react";
+
+interface ChatMessage {
+    role: "user" | "assistant";
+    content: string;
+}
 
 export default function StudyPage() {
     const params = useParams();
@@ -33,6 +41,59 @@ export default function StudyPage() {
     const [allAnswers, setAllAnswers] = useState<any[]>([]); // Track ALL answers for comprehensive analysis
     const [analysis, setAnalysis] = useState<TestAnalysisResponseDto | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
+
+    // Chat state
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatMessage, setChatMessage] = useState("");
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [isChatLoading, setIsChatLoading] = useState(false);
+    const chatEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isChatOpen && chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [chatHistory, isChatOpen]);
+
+    const handleSendMessage = async () => {
+        if (!chatMessage.trim() || isChatLoading) return;
+
+        const currentQuestion = allQuestions[currentQuestionIndex];
+        if (!currentQuestion) return;
+
+        const userMsg = chatMessage.trim();
+        setChatMessage("");
+        setChatHistory(prev => [...prev, { role: "user", content: userMsg }]);
+        setIsChatLoading(true);
+
+        try {
+            const token = localStorage.getItem("access_token");
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            
+            const response = await fetch(`${baseUrl}/tests/chat`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: userMsg,
+                    questionId: currentQuestion.id,
+                    history: chatHistory
+                })
+            });
+
+            if (!response.ok) throw new Error("Failed to get response");
+            
+            const data = await response.json();
+            setChatHistory(prev => [...prev, { role: "assistant", content: data.message }]);
+        } catch (error) {
+            console.error("Chat error:", error);
+            setChatHistory(prev => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
 
     useEffect(() => {
         const fetchObjectives = async () => {
@@ -275,6 +336,72 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                         </Button>
                     </CardContent>
                 </Card>
+    
+                {/* AI Tutor Chat */}
+                <div className="fixed bottom-6 right-6 z-50">
+                    {isChatOpen ? (
+                        <Card className="w-80 h-96 flex flex-col shadow-xl border-primary/20">
+                            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0 bg-primary/5 border-b">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    🤖 AI Tutor
+                                </CardTitle>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsChatOpen(false)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                                {chatHistory.length === 0 && (
+                                    <p className="text-sm text-muted-foreground text-center mt-8">
+                                        Stuck? Ask me for a hint! I won't give you the answer, but I can help you find it.
+                                    </p>
+                                )}
+                                {chatHistory.map((msg, i) => (
+                                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                                        <div className={`max-w-[85%] p-3 rounded-lg text-sm ${
+                                            msg.role === "user"
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted"
+                                        }`}>
+                                            {msg.content}
+                                        </div>
+                                    </div>
+                                ))}
+                                {isChatLoading && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-muted p-3 rounded-lg text-sm animate-pulse">
+                                            Thinking...
+                                        </div>
+                                    </div>
+                                )}
+                                <div ref={chatEndRef} />
+                            </CardContent>
+                            <CardFooter className="p-3 border-t">
+                                <div className="flex w-full gap-2">
+                                    <Input
+                                        value={chatMessage}
+                                        onChange={(e) => setChatMessage(e.target.value)}
+                                        onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                                        placeholder="Ask for a hint..."
+                                        disabled={isChatLoading}
+                                        className="h-9 text-sm"
+                                    />
+                                    <Button size="sm" onClick={handleSendMessage} disabled={!chatMessage.trim() || isChatLoading}>
+                                        <Send className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </CardFooter>
+                        </Card>
+                    ) : (
+                        <Button
+                            size="lg"
+                            className="rounded-full h-14 w-14 shadow-lg"
+                            onClick={() => setIsChatOpen(true)}
+                            disabled={isFinished}
+                        >
+                            <MessageCircle className="h-6 w-6" />
+                        </Button>
+                    )}
+                </div>
             </div>
         );
     }

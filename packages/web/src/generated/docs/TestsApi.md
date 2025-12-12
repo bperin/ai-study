@@ -4,12 +4,82 @@ All URIs are relative to *http://localhost*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**testsControllerGetAttemptDetails**](TestsApi.md#testscontrollergetattemptdetails) | **GET** /tests/attempt/{id} | Get detailed results for a specific test attempt |
 | [**testsControllerGetGlobalLeaderboard**](TestsApi.md#testscontrollergetgloballeaderboard) | **GET** /tests/leaderboard |  |
 | [**testsControllerGetMyRank**](TestsApi.md#testscontrollergetmyrank) | **GET** /tests/leaderboard/me |  |
 | [**testsControllerGetPdfLeaderboard**](TestsApi.md#testscontrollergetpdfleaderboard) | **GET** /tests/leaderboard/pdf/{pdfId} |  |
-| [**testsControllerGetTestHistory**](TestsApi.md#testscontrollergettesthistory) | **GET** /tests/history |  |
+| [**testsControllerGetTestHistory**](TestsApi.md#testscontrollergettesthistory) | **GET** /tests/history | Get user\&#39;s test history with scores and reports |
 | [**testsControllerSubmitTest**](TestsApi.md#testscontrollersubmittest) | **POST** /tests/submit |  |
 
+
+
+## testsControllerGetAttemptDetails
+
+> TestHistoryItemDto testsControllerGetAttemptDetails(id)
+
+Get detailed results for a specific test attempt
+
+### Example
+
+```ts
+import {
+  Configuration,
+  TestsApi,
+} from '';
+import type { TestsControllerGetAttemptDetailsRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new TestsApi(config);
+
+  const body = {
+    // string
+    id: id_example,
+  } satisfies TestsControllerGetAttemptDetailsRequest;
+
+  try {
+    const data = await api.testsControllerGetAttemptDetails(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **id** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**TestHistoryItemDto**](TestHistoryItemDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## testsControllerGetGlobalLeaderboard
@@ -216,9 +286,9 @@ example().catch(console.error);
 
 ## testsControllerGetTestHistory
 
-> testsControllerGetTestHistory()
+> TestHistoryResponseDto testsControllerGetTestHistory()
 
-
+Get user\&#39;s test history with scores and reports
 
 ### Example
 
@@ -255,7 +325,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-`void` (Empty response body)
+[**TestHistoryResponseDto**](TestHistoryResponseDto.md)
 
 ### Authorization
 
@@ -264,7 +334,7 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: `application/json`
 
 
 ### HTTP response details
