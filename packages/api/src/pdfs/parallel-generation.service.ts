@@ -274,25 +274,36 @@ ${pdfContext}
     }
 
     /**
-     * Analyze test results to provide study strategies
+     * Analyze test results to provide study strategies with web-enhanced resources
      */
-    async analyzeTestResults(pdfId: string, missedQuestions: any[]): Promise<{ summary: string; weakAreas: string[]; studyStrategies: string[] }> {
-        // Fetch PDF info (assuming it's stored or we have access to retrieve it)
+    async analyzeTestResults(
+        pdfId: string,
+        missedQuestions: any[],
+        allAnswers?: any[]
+    ): Promise<{
+        summary: string;
+        weakAreas: string[];
+        studyStrategies: string[];
+        strengths?: string[];
+    }> {
+        // Fetch PDF info
         const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
         if (!pdf) throw new Error("PDF not found");
 
         const pdfFilename = pdf.filename;
-        const gcsPath = pdf.gcsPath || pdf.content || ""; // Fallback
+        const gcsPath = pdf.gcsPath || pdf.content || "";
 
-        // Create analyzer agent
+        // Create analyzer agent with web search capability
         const agent = new LlmAgent({
             name: "test_analyzer",
-            description: "Analyzes test results and suggests study strategies",
+            description: "Analyzes test results and suggests study strategies with web-enhanced resources",
             // @ts-ignore
-            model: GEMINI_QUALITY_ANALYZER_MODEL, // Reusing the model constant
+            model: GEMINI_QUALITY_ANALYZER_MODEL,
             instruction: TEST_ANALYZER_INSTRUCTION,
-            // Still include tool just in case, but rely on direct injection
-            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService)],
+            tools: [
+                createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService),
+                createWebSearchTool(), // Enable web search for finding resources
+            ],
         });
 
         const runner = new InMemoryRunner({
@@ -343,14 +354,23 @@ ${pdfContext}
 Here are the questions the student missed:
 ${JSON.stringify(missedQuestions, null, 2)}
 
+${allAnswers && allAnswers.length > 0 ? `
+Here are ALL the student's answers (for identifying strengths):
+${JSON.stringify(allAnswers, null, 2)}
+` : ''}
+
 SOURCE MATERIAL FROM PDF:
 ${pdfContext}
 
 INSTRUCTIONS:
-Analyze the missed questions. Cross-reference them with the Source Material above.
-Identify why they might have missed them (e.g., specific concepts in the text).
-Provide actionable study strategies based on the text.
-Return ONLY valid JSON with keys: summary, weakAreas, studyStrategies.
+Analyze the student's performance comprehensively.
+- Cross-reference missed questions with the Source Material above
+- Identify why they missed specific questions (concepts, details, calculations)
+- If you have all answers, also identify what they did well (strengths)
+- Use the fetch_url_content tool to find 2-3 helpful online resources for weak areas
+- Provide actionable study strategies with specific resources and URLs when possible
+
+Return ONLY valid JSON with keys: summary, weakAreas, studyStrategies, strengths (optional).
 `,
                     },
                 ],
