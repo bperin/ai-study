@@ -10,24 +10,28 @@ datasource db {
 }
 
 model User {
-  id        String        @id @default(uuid())
-  email     String        @unique
-  password  String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  pdfs      Pdf[]
-  attempts  TestAttempt[]
+  id          String        @id @default(uuid())
+  email       String        @unique
+  password    String
+  isAdmin     Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  pdfs        Pdf[]
+  attempts    TestAttempt[]
+  pdfSessions PdfSession[]
 }
 
 model Pdf {
-  id         String        @id @default(uuid())
-  filename   String
-  content    String?       @db.Text
-  userId     String
-  user       User          @relation(fields: [userId], references: [id])
-  createdAt  DateTime      @default(now())
-  objectives Objective[]
-  attempts   TestAttempt[]
+  id          String        @id @default(uuid())
+  filename    String
+  content     String?       @db.Text
+  gcsPath     String? // Google Cloud Storage path
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  createdAt   DateTime      @default(now())
+  objectives  Objective[]
+  attempts    TestAttempt[]
+  pdfSessions PdfSession[]
 }
 
 model Objective {
@@ -40,38 +44,95 @@ model Objective {
 }
 
 model Mcq {
-  id           String       @id @default(uuid())
+  id           String   @id @default(uuid())
   question     String
   options      String[]
   correctIdx   Int
   explanation  String?
   hint         String?
   externalLink String?
-  objectiveId  String
-  objective    Objective    @relation(fields: [objectiveId], references: [id])
-  userAnswers  UserAnswer[]
+
+  // Picture card support
+  hasPicture    Boolean @default(false)
+  pictureUrl    String? // GCS URL for AI-generated image
+  picturePrompt String? // Prompt used to generate image
+
+  objectiveId String
+  objective   Objective    @relation(fields: [objectiveId], references: [id])
+  userAnswers UserAnswer[]
 }
 
 model TestAttempt {
-  id          String       @id @default(uuid())
-  userId      String
-  user        User         @relation(fields: [userId], references: [id])
-  pdfId       String
-  pdf         Pdf          @relation(fields: [pdfId], references: [id])
-  score       Int
-  total       Int
-  startedAt   DateTime     @default(now())
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  pdfId  String
+  pdf    Pdf    @relation(fields: [pdfId], references: [id])
+
+  // Session link
+  sessionId String? // Link to PdfSession if applicable
+
+  // Performance
+  score      Int    @default(0)
+  total      Int
+  percentage Float? // Calculated percentage
+
+  // Timing
+  startedAt   DateTime  @default(now())
   completedAt DateTime?
-  answers     UserAnswer[]
+  totalTime   Int? // Total time in seconds
+
+  // Detailed feedback (JSON)
+  feedback Json? // Stores TestFeedback structure
+
+  answers UserAnswer[]
 }
 
 model UserAnswer {
-  id          String      @id @default(uuid())
-  attemptId   String
-  attempt     TestAttempt @relation(fields: [attemptId], references: [id])
-  mcqId       String
-  mcq         Mcq         @relation(fields: [mcqId], references: [id])
+  id        String      @id @default(uuid())
+  attemptId String
+  attempt   TestAttempt @relation(fields: [attemptId], references: [id])
+  mcqId     String
+  mcq       Mcq         @relation(fields: [mcqId], references: [id])
+
+  // Answer details
   selectedIdx Int
   isCorrect   Boolean
-  createdAt   DateTime    @default(now())
+
+  // Engagement metrics
+  timeSpent  Int  @default(0) // Time spent in seconds
+  hintsUsed  Int  @default(0) // Number of hints used
+  confidence Int? // Optional 1-5 confidence rating
+
+  createdAt DateTime @default(now())
+}
+
+// PDF Session - for Test Setup Agent HITL workflow
+model PdfSession {
+  id     String @id @default(uuid())
+  pdfId  String
+  pdf    Pdf    @relation(fields: [pdfId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // User preferences (free-form)
+  userPreferences Json // Stores user's free-form preferences
+
+  // Plan proposal
+  proposedPlan   Json? // TestPlan structure
+  planStatus     String @default("pending") // pending, approved, rejected
+  planIterations Int    @default(0) // Number of plan revisions
+
+  // Configuration
+  difficulty      String?
+  totalQuestions  Int?
+  includePictures Boolean @default(false)
+  pictureCount    Int     @default(0)
+  timeLimit       Int? // Suggested time limit in minutes
+
+  // Status
+  status String @default("planning") // planning, generating, ready, completed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

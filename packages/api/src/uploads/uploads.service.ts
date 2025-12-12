@@ -22,9 +22,9 @@ export class UploadsService {
             credentials:
                 clientEmail && privateKey
                     ? {
-                          client_email: clientEmail,
-                          private_key: privateKey,
-                      }
+                        client_email: clientEmail,
+                        private_key: privateKey,
+                    }
                     : undefined,
         });
 
@@ -72,7 +72,7 @@ export class UploadsService {
         });
 
         return {
-            uploadUrl,
+            uploadUrl: uploadUrl,
             filePath,
             expiresAt: new Date(expiresAt).toISOString(),
             maxSizeBytes: 10485760, // 10MB in bytes (enforce client-side)
@@ -85,15 +85,14 @@ export class UploadsService {
             data: {
                 filename: fileName,
                 userId: userId,
-                content: filePath, // Store GCS path in content field for now
+                gcsPath: filePath, // Store GCS path
             },
         });
 
         return {
             id: pdf.id,
             filename: pdf.filename,
-            createdAt: pdf.createdAt,
-            message: "PDF uploaded successfully",
+            userId: pdf.userId,
         };
     }
 }

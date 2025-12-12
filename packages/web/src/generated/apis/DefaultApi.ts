@@ -20,14 +20,6 @@ export interface PdfsControllerGenerateFlashcardsRequest {
     body: object;
 }
 
-export interface UploadsControllerConfirmUploadRequest {
-    body: object;
-}
-
-export interface UploadsControllerCreateSignedUploadUrlRequest {
-    body: object;
-}
-
 /**
  * 
  */
@@ -101,78 +93,6 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async pdfsControllerGenerateFlashcards(requestParameters: PdfsControllerGenerateFlashcardsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.pdfsControllerGenerateFlashcardsRaw(requestParameters, initOverrides);
-    }
-
-    /**
-     */
-    async uploadsControllerConfirmUploadRaw(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        if (requestParameters['body'] == null) {
-            throw new runtime.RequiredError(
-                'body',
-                'Required parameter "body" was null or undefined when calling uploadsControllerConfirmUpload().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-
-        let urlPath = `/uploads/confirm`;
-
-        const response = await this.request({
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: requestParameters['body'] as any,
-        }, initOverrides);
-
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     */
-    async uploadsControllerConfirmUpload(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.uploadsControllerConfirmUploadRaw(requestParameters, initOverrides);
-    }
-
-    /**
-     */
-    async uploadsControllerCreateSignedUploadUrlRaw(requestParameters: UploadsControllerCreateSignedUploadUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        if (requestParameters['body'] == null) {
-            throw new runtime.RequiredError(
-                'body',
-                'Required parameter "body" was null or undefined when calling uploadsControllerCreateSignedUploadUrl().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-
-        let urlPath = `/uploads/sign`;
-
-        const response = await this.request({
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: requestParameters['body'] as any,
-        }, initOverrides);
-
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     */
-    async uploadsControllerCreateSignedUploadUrl(requestParameters: UploadsControllerCreateSignedUploadUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.uploadsControllerCreateSignedUploadUrlRaw(requestParameters, initOverrides);
     }
 
 }
