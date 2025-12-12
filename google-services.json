@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "pro-pulsar-274402",
+  "private_key_id": "b909847178cfb8f4aa74023489bb0c9e55697791",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDBothQuXcQwtL7\n0TIi06Uf/kMTvnGBVf9m4lWYXn43TbbN82kg1YREH5mFReEMeHq4ZNer5f1ZiFpZ\ndU7D+HtQJNCn230JfZ8/aJnSiL6VazpYWBRjyWmXyJ9olafP87dfkuIzq7YFiiq8\n4x2kpUO75KoFJzr7mkaHpNjtW+qh7QGQhyYjY2SY/qKSVh858Mq1QTF0v281TgXt\nsyF561DfUoxQRDswqkgxaBlNbBF/ysU+ChyGDfh4U5v2PY0rMUVLcDGTwbdNCV+Z\nT6Ioqqy8v1Q/x/xl8f2L9Fb/eaUxoZIkfMrOKoVptsuCX4J5zgzuN4Ud3aHv5tsj\nSiZTvjARAgMBAAECggEAAqoEmUQ6+1Td4aNywdRJAWIefsQcFE4oSNxodnOm34iL\nAUWGAtLTOnt3kZQI/RKfiB/RkJK2EBQ6X4CX3kYB/tPZ19RjEZVMEouUMbeKTTyb\n4XUpRyfxUyp6SH5mIBwjn83R3UmBlC0O6llC2jYAowI59V8RPn7UdXdu+WGOTm7h\n6ia/JxX9M+oejXNWznS8Lj2K/AzDWVBNdczqPJkUkl2+C5rFfBLdlRcUqSx0DNLt\nW1sJtOlOvjTZHQrAQeLfW1hGOa8eBDaGJ4gViVYxdTliZF/rTdliQnWJHM3qIz8G\nVpUUV+tvZV1rNFYvWRYvob7PWbxtU56drf7+CwszIQKBgQDfPwwQfO8F1aMAfiVQ\niJ9OJAKo9QlzmcaPHOrDKGFk17Fmw3Rh+cyqUD0oudtWbWPngzb4gYMPIFwRflhm\nqitzicONsFP55PmIU4FI8u6k498Ho4msI22qFlagZiehn3l7rHy+9eH4b8OX0je7\nT6FptwI9PeerPuAZRLV2T7UQcQKBgQDeC6nhFdUDdaJfQD7b6tEDWAaXhRaPOFRx\nIDUB60+1Eo9EgSKDNxXt0DqJcbG1HqbocCsC9NWts0oxVVl8tA33UC3DyX7S+pEY\nE9vHjMt5NG3rr/CvC7jEARM2/YiczWUWUGr10vzH37kWMfhZBLlKGr6mNZaEEQXS\nEunryWjpoQKBgG0DGl8KwqT0t03MS2hR7oh3qRzb2quqUX0cv75gf36AnM3zb2dQ\nVZJs8BBtAR/o9rncJwGeLGM8h/i622v2eJVIlkcf7UG/f+ID9MOsbL/zzbqrLtTx\nz+EYW2CjwYJ4nxe3GIsfAiMQYFBIhJJgxg8bIGrLSc8jOsbb+Eg3j9DhAoGAEqJv\n80/dvJiWs9+0ZshiGiG9C+JDbmmPzJ6jVDHnUo7oLxuXRePNl1OuVfKQs16LK16e\nfXUGqbkuNM2w4OJLecHk1VWHqzUUEC06eJi8SsO3pdvyGv6k1u4wKqFEYcRrA2Bk\nWZUHWc7Qvagb63yWAD4WWeSNaS/0iRjFQOB6SYECgYBpqO8yXODOtJwAol8ujhAe\n607Df8FzVPcEzB+4Djg1utpjQvHQ8e1fvKhs5Eh4A+FLTOQKef3oXuwUxMQdyMS8\nYrj3iWyaPFiPCJazXzaq1suECa9vabFku6GrZ8ergd6A5Bs4TD2nLaiODG1XeaJZ\n7YV6nWgwfth92nUOMr2J5Q==\n-----END PRIVATE KEY-----\n",
+  "client_email": "solo-stack@pro-pulsar-274402.iam.gserviceaccount.com",
+  "client_id": "104546340367201677107",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/solo-stack%40pro-pulsar-274402.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
