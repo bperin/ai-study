@@ -14,3 +14,4 @@ export * from './SubmitTestDto';
 export * from './SubmitTestResultsDto';
 export * from './TestAnalysisResponseDto';
 export * from './UploadUrlResponseDto';
+export * from './UserResponseDto';

@@ -14,6 +14,13 @@
 
 
 import * as runtime from '../runtime';
+import type {
+  UserResponseDto,
+} from '../models/index';
+import {
+    UserResponseDtoFromJSON,
+    UserResponseDtoToJSON,
+} from '../models/index';
 
 /**
  * 
@@ -22,7 +29,7 @@ export class UsersApi extends runtime.BaseAPI {
 
     /**
      */
-    async usersControllerFindAllRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async usersControllerFindAllRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<UserResponseDto>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -45,18 +52,19 @@ export class UsersApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(UserResponseDtoFromJSON));
     }
 
     /**
      */
-    async usersControllerFindAll(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.usersControllerFindAllRaw(initOverrides);
+    async usersControllerFindAll(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<UserResponseDto>> {
+        const response = await this.usersControllerFindAllRaw(initOverrides);
+        return await response.value();
     }
 
     /**
      */
-    async usersControllerGetMeRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async usersControllerGetMeRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserResponseDto>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -79,13 +87,14 @@ export class UsersApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserResponseDtoFromJSON(jsonValue));
     }
 
     /**
      */
-    async usersControllerGetMe(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.usersControllerGetMeRaw(initOverrides);
+    async usersControllerGetMe(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserResponseDto> {
+        const response = await this.usersControllerGetMeRaw(initOverrides);
+        return await response.value();
     }
 
 }
