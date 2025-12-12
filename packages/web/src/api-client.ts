@@ -1,14 +1,14 @@
-import { Configuration, AuthApi, UsersApi, DefaultApi } from "./generated";
+import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi } from "./generated";
 
 const getConfig = () => {
     if (typeof window === "undefined") {
-        return new Configuration({ basePath: "http://localhost:3001" });
+        return new Configuration({ basePath: "http://localhost:3000" });
     }
 
     const token = localStorage.getItem("access_token");
 
     return new Configuration({
-        basePath: "http://localhost:3001",
+        basePath: "http://localhost:3000",
         accessToken: token || undefined,
         headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
@@ -17,15 +17,15 @@ const getConfig = () => {
 export const authApi = new AuthApi(getConfig());
 export const usersApi = new UsersApi(getConfig());
 export const defaultApi = new DefaultApi(getConfig());
+export const uploadsApi = new UploadsApi(getConfig());
 
 // Helper to refresh API instances when token changes (e.g. after login)
 export const refreshApiConfig = () => {
     const config = getConfig();
-    // We can't reassign the exported constants, but we can rely on getConfig() being called
-    // OR we can export a function that returns the APIs
     return {
         authApi: new AuthApi(config),
         usersApi: new UsersApi(config),
         defaultApi: new DefaultApi(config),
+        uploadsApi: new UploadsApi(config),
     };
 };
