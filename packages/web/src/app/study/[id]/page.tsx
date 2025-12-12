@@ -19,6 +19,9 @@ export default function StudyPage() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [showExplanation, setShowExplanation] = useState(false);
+    const [showHint, setShowHint] = useState(false);
+    const [hasAnsweredCorrectly, setHasAnsweredCorrectly] = useState(false);
+    const [attemptCount, setAttemptCount] = useState(0);
     const [score, setScore] = useState(0);
 
     // Test state
@@ -64,36 +67,68 @@ export default function StudyPage() {
     };
 
     const handleOptionSelect = (index: number) => {
-        if (selectedOption !== null) return; // Prevent changing answer
+        if (hasAnsweredCorrectly) return; // Prevent changing answer after correct answer
+        
+        const newAttemptCount = attemptCount + 1;
         setSelectedOption(index);
-        setShowExplanation(true);
+        setAttemptCount(newAttemptCount);
 
         const currentQuestion = allQuestions[currentQuestionIndex];
         const isCorrect = index === currentQuestion.correctIdx;
 
-        // Track this answer
-        const answer = {
-            questionId: currentQuestion.id,
-            questionText: currentQuestion.question,
-            selectedAnswer: currentQuestion.options[index],
-            correctAnswer: currentQuestion.options[currentQuestion.correctIdx],
-            isCorrect,
-        };
-
-        setAllAnswers([...allAnswers, answer]);
-
         if (isCorrect) {
+            setHasAnsweredCorrectly(true);
+            setShowExplanation(true);
+            setShowHint(false);
+            
+            // Track this answer
+            const answer = {
+                questionId: currentQuestion.id,
+                questionText: currentQuestion.question,
+                selectedAnswer: currentQuestion.options[index],
+                correctAnswer: currentQuestion.options[currentQuestion.correctIdx],
+                isCorrect: true,
+                attempts: newAttemptCount,
+            };
+
+            setAllAnswers([...allAnswers, answer]);
             setScore(score + 1);
         } else {
-            setMissedQuestions([
-                ...missedQuestions,
-                {
+            // Check if this is the second (final) attempt
+            if (newAttemptCount >= 2) {
+                // No more attempts - show explanation and mark as completed
+                setHasAnsweredCorrectly(true);
+                setShowExplanation(true);
+                setShowHint(false);
+                
+                // Track this as a failed answer
+                const answer = {
                     questionId: currentQuestion.id,
                     questionText: currentQuestion.question,
                     selectedAnswer: currentQuestion.options[index],
                     correctAnswer: currentQuestion.options[currentQuestion.correctIdx],
-                },
-            ]);
+                    isCorrect: false,
+                    attempts: newAttemptCount,
+                };
+                setAllAnswers([...allAnswers, answer]);
+            } else {
+                // First attempt - show hint and allow retry
+                setShowHint(true);
+                setShowExplanation(false);
+            }
+            
+            // Track as missed on first incorrect attempt
+            if (newAttemptCount === 1) {
+                setMissedQuestions([
+                    ...missedQuestions,
+                    {
+                        questionId: currentQuestion.id,
+                        questionText: currentQuestion.question,
+                        selectedAnswer: currentQuestion.options[index],
+                        correctAnswer: currentQuestion.options[currentQuestion.correctIdx],
+                    },
+                ]);
+            }
         }
     };
 
@@ -102,6 +137,9 @@ export default function StudyPage() {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
             setSelectedOption(null);
             setShowExplanation(false);
+            setShowHint(false);
+            setHasAnsweredCorrectly(false);
+            setAttemptCount(0);
         } else {
             finishTest();
         }
@@ -323,9 +361,12 @@ export default function StudyPage() {
                             const isCorrect = index === currentQuestion.correctIdx;
                             const isSelected = index === selectedOption;
 
-                            if (selectedOption !== null) {
+                            if (hasAnsweredCorrectly) {
                                 if (isCorrect) className += " bg-green-500 hover:bg-green-600 text-white border-green-500 dark:bg-green-900 dark:border-green-700";
                                 else if (isSelected) className += " bg-red-500 hover:bg-red-600 text-white border-red-500 dark:bg-red-900 dark:border-red-700";
+                            } else if (selectedOption !== null && !hasAnsweredCorrectly) {
+                                // Show temporary feedback but allow retry
+                                if (isSelected) className += " bg-red-100 hover:bg-red-200 text-red-800 border-red-300 dark:bg-red-900/30 dark:border-red-700";
                             }
 
                             return (
@@ -334,7 +375,7 @@ export default function StudyPage() {
                                     variant={selectedOption === null ? "outline" : "ghost"}
                                     className={selectedOption === null ? "justify-start text-left h-auto py-4 px-6 whitespace-normal" : className}
                                     onClick={() => handleOptionSelect(index)}
-                                    disabled={selectedOption !== null}
+                                    disabled={hasAnsweredCorrectly}
                                 >
                                     <span className="mr-3 font-semibold">{String.fromCharCode(65 + index)}.</span>
                                     {option}
@@ -343,15 +384,59 @@ export default function StudyPage() {
                         })}
                     </div>
 
+                    {showHint && (
+                        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                            <h4 className="font-semibold mb-2 text-yellow-800 dark:text-yellow-200">💡 Hint:</h4>
+                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                {currentQuestion.hint || "Think carefully about the key concepts and try again!"}
+                            </p>
+                            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                                You can try again - no penalty for incorrect attempts!
+                            </p>
+                        </div>
+                    )}
+
                     {showExplanation && (
-                        <div className="mt-6 p-4 bg-secondary rounded-lg">
-                            <h4 className="font-semibold mb-2">Explanation:</h4>
-                            <p className="text-sm text-muted-foreground">{currentQuestion.explanation}</p>
+                        <div className={`mt-6 p-4 border rounded-lg ${
+                            selectedOption === currentQuestion.correctIdx 
+                                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                                : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                        }`}>
+                            <h4 className={`font-semibold mb-2 ${
+                                selectedOption === currentQuestion.correctIdx
+                                    ? "text-green-800 dark:text-green-200"
+                                    : "text-red-800 dark:text-red-200"
+                            }`}>
+                                {selectedOption === currentQuestion.correctIdx 
+                                    ? "✅ Correct! Explanation:" 
+                                    : "❌ Incorrect. Correct Answer:"}
+                            </h4>
+                            <p className={`text-sm ${
+                                selectedOption === currentQuestion.correctIdx
+                                    ? "text-green-700 dark:text-green-300"
+                                    : "text-red-700 dark:text-red-300"
+                            }`}>
+                                {selectedOption !== currentQuestion.correctIdx && (
+                                    <span className="font-medium">
+                                        {String.fromCharCode(65 + currentQuestion.correctIdx)}. {currentQuestion.options[currentQuestion.correctIdx]}
+                                        <br /><br />
+                                    </span>
+                                )}
+                                {currentQuestion.explanation || (selectedOption === currentQuestion.correctIdx ? "Great job! You got it right." : "Better luck next time!")}
+                            </p>
+                            <p className={`text-xs mt-2 ${
+                                selectedOption === currentQuestion.correctIdx
+                                    ? "text-green-600 dark:text-green-400"
+                                    : "text-red-600 dark:text-red-400"
+                            }`}>
+                                Completed in {attemptCount} attempt{attemptCount > 1 ? 's' : ''}
+                                {attemptCount >= 2 && selectedOption !== currentQuestion.correctIdx && " (maximum attempts reached)"}
+                            </p>
                         </div>
                     )}
                 </CardContent>
                 <CardFooter className="justify-end pt-2">
-                    {selectedOption !== null && (
+                    {hasAnsweredCorrectly && (
                         <Button onClick={handleNextQuestion}>
                             {currentQuestionIndex < allQuestions.length - 1 ? "Next Question" : "Finish"}
                         </Button>

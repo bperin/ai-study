@@ -24,6 +24,7 @@ docs/TestAnalysisResponseDto.md
 docs/TestsApi.md
 docs/UploadUrlResponseDto.md
 docs/UploadsApi.md
+docs/UserResponseDto.md
 docs/UsersApi.md
 index.ts
 models/AnswerDto.ts
@@ -40,5 +41,6 @@ models/SubmitTestDto.ts
 models/SubmitTestResultsDto.ts
 models/TestAnalysisResponseDto.ts
 models/UploadUrlResponseDto.ts
+models/UserResponseDto.ts
 models/index.ts
 runtime.ts

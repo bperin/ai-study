@@ -38,7 +38,7 @@ describe('Application Smoke Tests', () => {
 
     describe('Prompts', () => {
         it('should have test plan chat prompt', async () => {
-            const { TEST_PLAN_CHAT_PROMPT } = await import('../src/pdfs/prompts');
+            const { TEST_PLAN_CHAT_PROMPT } = await import('../src/ai/prompts');
             expect(TEST_PLAN_CHAT_PROMPT).toBeDefined();
             expect(typeof TEST_PLAN_CHAT_PROMPT).toBe('function');
 
@@ -47,7 +47,7 @@ describe('Application Smoke Tests', () => {
         });
 
         it('should have flashcard generation prompt builder', async () => {
-            const { FLASHCARD_GENERATION_PROMPT } = await import('../src/pdfs/prompts');
+            const { FLASHCARD_GENERATION_PROMPT } = await import('../src/ai/prompts');
             expect(FLASHCARD_GENERATION_PROMPT).toBeDefined();
             expect(typeof FLASHCARD_GENERATION_PROMPT).toBe('function');
 
