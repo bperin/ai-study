@@ -1,0 +1,56 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: pro-pulsar-274402
+  GCP_REGION: us-central1
+  API_SERVICE_NAME: ai-study-api
+  WEB_SERVICE_NAME: ai-study-web
+  NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+
+jobs:
+  deploy:
+    name: Deploy API and Web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy API service
+        run: |
+          gcloud run deploy ${{ env.API_SERVICE_NAME }} \
+            --source packages/api \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Deploy Web service
+        run: |
+          gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
+            --source packages/web \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --set-build-env-vars NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
+            --set-env-vars NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
+            --quiet
