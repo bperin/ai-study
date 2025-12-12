@@ -87,23 +87,20 @@ export default function UploadPage() {
             setProgress(70);
 
             // Step 3: Confirm upload with backend
-            await uploadsApi.uploadsControllerConfirmUpload({
+            const confirmResponse = await uploadsApi.uploadsControllerConfirmUpload({
                 body: {
                     filePath,
                     fileName: file.name,
                 },
             });
 
-            // Get the PDF ID - we need to parse it from the filePath or get it from response
-            // For now, let's assume the backend returns it (you may need to add a response DTO)
-            const pdfId = filePath.split('/')[1]; // Extract user ID from path
-
+            const { id } = confirmResponse;
             setProgress(100);
-            setUploadedPdfId(pdfId);
+            setUploadedPdfId(id);
 
             // Redirect to customize page after 1 second
             setTimeout(() => {
-                router.push(`/customize/${pdfId}`);
+                router.push(`/customize/${id}`);
             }, 1000);
         } catch (err: any) {
             setError(err.message || "Upload failed");
