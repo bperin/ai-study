@@ -6,7 +6,7 @@ import { ROOT_AGENT_INSTRUCTION } from "./prompts";
 import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from "./tools";
 
 // Model constant for orchestrator
-const GEMINI_ORCHESTRATOR_MODEL = "gemini-2.5-flash";
+const GEMINI_ORCHESTRATOR_MODEL = "gemini-2.5-pro";
 
 @Injectable()
 export class GeminiService {

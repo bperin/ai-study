@@ -1,5 +1,5 @@
 
-# ConfirmUploadResponseDto
+# PdfResponseDto
 
 
 ## Properties
@@ -8,19 +8,21 @@ Name | Type
 ------------ | -------------
 `id` | string
 `filename` | string
-`userId` | string
+`createdAt` | Date
+`objectives` | Array&lt;object&gt;
 
 ## Example
 
 ```typescript
-import type { ConfirmUploadResponseDto } from ''
+import type { PdfResponseDto } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "id": 12cb4237-d74f-4cda-998d-4ef35f56...,
-  "filename": study-material.pdf,
-  "userId": 2778db4c-ec62-49d4-a0d1-229f6f3c15de,
-} satisfies ConfirmUploadResponseDto
+  "id": null,
+  "filename": null,
+  "createdAt": null,
+  "objectives": [{"title":"Objective Title","difficulty":"easy"}],
+} satisfies PdfResponseDto
 
 console.log(example)
 
@@ -29,7 +31,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as ConfirmUploadResponseDto
+const exampleParsed = JSON.parse(exampleJSON) as PdfResponseDto
 console.log(exampleParsed)
 ```
 

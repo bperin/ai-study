@@ -1,13 +1,11 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { GeminiService } from "./gemini.service";
 import { ParallelGenerationService } from "./parallel-generation.service";
 
 @Injectable()
 export class PdfsService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly geminiService: GeminiService,
         private readonly parallelGenerationService: ParallelGenerationService
     ) {}
 
@@ -42,5 +40,34 @@ export class PdfsService {
             summary: result.summary,
             objectives,
         };
+    }
+
+    async getObjectives(pdfId: string) {
+        return this.prisma.objective.findMany({
+            where: { pdfId },
+            include: { mcqs: true },
+        });
+    }
+
+    async listPdfs(userId: string) {
+        return this.prisma.pdf.findMany({
+            where: { userId },
+            orderBy: { createdAt: "desc" },
+            select: {
+                id: true,
+                filename: true,
+                createdAt: true,
+                objectives: {
+                    select: {
+                        title: true,
+                        difficulty: true,
+                    },
+                },
+            },
+        });
+    }
+
+    async analyzeTest(pdfId: string, missedQuestions: any[]) {
+        return this.parallelGenerationService.analyzeTestResults(pdfId, missedQuestions);
     }
 }

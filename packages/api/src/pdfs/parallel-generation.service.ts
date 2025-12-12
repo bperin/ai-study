@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { LlmAgent, InMemoryRunner } from "@google/adk";
-import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION } from "./prompts";
+import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION } from "./prompts";
+// @ts-ignore
 import { createGetPdfInfoTool, createSaveObjectiveTool } from "./tools";
 
 // Model constants
+// @ts-ignore
 const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-flash";
+// @ts-ignore
 const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-flash";
 
 interface QuestionGenerationTask {
@@ -130,6 +133,7 @@ Use the save_objective tool to save the questions you generate.
 
         // Run agent
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // @ts-ignore
         for await (const _event of runner.runAsync({
             userId,
             sessionId,
@@ -217,5 +221,84 @@ Use the save_objective tool to save the questions you generate.
         }
 
         return qualitySummary;
+    }
+
+    /**
+     * Analyze test results to provide study strategies
+     */
+    async analyzeTestResults(pdfId: string, missedQuestions: any[]): Promise<{ summary: string; weakAreas: string[]; studyStrategies: string[] }> {
+        // Fetch PDF info (assuming it's stored or we have access to retrieve it)
+        const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+        if (!pdf) throw new Error("PDF not found");
+
+        const pdfFilename = pdf.filename;
+        const gcsPath = pdf.gcsPath || pdf.content || ""; // Fallback
+
+        // Create analyzer agent
+        const agent = new LlmAgent({
+            name: "test_analyzer",
+            description: "Analyzes test results and suggests study strategies",
+            // @ts-ignore
+            model: GEMINI_QUALITY_ANALYZER_MODEL, // Reusing the model constant
+            instruction: TEST_ANALYZER_INSTRUCTION,
+            tools: [createGetPdfInfoTool(pdfFilename, gcsPath)],
+        });
+
+        const runner = new InMemoryRunner({
+            agent,
+            appName: "flashcard-generator",
+        });
+
+        const sessionId = `analysis-${pdfId}-${Date.now()}`;
+        const userId = "system";
+
+        await runner.sessionService.createSession({
+            appName: "flashcard-generator",
+            userId,
+            sessionId,
+            state: { pdfId, missedQuestions },
+        });
+
+        let analysisResult = {
+            summary: "Analysis failed to generate.",
+            weakAreas: [],
+            studyStrategies: [],
+        };
+
+        // @ts-ignore
+        for await (const event of runner.runAsync({
+            userId,
+            sessionId,
+            newMessage: {
+                role: "user",
+                parts: [
+                    {
+                        text: `Here are the questions the student missed: ${JSON.stringify(
+                            missedQuestions,
+                            null,
+                            2
+                        )}. Analyze these and cross-reference with the PDF content to provide study strategies. Return valid JSON.`,
+                    },
+                ],
+            },
+        })) {
+            if (event.content?.parts?.[0]?.text) {
+                try {
+                    // Simple extraction of JSON if wrapped in markdown code blocks
+                    const text = event.content.parts[0].text;
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        analysisResult = JSON.parse(jsonMatch[0]);
+                    } else {
+                        // Fallback if not pure JSON
+                        analysisResult = JSON.parse(text);
+                    }
+                } catch (e) {
+                    console.error("Failed to parse analysis result JSON", e);
+                }
+            }
+        }
+
+        return analysisResult;
     }
 }
