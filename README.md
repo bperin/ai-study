@@ -1,57 +1,65 @@
 # AI Study
 
-AI-based study guide that ingests PDFs and turns them into interactive flashcards.
+**A study tool that converts PDFs into interactive flashcards.**
 
-## 🎯 Overview
+## Overview
 
-AI Study is a full-stack application that helps students learn more effectively by:
+This project uses Google Gemini to help students review material. It breaks down PDFs into key concepts and generates multiple-choice questions for self-testing.
 
-1. Uploading study materials (PDFs)
-2. Automatically extracting and analyzing content
-3. Generating intelligent flashcards and multiple-choice questions
-4. Providing an interactive study and testing interface
+The backend uses multiple AI agents to process the content:
+1.  **Analyzer**: Reads the PDF to find main topics.
+2.  **Generator**: Creates questions based on those topics.
+3.  **Reviewer**: Checks the questions for quality.
 
-## ✨ Current Features
+## Features
 
-### ✅ Completed
+- **PDF Upload**: Secure upload to Google Cloud Storage.
+- **Flashcard Generation**: Automated creation of study materials.
+- **Study Mode**: Interactive testing with instant feedback.
+- **Progress Saving**: Resumable sessions so you don't lose your place.
+- **Analysis**: Simple feedback on what to study next based on your results.
 
-- **User Authentication**: JWT-based login and registration
-- **Secure PDF Upload**: Direct-to-cloud upload via Google Cloud Storage
-    - User-isolated file storage
-    - 10MB file size limit
-    - PDF-only validation
-    - Time-limited signed URLs
-- **Database**: Prisma 7 with PostgreSQL (Neon)
-- **API Documentation**: Auto-generated OpenAPI/Swagger docs
+## Tech Stack
 
-### 🚧 In Progress
+- **Backend**: NestJS, Prisma, PostgreSQL, Google Vertex AI (Gemini).
+- **Frontend**: Next.js, TypeScript, Radix UI.
+- **Infrastructure**: Google Cloud Run, Cloud Build, Cloud Storage.
 
-- PDF text extraction
-- AI-powered flashcard generation (using Google Gemini)
-- Frontend study interface
-
-## 🛠 Tech Stack
+## 🏗 Architecture
 
 ### Backend (`packages/api`)
+Built with **NestJS**, following a modular architecture.
 
-- **Framework**: NestJS
-- **Database**: Prisma 7 + PostgreSQL (Neon)
-- **Authentication**: JWT with Passport
-- **Storage**: Google Cloud Storage
-- **AI**: Google Generative AI (Gemini)
+- **AI Module (`src/ai`)**: Contains the Gemini service and agent definitions.
+    - `gemini.service.ts`: Core service managing LLM interactions.
+    - `agents.ts`: Definitions for Content, Question, and Quality agents.
+    - `tools.ts`: Custom tools for agents (PDF reading, DB saving, Web search).
+- **PDFs Module (`src/pdfs`)**: Handles PDF upload, storage, and text extraction.
+- **Tests Module (`src/tests`)**: Manages test attempts, scoring, and session state.
+- **Database**: **Prisma** ORM with PostgreSQL.
 
 ### Frontend (`packages/web`)
+Built with **Next.js** (App Router), focusing on a modern, responsive UI.
 
-- **Framework**: Next.js
-- **Language**: TypeScript
-- **API Client**: Auto-generated from OpenAPI spec
+- **UI Components**: **Radix UI** primitives styled with **Shadcn UI** and **Tailwind CSS**.
+- **State Management**: React hooks for real-time study session management.
+- **API Integration**: Auto-generated TypeScript SDK (`npm run codegen`) ensures frontend types always match the backend.
+
+### 🤖 Multi-Agent Workflow
+
+1.  **Ingestion**: User uploads a PDF to GCS.
+2.  **Analysis**: The **Content Analyzer Agent** scans the document to find "Learning Objectives".
+3.  **Generation**: The **Question Generator Agent** creates questions for each objective, utilizing the `get_pdf_info` tool to reference source text.
+4.  **Review**: The **Quality Analyzer Agent** (optional pipeline) scores the output.
+5.  **Study**: The user takes the test.
+6.  **Feedback**: Upon completion, the **Result Analyzer Agent** reviews performance, searches the web for resources, and generates a study plan.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
 - Node.js 18+
-- npm or yarn
+- Docker (optional, for containerized deployment)
+- Google Cloud Project with Vertex AI and GCS enabled
 
 ### Installation
 
@@ -59,129 +67,58 @@ AI Study is a full-stack application that helps students learn more effectively 
 # Install dependencies
 npm install
 
-# Start both backend and frontend
+# Start development environment
 ./run.sh
 ```
 
-The services will start on:
+The `./run.sh` script automates the entire startup process:
+1.  Starts the **Backend** (NestJS).
+2.  Waits for the OpenAPI spec to be generated.
+3.  **Automatically runs codegen** to update the Frontend SDK.
+4.  Starts the **Frontend** (Next.js).
+
+*Note: It may take a few seconds for the SDK types to generate before the frontend starts.*
 
 - **Backend**: http://localhost:3000
 - **Frontend**: http://localhost:3001
-- **API Docs**: http://localhost:3000/api
+- **Swagger Docs**: http://localhost:3000/api
 
-### Testing PDF Upload
+## 💻 Development Workflow
 
-```bash
-# Run end-to-end upload test
-./test-upload.sh
-```
+### SDK Generation
+Our frontend client is auto-generated from the backend controller definitions. This ensures type safety across the stack.
 
-## 📁 Project Structure
-
-```
-ai-study/
-├── packages/
-│   ├── api/              # NestJS backend
-│   │   ├── src/
-│   │   │   ├── auth/     # Authentication module
-│   │   │   ├── users/    # User management
-│   │   │   ├── uploads/  # PDF upload handling
-│   │   │   ├── tests/    # Test/quiz module
-│   │   │   └── prisma/   # Database service
-│   │   └── prisma/
-│   │       └── schema.prisma
-│   └── web/              # Next.js frontend
-├── docs/
-│   ├── TECHNICAL_PROGRESS.md  # Detailed technical docs
-│   └── PDF_UPLOAD_SETUP.md    # GCS setup guide
-├── run.sh                # Start all services
-└── test-upload.sh        # Test upload flow
-```
-
-## 🔧 Environment Setup
-
-Copy `.env.example` to `.env` in `packages/api/`:
+The `./run.sh` script handles this automatically on startup. If you make changes to Backend Controllers while developing:
 
 ```bash
-# Database
-DATABASE_URL="postgresql://..."
-
-# Authentication
-JWT_SECRET="your-secret-key"
-
-# Google Cloud Storage
-GCP_PROJECT_ID="your-project-id"
-GCP_BUCKET_NAME="your-bucket-name"
-GCP_CLIENT_EMAIL="your-service-account@..."
-GCP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-```
-
-See `docs/PDF_UPLOAD_SETUP.md` for detailed GCP setup instructions.
-
-## 📚 Documentation
-
-- **[Technical Progress](docs/TECHNICAL_PROGRESS.md)**: Detailed implementation status
-- **[PDF Upload Setup](docs/PDF_UPLOAD_SETUP.md)**: Google Cloud Storage configuration
-- **API Docs**: Available at http://localhost:3000/api when running
-
-## 🧪 Development
-
-### Backend Development
-
-```bash
-cd packages/api
-
-# Start in watch mode
-npm run dev
-
-# Run Prisma Studio (database GUI)
-npx prisma studio
-
-# Generate Prisma Client
-npx prisma generate
-
-# Push schema changes
-npx prisma db push
-```
-
-### Frontend Development
-
-```bash
+# Regenerate SDK manually
 cd packages/web
-
-# Start dev server
-npm run dev
-
-# Regenerate API client (after backend changes)
 npm run codegen
 ```
 
-## 🎯 Roadmap
+This generates typed API clients (in `packages/web/src/generated`) that you can use immediately:
 
-- [x] User authentication
-- [x] Secure PDF upload to cloud storage
-- [ ] PDF text extraction
-- [ ] AI-powered flashcard generation
-- [ ] Interactive study interface
-- [ ] Spaced repetition algorithm
-- [ ] Progress tracking and analytics
-- [ ] Mobile app (React Native)
+```typescript
+import { getPdfsApi } from "@/api-client";
+
+const api = getPdfsApi();
+const myPdfs = await api.pdfsControllerListPdfs();
+```
+
+### Database
+```bash
+cd packages/api
+npx prisma studio  # View data
+npx prisma generate # Update client after schema changes
+```
+
+## ☁️ Deployment
+
+The project is configured for **Google Cloud Run**.
+
+- **CI/CD**: GitHub Actions workflows (`deploy.yml`) handle automated deployment.
+- **Build**: Uses **Cloud Build** to build Docker images from the root context.
+- **Run**: Deploys separate services for API and Web to Cloud Run.
 
 ## 📝 License
-
 MIT
-
-## 🤝 Contributing
-
-This is a personal project, but suggestions and feedback are welcome!
-
-## Uploading PDFs
-
-The API can generate a short-lived, signed URL that lets the frontend upload PDFs directly to Google Cloud Storage. Configure the backend with the following environment variables:
-
-- `GCP_PROJECT_ID`: Google Cloud project id.
-- `GCP_CLIENT_EMAIL`: Service account client email (optional if using default credentials).
-- `GCP_PRIVATE_KEY`: Service account private key (use `\n` for newlines), or
-- `GCP_PRIVATE_KEY_BASE64`: Base64-encoded private key string.
-
-By default the frontend points to `http://localhost:3000` for the API. Set `NEXT_PUBLIC_API_URL` if the API is hosted elsewhere.
