@@ -1,64 +1,64 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from './../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { AppModule } from "./../src/app.module";
+import { PrismaService } from "../src/prisma/prisma.service";
 
-describe('AuthController (e2e)', () => {
-  let app: INestApplication;
-  let prisma: PrismaService;
+describe("AuthController (e2e)", () => {
+    let app: INestApplication;
+    let prisma: PrismaService;
 
-  beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    beforeAll(async () => {
+        const moduleFixture: TestingModule = await Test.createTestingModule({
+            imports: [AppModule],
+        }).compile();
 
-    app = moduleFixture.createNestApplication();
-    await app.init();
+        app = moduleFixture.createNestApplication();
+        await app.init();
 
-    prisma = app.get(PrismaService);
-    
-    // Clean up database
-    await prisma.user.deleteMany({ where: { email: 'test@example.com' } });
-  });
+        prisma = app.get(PrismaService);
 
-  afterAll(async () => {
-    // Clean up database
-    await prisma.user.deleteMany({ where: { email: 'test@example.com' } });
-    await app.close();
-  });
+        // Clean up database
+        await prisma.user.deleteMany({ where: { email: "test@example.com" } });
+    });
 
-  it('/auth/register (POST)', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email: 'test@example.com',
-        password: 'password123',
-      })
-      .expect(201);
+    afterAll(async () => {
+        // Clean up database
+        await prisma.user.deleteMany({ where: { email: "test@example.com" } });
+        await app.close();
+    });
 
-    expect(response.body).toHaveProperty('access_token');
-  });
+    it("/auth/register (POST)", async () => {
+        const response = await request(app.getHttpServer())
+            .post("/auth/register")
+            .send({
+                email: "test@example.com",
+                password: "password123",
+            })
+            .expect(201);
 
-  it('/auth/login (POST)', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({
-        email: 'test@example.com',
-        password: 'password123',
-      })
-      .expect(200);
+        expect(response.body).toHaveProperty("access_token");
+    });
 
-    expect(response.body).toHaveProperty('access_token');
-  });
+    it("/auth/login (POST)", async () => {
+        const response = await request(app.getHttpServer())
+            .post("/auth/login")
+            .send({
+                email: "test@example.com",
+                password: "password123",
+            })
+            .expect(200);
 
-  it('/auth/login (POST) - invalid credentials', () => {
-    return request(app.getHttpServer())
-      .post('/auth/login')
-      .send({
-        email: 'test@example.com',
-        password: 'wrongpassword',
-      })
-      .expect(401);
-  });
+        expect(response.body).toHaveProperty("access_token");
+    });
+
+    it("/auth/login (POST) - invalid credentials", () => {
+        return request(app.getHttpServer())
+            .post("/auth/login")
+            .send({
+                email: "test@example.com",
+                password: "wrongpassword",
+            })
+            .expect(401);
+    });
 });
