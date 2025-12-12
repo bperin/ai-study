@@ -25,8 +25,8 @@ RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build --workspace=packages/
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Cloud Run containers must listen on the port defined by the PORT environment variable
-ENV PORT 8080
+# Cloud Run will set PORT automatically - don't override it
+# ENV PORT 8080
 EXPOSE $PORT
 
 # Copy only necessary files from the builder stage
