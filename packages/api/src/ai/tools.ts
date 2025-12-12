@@ -2,7 +2,7 @@ import { FunctionTool } from "@google/adk";
 import { PrismaService } from "../prisma/prisma.service";
 import { z } from "zod";
 import * as pdfParse from "pdf-parse";
-import { GcsService } from "./gcs.service";
+import { GcsService } from "../pdfs/gcs.service";
 
 /**
  * Tool for saving a single objective with its questions to the database

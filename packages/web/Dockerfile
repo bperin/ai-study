@@ -29,10 +29,13 @@ WORKDIR /app
 
 # Copy built assets
 COPY --from=builder /app/packages/web/.next ./packages/web/.next
-COPY --from=builder /app/packages/web/public ./packages/web/public
 COPY --from=builder /app/packages/web/package.json ./packages/web/package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+
+# Create public directory first, then copy contents if any exist
+RUN mkdir -p ./packages/web/public
+COPY --from=builder /app/packages/web/public/ ./packages/web/public/
 
 # Expose the port
 EXPOSE 3001

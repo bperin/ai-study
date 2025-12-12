@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { ParallelGenerationService } from "./parallel-generation.service";
+import { ParallelGenerationService } from "../ai/parallel-generation.service";
 
 @Injectable()
 export class PdfsService {
@@ -236,7 +236,7 @@ export class PdfsService {
         const conversationHistory = history || [];
 
         // Import prompt from prompts.ts
-        const { TEST_PLAN_CHAT_PROMPT } = require("./prompts");
+        const { TEST_PLAN_CHAT_PROMPT } = require("../ai/prompts");
         const systemPrompt = TEST_PLAN_CHAT_PROMPT(pdf.filename);
 
         const chat = model.startChat({

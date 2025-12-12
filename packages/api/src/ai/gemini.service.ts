@@ -2,8 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { LlmAgent, InMemoryRunner, getFunctionCalls } from "@google/adk";
 import { PrismaService } from "../prisma/prisma.service";
-import { GcsService } from "./gcs.service";
-import { PdfTextService } from "./pdf-text.service";
+import { GcsService } from "../pdfs/gcs.service";
+import { PdfTextService } from "../pdfs/pdf-text.service";
 import { ROOT_AGENT_INSTRUCTION } from "./prompts";
 import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from "./tools";
 
