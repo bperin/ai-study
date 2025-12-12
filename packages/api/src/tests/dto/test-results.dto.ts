@@ -167,24 +167,26 @@ export class TestHistoryItemDto {
             percentage = attempt.total > 0 ? (attempt.score / attempt.total) * 100 : 0;
         }
 
-        const answers = attempt.answers ? attempt.answers.map((a: any) => ({
-            questionId: a.mcqId,
-            questionText: a.mcq?.question || 'Unknown Question',
-            selectedAnswer: a.mcq?.options[a.selectedIdx] || 'Unknown Answer',
-            correctAnswer: a.mcq?.options[a.mcq.correctIdx] || 'Unknown Correct Answer',
-            isCorrect: a.isCorrect
-        })) : undefined;
+        const answers = attempt.answers
+            ? attempt.answers.map((a: any) => ({
+                  questionId: a.mcqId,
+                  questionText: a.mcq?.question || "Unknown Question",
+                  selectedAnswer: a.mcq?.options[a.selectedIdx] || "Unknown Answer",
+                  correctAnswer: a.mcq?.options[a.mcq.correctIdx] || "Unknown Correct Answer",
+                  isCorrect: a.isCorrect,
+              }))
+            : undefined;
 
         return {
             id: attempt.id,
             pdfId: attempt.pdfId,
-            pdfTitle: attempt.pdf?.filename || 'Unknown PDF',
+            pdfTitle: attempt.pdf?.filename || "Unknown PDF",
             score: attempt.score,
             total: attempt.total,
             percentage: percentage,
             completedAt: attempt.completedAt,
             report: (attempt.feedback as any)?.report || undefined,
-            answers
+            answers,
         };
     }
 }
@@ -198,8 +200,8 @@ export class TestHistoryResponseDto {
 
     static fromEntities(attempts: any[]): TestHistoryResponseDto {
         return {
-            attempts: attempts.map(attempt => TestHistoryItemDto.fromEntity(attempt)),
-            totalAttempts: attempts.length
+            attempts: attempts.map((attempt) => TestHistoryItemDto.fromEntity(attempt)),
+            totalAttempts: attempts.length,
         };
     }
 }

@@ -12,7 +12,7 @@ export class TestsController {
     constructor(
         private testsService: TestsService,
         private leaderboardService: LeaderboardService
-    ) { }
+    ) {}
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)

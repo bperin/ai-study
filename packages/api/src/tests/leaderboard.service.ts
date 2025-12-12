@@ -11,7 +11,7 @@ export interface LeaderboardEntry {
 
 @Injectable()
 export class LeaderboardService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     /**
      * Get global leaderboard rankings

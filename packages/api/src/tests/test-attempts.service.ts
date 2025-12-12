@@ -29,9 +29,7 @@ export class TestAttemptsService {
         };
     }
 
-    async submitTest(
-        body: SubmitTestResultsDto
-    ): Promise<TestAnalysisResponseDto & { attemptId: string }> {
+    async submitTest(body: SubmitTestResultsDto): Promise<TestAnalysisResponseDto & { attemptId: string }> {
         const attempt = await this.prisma.testAttempt.findUnique({
             where: { id: body.attemptId },
             include: { pdf: true },
@@ -45,11 +43,7 @@ export class TestAttemptsService {
         try {
             // Analyze results with AI (now with web search and all answers)
             console.log(`Analyzing test results for PDF: ${attempt.pdfId}`);
-            analysis = await this.parallelGenerationService.analyzeTestResults(
-                attempt.pdfId,
-                body.missedQuestions,
-                body.allAnswers
-            );
+            analysis = await this.parallelGenerationService.analyzeTestResults(attempt.pdfId, body.missedQuestions, body.allAnswers);
 
             // The analysis already contains the markdown report
         } catch (error) {
@@ -60,23 +54,14 @@ export class TestAttemptsService {
                 report: `# Test Performance Analysis Report
 
 ## Executive Summary
-You scored ${body.score} out of ${body.totalQuestions} (${percentage}%). ${
-                    percentage >= 80
-                        ? "Great job! You have a strong understanding of the material."
-                        : percentage >= 60
-                        ? "Good effort! Review the areas you missed to improve further."
-                        : "Keep studying! Focus on understanding the core concepts."
-                }
+You scored ${body.score} out of ${body.totalQuestions} (${percentage}%). ${percentage >= 80 ? "Great job! You have a strong understanding of the material." : percentage >= 60 ? "Good effort! Review the areas you missed to improve further." : "Keep studying! Focus on understanding the core concepts."}
 
 ## Areas for Improvement
 ${
     body.missedQuestions.length > 0
         ? body.missedQuestions
               .slice(0, 3)
-              .map(
-                  (q) =>
-                      `- **${q.questionText}**\n  - Your answer: ${q.selectedAnswer}\n  - Correct answer: ${q.correctAnswer}\n  - Review this concept in the study material`
-              )
+              .map((q) => `- **${q.questionText}**\n  - Your answer: ${q.selectedAnswer}\n  - Correct answer: ${q.correctAnswer}\n  - Review this concept in the study material`)
               .join("\n\n")
         : "- No specific areas identified - great job!"
 }

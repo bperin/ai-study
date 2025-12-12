@@ -90,7 +90,7 @@ export default function CustomizePage() {
 
             const data = await response.json();
 
-            setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
+            setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
 
             if (data.testPlan) {
                 setTestPlan(data.testPlan);
@@ -103,7 +103,7 @@ export default function CustomizePage() {
             }
         } catch (error) {
             console.error("Chat error:", error);
-            setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
+            setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
         } finally {
             setChatting(false);
         }
@@ -118,7 +118,7 @@ export default function CustomizePage() {
             const token = localStorage.getItem("access_token");
 
             // Build prompt from test plan
-            const prompt = `Generate ${testPlan.totalQuestions} questions with the following objectives:\n${testPlan.objectives.map(obj => `- ${obj.title} (${obj.difficulty}, ${obj.questionCount} questions)`).join("\n")}`;
+            const prompt = `Generate ${testPlan.totalQuestions} questions with the following objectives:\n${testPlan.objectives.map((obj) => `- ${obj.title} (${obj.difficulty}, ${obj.questionCount} questions)`).join("\n")}`;
 
             const response = await fetch(`http://localhost:3000/pdfs/${pdfId}/generate`, {
                 method: "POST",
@@ -185,10 +185,7 @@ export default function CustomizePage() {
                                     )}
                                     {messages.map((msg, i) => (
                                         <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                                            <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === "user"
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-background border"
-                                                }`}>
+                                            <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-background border"}`}>
                                                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                                             </div>
                                         </div>
@@ -205,13 +202,7 @@ export default function CustomizePage() {
 
                                 {/* Input */}
                                 <div className="flex gap-2">
-                                    <Input
-                                        value={message}
-                                        onChange={(e) => setMessage(e.target.value)}
-                                        onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                                        placeholder="e.g., Create 20 hard questions on photosynthesis..."
-                                        disabled={chatting || generating}
-                                    />
+                                    <Input value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === "Enter" && handleSendMessage()} placeholder="e.g., Create 20 hard questions on photosynthesis..." disabled={chatting || generating} />
                                     <Button onClick={handleSendMessage} disabled={!message.trim() || chatting || generating}>
                                         <Send className="w-4 h-4" />
                                     </Button>
@@ -223,7 +214,6 @@ export default function CustomizePage() {
                     {/* Right: Test Plan */}
                     <div className="space-y-4">
                         <div className="h-12" /> {/* Spacer */}
-
                         {testPlan && !generating ? (
                             <Card className="border-2 border-primary shadow-xl">
                                 <CardHeader>
@@ -255,7 +245,9 @@ export default function CustomizePage() {
                                                     <div className="flex-1">
                                                         <h5 className="font-semibold">{obj.title}</h5>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            <Badge variant="outline" className="capitalize">{obj.difficulty}</Badge>
+                                                            <Badge variant="outline" className="capitalize">
+                                                                {obj.difficulty}
+                                                            </Badge>
                                                             <Badge variant="outline">{obj.questionCount} questions</Badge>
                                                         </div>
                                                     </div>
@@ -263,7 +255,9 @@ export default function CustomizePage() {
                                                 {obj.topics && obj.topics.length > 0 && (
                                                     <div className="mt-2 flex flex-wrap gap-1">
                                                         {obj.topics.map((topic, i) => (
-                                                            <span key={i} className="text-xs px-2 py-1 bg-background/50 rounded">{topic}</span>
+                                                            <span key={i} className="text-xs px-2 py-1 bg-background/50 rounded">
+                                                                {topic}
+                                                            </span>
                                                         ))}
                                                     </div>
                                                 )}
@@ -272,11 +266,7 @@ export default function CustomizePage() {
                                     </div>
 
                                     {!shouldGenerate && (
-                                        <Button
-                                            onClick={handleGenerate}
-                                            className="w-full h-12 text-lg font-semibold"
-                                            size="lg"
-                                        >
+                                        <Button onClick={handleGenerate} className="w-full h-12 text-lg font-semibold" size="lg">
                                             <Sparkles className="w-5 h-5 mr-2" />
                                             Generate Flashcards
                                         </Button>
