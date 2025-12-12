@@ -24,6 +24,13 @@ PROJECT_DIR=$(pwd)
 echo "  Starting AI Study Backend (Port 3000)..."
 osascript -e "tell app \"Terminal\" to do script \"cd ${PROJECT_DIR}/packages/api && npm run dev\""
 
+echo "⏳ Waiting for Backend to generate OpenAPI spec..."
+sleep 10
+
+# Generate Client Code
+echo "  Generating Frontend Client Code..."
+cd ${PROJECT_DIR}/packages/web && npm run codegen
+
 # Start Frontend
 echo "  Starting AI Study Frontend (Port 3001)..."
 osascript -e "tell app \"Terminal\" to do script \"cd ${PROJECT_DIR}/packages/web && PORT=3001 npm run dev\""
