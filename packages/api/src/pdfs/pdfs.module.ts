@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common";
 import { PdfsController } from "./pdfs.controller";
 import { PdfsService } from "./pdfs.service";
-import { GeminiService } from "./gemini.service";
-import { ParallelGenerationService } from "./parallel-generation.service";
+import { GeminiService } from "../ai/gemini.service";
+import { ParallelGenerationService } from "../ai/parallel-generation.service";
 import { PdfTextService } from "./pdf-text.service";
 import { GcsService } from "./gcs.service";
 import { PrismaModule } from "../prisma/prisma.module";
