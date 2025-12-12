@@ -63,4 +63,11 @@ export class PdfsController {
     deletePdf(@Param("id") pdfId: string) {
         return this.pdfsService.deletePdf(pdfId);
     }
+
+    @Post("chat")
+    @ApiOperation({ summary: "Chat with AI to plan test generation" })
+    @ApiResponse({ status: 200, description: "AI response with test plan" })
+    async chatPlan(@Body() body: { message: string; pdfId: string; history?: any[] }, @Request() req: any) {
+        return this.pdfsService.chatPlan(body.message, body.pdfId, req.user.userId, body.history);
+    }
 }

@@ -10,9 +10,9 @@ import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } fr
 
 // Model constants
 // @ts-ignore
-const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-pro";
+const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-flash";
 // @ts-ignore
-const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-pro";
+const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-flash";
 
 interface QuestionGenerationTask {
     difficulty: "easy" | "medium" | "hard";

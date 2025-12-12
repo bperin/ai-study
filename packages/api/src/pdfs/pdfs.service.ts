@@ -222,4 +222,51 @@ export class PdfsService {
             filename: pdf.filename,
         };
     }
+
+    async chatPlan(message: string, pdfId: string, userId: string, history?: any[]) {
+        const { GoogleGenerativeAI } = require("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        // Get PDF info
+        const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+        if (!pdf) throw new NotFoundException("PDF not found");
+
+        // Build conversation history
+        const conversationHistory = history || [];
+
+        // Import prompt from prompts.ts
+        const { TEST_PLAN_CHAT_PROMPT } = require("./prompts");
+        const systemPrompt = TEST_PLAN_CHAT_PROMPT(pdf.filename);
+
+        const chat = model.startChat({
+            history: [
+                { role: "user", parts: [{ text: systemPrompt }] },
+                { role: "model", parts: [{ text: "I understand! I'll help create a test plan. What would you like to study?" }] },
+                ...conversationHistory.map(msg => ({
+                    role: msg.role === "user" ? "user" : "model",
+                    parts: [{ text: msg.content }]
+                }))
+            ],
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = result.response.text();
+
+        // Try to parse JSON from response
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+        } catch (e) {
+            // If not JSON, return as plain message
+        }
+
+        return {
+            message: response,
+            testPlan: null,
+            shouldGenerate: false,
+        };
+    }
 }
