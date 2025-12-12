@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { LlmAgent, InMemoryRunner, getFunctionCalls } from "@google/adk";
 import { PrismaService } from "../prisma/prisma.service";
+import { GcsService } from "./gcs.service";
+import { PdfTextService } from "./pdf-text.service";
 import { ROOT_AGENT_INSTRUCTION } from "./prompts";
 import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from "./tools";
 
@@ -12,7 +14,9 @@ const GEMINI_ORCHESTRATOR_MODEL = "gemini-2.5-pro";
 export class GeminiService {
     constructor(
         private readonly configService: ConfigService,
-        private readonly prisma: PrismaService
+        private readonly prisma: PrismaService,
+        private readonly gcsService: GcsService,
+        private readonly pdfTextService: PdfTextService
     ) {
         const apiKey = this.configService.get<string>("GOOGLE_API_KEY");
         if (!apiKey) {
@@ -27,8 +31,8 @@ export class GeminiService {
      * Generate flashcards using an agentic approach with tools
      */
     async generateFlashcards(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
-        // Create tools for this specific PDF
-        const tools = [createSaveObjectiveTool(this.prisma, pdfId), createGetPdfInfoTool(pdfFilename, gcsPath), createCompletionTool()];
+        // Create tools for this specific PDF - now with PdfTextService
+        const tools = [createSaveObjectiveTool(this.prisma, pdfId), createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createCompletionTool()];
 
         // Create the root orchestrator agent
         const orchestratorAgent = new LlmAgent({

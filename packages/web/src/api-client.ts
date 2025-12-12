@@ -14,17 +14,19 @@ const getConfig = () => {
     });
 };
 
-export const authApi = new AuthApi(getConfig());
+export const authApi = new AuthApi(new Configuration({ basePath: "http://localhost:3000" }));
 export const usersApi = new UsersApi(getConfig());
 export const defaultApi = new DefaultApi(getConfig());
 export const uploadsApi = new UploadsApi(getConfig());
 export const pdfsApi = new PdfsApi(getConfig());
 
+export const getPdfsApi = () => new PdfsApi(getConfig());
+
 // Helper to refresh API instances when token changes (e.g. after login)
 export const refreshApiConfig = () => {
     const config = getConfig();
     return {
-        authApi: new AuthApi(config),
+        authApi: new AuthApi(new Configuration({ basePath: "http://localhost:3000" })),
         usersApi: new UsersApi(config),
         defaultApi: new DefaultApi(config),
         uploadsApi: new UploadsApi(config),

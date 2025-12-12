@@ -17,12 +17,21 @@ import * as runtime from '../runtime';
 import type {
   ObjectiveResponseDto,
   PdfResponseDto,
+  StartAttemptResponseDto,
+  SubmitTestResultsDto,
+  TestAnalysisResponseDto,
 } from '../models/index';
 import {
     ObjectiveResponseDtoFromJSON,
     ObjectiveResponseDtoToJSON,
     PdfResponseDtoFromJSON,
     PdfResponseDtoToJSON,
+    StartAttemptResponseDtoFromJSON,
+    StartAttemptResponseDtoToJSON,
+    SubmitTestResultsDtoFromJSON,
+    SubmitTestResultsDtoToJSON,
+    TestAnalysisResponseDtoFromJSON,
+    TestAnalysisResponseDtoToJSON,
 } from '../models/index';
 
 export interface PdfsControllerGenerateFlashcardsRequest {
@@ -32,6 +41,14 @@ export interface PdfsControllerGenerateFlashcardsRequest {
 
 export interface PdfsControllerGetObjectivesRequest {
     id: string;
+}
+
+export interface PdfsControllerStartAttemptRequest {
+    id: string;
+}
+
+export interface PdfsControllerSubmitAttemptRequest {
+    submitTestResultsDto: SubmitTestResultsDto;
 }
 
 /**
@@ -172,6 +189,98 @@ export class PdfsApi extends runtime.BaseAPI {
      */
     async pdfsControllerListPdfs(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PdfResponseDto>> {
         const response = await this.pdfsControllerListPdfsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Start a new test attempt
+     */
+    async pdfsControllerStartAttemptRaw(requestParameters: PdfsControllerStartAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StartAttemptResponseDto>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling pdfsControllerStartAttempt().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/pdfs/{id}/start-attempt`;
+        urlPath = urlPath.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => StartAttemptResponseDtoFromJSON(jsonValue));
+    }
+
+    /**
+     * Start a new test attempt
+     */
+    async pdfsControllerStartAttempt(requestParameters: PdfsControllerStartAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StartAttemptResponseDto> {
+        const response = await this.pdfsControllerStartAttemptRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Submit test attempt and get analysis
+     */
+    async pdfsControllerSubmitAttemptRaw(requestParameters: PdfsControllerSubmitAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestAnalysisResponseDto>> {
+        if (requestParameters['submitTestResultsDto'] == null) {
+            throw new runtime.RequiredError(
+                'submitTestResultsDto',
+                'Required parameter "submitTestResultsDto" was null or undefined when calling pdfsControllerSubmitAttempt().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/pdfs/submit-attempt`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SubmitTestResultsDtoToJSON(requestParameters['submitTestResultsDto']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TestAnalysisResponseDtoFromJSON(jsonValue));
+    }
+
+    /**
+     * Submit test attempt and get analysis
+     */
+    async pdfsControllerSubmitAttempt(requestParameters: PdfsControllerSubmitAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestAnalysisResponseDto> {
+        const response = await this.pdfsControllerSubmitAttemptRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

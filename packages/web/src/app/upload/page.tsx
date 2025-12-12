@@ -21,8 +21,8 @@ export default function UploadPage() {
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const pdfFile = acceptedFiles[0];
         if (pdfFile) {
-            if (pdfFile.size > 10 * 1024 * 1024) {
-                setError("File size must be less than 10MB");
+            if (pdfFile.size > 50 * 1024 * 1024) {
+                setError("File size must be less than 50MB");
                 return;
             }
             setFile(pdfFile);
@@ -36,7 +36,7 @@ export default function UploadPage() {
             "application/pdf": [".pdf"],
         },
         multiple: false,
-        maxSize: 10 * 1024 * 1024,
+        maxSize: 50 * 1024 * 1024,
     });
 
     const handleUpload = async () => {
@@ -151,9 +151,9 @@ export default function UploadPage() {
                 {/* Upload Card */}
                 <Card className="border-2 shadow-xl">
                     <CardHeader>
-                        <CardTitle>Select PDF File</CardTitle>
-                        <CardDescription>Upload a PDF file (max 10MB) to get started</CardDescription>
-                    </CardHeader>
+        <CardTitle>Select PDF File</CardTitle>
+        <CardDescription>Upload a PDF file (max 50MB) to get started</CardDescription>
+    </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Dropzone */}
                         <div
@@ -186,7 +186,7 @@ export default function UploadPage() {
                                             <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">{isDragActive ? "Drop your PDF here" : "Drag & drop your PDF here"}</p>
                                             <p className="text-sm text-slate-500">or click to browse files</p>
                                         </div>
-                                        <Badge variant="secondary">PDF only • Max 10MB</Badge>
+                                        <Badge variant="secondary">PDF only • Max 50MB</Badge>
                                     </>
                                 )}
                             </div>
