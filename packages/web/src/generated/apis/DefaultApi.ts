@@ -15,6 +15,15 @@
 
 import * as runtime from '../runtime';
 
+export interface PdfsControllerGenerateFlashcardsRequest {
+    id: string;
+    body: object;
+}
+
+export interface UploadsControllerConfirmUploadRequest {
+    body: object;
+}
+
 export interface UploadsControllerCreateSignedUploadUrlRequest {
     body: object;
 }
@@ -48,6 +57,86 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async appControllerGetHello(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.appControllerGetHelloRaw(initOverrides);
+    }
+
+    /**
+     */
+    async pdfsControllerGenerateFlashcardsRaw(requestParameters: PdfsControllerGenerateFlashcardsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling pdfsControllerGenerateFlashcards().'
+            );
+        }
+
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling pdfsControllerGenerateFlashcards().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/pdfs/{id}/generate`;
+        urlPath = urlPath.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['body'] as any,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async pdfsControllerGenerateFlashcards(requestParameters: PdfsControllerGenerateFlashcardsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.pdfsControllerGenerateFlashcardsRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     */
+    async uploadsControllerConfirmUploadRaw(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling uploadsControllerConfirmUpload().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/uploads/confirm`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['body'] as any,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async uploadsControllerConfirmUpload(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.uploadsControllerConfirmUploadRaw(requestParameters, initOverrides);
     }
 
     /**
