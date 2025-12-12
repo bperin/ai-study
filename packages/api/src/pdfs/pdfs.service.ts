@@ -172,4 +172,54 @@ export class PdfsService {
 
         return newPdf;
     }
+
+    async deletePdf(pdfId: string) {
+        const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+        if (!pdf) throw new NotFoundException("PDF not found");
+
+        // Delete in correct order due to foreign key constraints
+        // 1. Delete user answers (linked to test attempts)
+        await this.prisma.userAnswer.deleteMany({
+            where: {
+                attempt: {
+                    pdfId,
+                },
+            },
+        });
+
+        // 2. Delete test attempts
+        await this.prisma.testAttempt.deleteMany({
+            where: { pdfId },
+        });
+
+        // 3. Delete MCQs (linked to objectives)
+        await this.prisma.mcq.deleteMany({
+            where: {
+                objective: {
+                    pdfId,
+                },
+            },
+        });
+
+        // 4. Delete objectives
+        await this.prisma.objective.deleteMany({
+            where: { pdfId },
+        });
+
+        // 5. Delete PDF sessions
+        await this.prisma.pdfSession.deleteMany({
+            where: { pdfId },
+        });
+
+        // 6. Finally delete the PDF itself
+        await this.prisma.pdf.delete({
+            where: { id: pdfId },
+        });
+
+        return {
+            message: "PDF and all associated data deleted successfully",
+            pdfId,
+            filename: pdf.filename,
+        };
+    }
 }
