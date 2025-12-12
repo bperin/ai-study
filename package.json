@@ -8,7 +8,9 @@
   "scripts": {
     "test": "jest",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "start:studio": "prisma studio --schema packages/api/prisma/schema.prisma",
+    "start:dev": "npm run dev --workspaces"
   },
   "devDependencies": {
     "eslint": "^8.0.0",
