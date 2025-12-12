@@ -54,3 +54,5 @@ packages/api/openapi.json
 google-services.jsongoogle-services.json
 resources
 *.js
+packages/api/test-pdf-cards.js
+packages/api/test-pdf-generation.js
