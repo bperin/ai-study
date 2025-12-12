@@ -53,3 +53,4 @@ packages/api/openapi.json
 
 google-services.jsongoogle-services.json
 resources
+*.js
