@@ -10,7 +10,7 @@ export class GcsService {
     constructor(private readonly configService: ConfigService) {
         const projectId = this.configService.get<string>("GCP_PROJECT_ID");
         const clientEmail = this.configService.get<string>("GCP_CLIENT_EMAIL");
-        const privateKey = this.configService.get<string>("GCP_PRIVATE_KEY")?.replace(/\\n/g, "\n");
+        const privateKey = this.resolvePrivateKey();
 
         this.storage = new Storage({
             projectId,
@@ -24,6 +24,20 @@ export class GcsService {
         });
 
         this.bucketName = this.configService.get<string>("GCP_BUCKET_NAME") ?? "missing-bucket";
+    }
+
+    private resolvePrivateKey(): string | undefined {
+        const rawKey = this.configService.get<string>("GCP_PRIVATE_KEY");
+        if (rawKey) {
+            return rawKey.replace(/\\n/g, "\n");
+        }
+
+        const base64Key = this.configService.get<string>("GCP_PRIVATE_KEY_BASE64");
+        if (base64Key) {
+            return Buffer.from(base64Key, "base64").toString("utf8");
+        }
+
+        return undefined;
     }
 
     /**

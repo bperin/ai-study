@@ -1,0 +1,16 @@
+.git
+.gitignore
+.DS_Store
+node_modules
+npm-debug.log
+
+packages/api/node_modules
+packages/api/dist
+packages/api/.env
+packages/api/.vercel
+
+packages/web/node_modules
+packages/web/.next
+packages/web/dist
+packages/web/.turbo
+packages/web/.vercel
