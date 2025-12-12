@@ -33,8 +33,8 @@ COPY --from=builder /app/packages/api/package*.json ./packages/api/
 COPY --from=builder /app/packages/api/prisma ./packages/api/prisma
 COPY --from=builder /app/packages/api/node_modules ./packages/api/node_modules
 
-# Set default PORT for Cloud Run
-ENV PORT=8080
+# Remove default PORT - let Cloud Run set it
+# ENV PORT=8080
 
 # Expose the API port
 EXPOSE 8080

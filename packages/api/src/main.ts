@@ -30,7 +30,10 @@ async function bootstrap() {
     SwaggerModule.setup("api", app, document);
 
     const port = process.env.PORT || 3000;
+    console.log(`Starting server on port ${port} (from env: ${process.env.PORT})`);
+    console.log(`Environment: NODE_ENV=${process.env.NODE_ENV}`);
+    
     await app.listen(port, '0.0.0.0');
-    console.log(`Application is running on port ${port}`);
+    console.log(`✅ Application successfully started and listening on 0.0.0.0:${port}`);
 }
 bootstrap();
