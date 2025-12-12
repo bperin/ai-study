@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { refreshApiConfig } from '@/api-client';
 
 export default function UploadPage() {
     const router = useRouter();
@@ -54,23 +55,13 @@ export default function UploadPage() {
 
             // Step 1: Get signed URL from backend
             setProgress(10);
-            const signResponse = await fetch('http://localhost:3000/uploads/sign', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    fileName: file.name,
+            const { defaultApi } = refreshApiConfig();
+            const { uploadUrl, filePath } = await defaultApi.uploadsControllerCreateSignedUploadUrl({
+                body: {
+                    filename: file.name,
                     contentType: 'application/pdf',
-                }),
-            });
-
-            if (!signResponse.ok) {
-                throw new Error('Failed to get upload URL');
-            }
-
-            const { uploadUrl, filePath } = await signResponse.json();
+                }
+            }) as any; // Cast as any because the generated type might be void if not correctly defined in swagger
             setProgress(30);
 
             // Step 2: Upload file directly to GCS
@@ -89,23 +80,12 @@ export default function UploadPage() {
             setProgress(70);
 
             // Step 3: Confirm upload with backend
-            const confirmResponse = await fetch('http://localhost:3000/uploads/confirm', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
+            const { id } = await defaultApi.uploadsControllerConfirmUpload({
+                body: {
                     filePath,
-                    fileName: file.name,
-                }),
-            });
-
-            if (!confirmResponse.ok) {
-                throw new Error('Failed to confirm upload');
-            }
-
-            const { id } = await confirmResponse.json();
+                    filename: file.name,
+                }
+            }) as any;
             setProgress(100);
             setUploadedPdfId(id);
 
