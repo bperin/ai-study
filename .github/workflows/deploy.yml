@@ -36,24 +36,36 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
+      - name: Build API Image
+        run: |
+          gcloud builds submit . \
+            --config packages/api/cloudbuild.yaml \
+            --substitutions=_DATABASE_URL="${{ env.DATABASE_URL }}" \
+            --project ${{ env.GCP_PROJECT_ID }}
+
       - name: Deploy API service
         run: |
           gcloud run deploy ${{ env.API_SERVICE_NAME }} \
-            --source packages/api \
+            --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
             --project ${{ env.GCP_PROJECT_ID }} \
             --region ${{ env.GCP_REGION }} \
             --set-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
-            --set-build-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
             --allow-unauthenticated \
             --quiet
+
+      - name: Build Web Image
+        run: |
+          gcloud builds submit . \
+            --config packages/web/cloudbuild.yaml \
+            --substitutions=_NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
+            --project ${{ env.GCP_PROJECT_ID }}
 
       - name: Deploy Web service
         run: |
           gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
-            --source packages/web \
+            --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest \
             --project ${{ env.GCP_PROJECT_ID }} \
             --region ${{ env.GCP_REGION }} \
-            --allow-unauthenticated \
-            --set-build-env-vars NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
             --set-env-vars NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
+            --allow-unauthenticated \
             --quiet
