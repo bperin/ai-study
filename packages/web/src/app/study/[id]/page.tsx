@@ -121,19 +121,19 @@ export default function StudyPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-                <p className="text-slate-300 animate-pulse">Loading flashcards...</p>
+            <div className="flex items-center justify-center min-h-screen bg-background">
+                <p className="text-muted-foreground animate-pulse">Loading flashcards...</p>
             </div>
         );
     }
 
     if (allQuestions.length === 0) {
         return (
-            <div className="container mx-auto p-6 max-w-2xl min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-                <Card className="bg-slate-900/50 border-slate-800">
+            <div className="container mx-auto p-6 max-w-2xl min-h-screen bg-background">
+                <Card>
                     <CardContent className="pt-6">
-                        <p className="text-center text-slate-300">No flashcards found for this study session.</p>
-                        <Button className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" onClick={() => router.push("/dashboard")}>
+                        <p className="text-center text-muted-foreground">No flashcards found for this study session.</p>
+                        <Button className="w-full mt-4" onClick={() => router.push("/dashboard")}>
                             Back to Dashboard
                         </Button>
                     </CardContent>
@@ -144,14 +144,14 @@ export default function StudyPage() {
 
     if (!hasStarted) {
         return (
-            <div className="container mx-auto p-6 max-w-2xl min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-                <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
+            <div className="container mx-auto p-6 max-w-2xl min-h-screen bg-background">
+                <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl text-center text-slate-100">Ready to Start?</CardTitle>
+                        <CardTitle className="text-2xl text-center">Ready to Start?</CardTitle>
                     </CardHeader>
                     <CardContent className="text-center space-y-4">
-                        <p className="text-slate-300">This test contains {allQuestions.length} questions covering {objectives.length} objectives.</p>
-                        <div className="text-sm text-slate-400 text-left bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                        <p className="text-muted-foreground">This test contains {allQuestions.length} questions covering {objectives.length} objectives.</p>
+                        <div className="text-sm text-muted-foreground text-left bg-secondary p-4 rounded-lg">
                             <ul className="list-disc pl-5 space-y-1">
                                 {objectives.map((obj) => (
                                     <li key={obj.id}>{obj.title}</li>
@@ -160,7 +160,7 @@ export default function StudyPage() {
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" size="lg" onClick={handleStartTest}>Start Test</Button>
+                        <Button className="w-full" size="lg" onClick={handleStartTest}>Start Test</Button>
                     </CardFooter>
                 </Card>
             </div>
@@ -170,22 +170,22 @@ export default function StudyPage() {
     if (isFinished) {
         const percentage = Math.round((score / allQuestions.length) * 100);
         return (
-            <div className="container mx-auto p-6 max-w-4xl min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-                <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
+            <div className="container mx-auto p-6 max-w-4xl min-h-screen bg-background">
+                <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl text-center text-slate-100">Session Complete!</CardTitle>
+                        <CardTitle className="text-2xl text-center">Session Complete!</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-8">
                         <div className="text-center">
-                            <div className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent mb-2">{percentage}%</div>
-                            <p className="text-slate-400">
+                            <div className="text-6xl font-bold mb-2">{percentage}%</div>
+                            <p className="text-muted-foreground">
                                 You got {score} out of {allQuestions.length} questions correct.
                             </p>
                         </div>
 
                         {analyzing ? (
-                            <div className="text-center p-8 bg-slate-800/30 rounded-lg border border-slate-700">
-                                <p className="animate-pulse text-slate-300">Analyzing your performance with AI...</p>
+                            <div className="text-center p-8 bg-secondary rounded-lg">
+                                <p className="animate-pulse text-muted-foreground">Analyzing your performance with AI...</p>
                             </div>
                         ) : analysis ? (
                             <div className="space-y-6">
@@ -195,34 +195,34 @@ export default function StudyPage() {
                                 </div>
 
                                 <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-100 dark:border-red-800">
-                                        <h3 className="font-semibold mb-3 text-red-900 dark:text-red-100">Areas for Improvement</h3>
+                                    <div className="bg-red-50 dark:bg-red-950/20 p-6 rounded-lg border border-red-100 dark:border-red-900">
+                                        <h3 className="font-semibold mb-3 text-red-900 dark:text-red-200">Areas for Improvement</h3>
                                         <ul className="list-disc pl-5 space-y-2">
                                             {analysis.weakAreas.map((area, i) => (
-                                                <li key={i} className="text-red-800 dark:text-red-200 text-sm">{area}</li>
+                                                <li key={i} className="text-red-800 dark:text-red-300 text-sm">{area}</li>
                                             ))}
                                         </ul>
                                     </div>
 
-                                    <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg border border-green-100 dark:border-green-800">
-                                        <h3 className="font-semibold mb-3 text-green-900 dark:text-green-100">Study Strategies</h3>
+                                    <div className="bg-green-50 dark:bg-green-950/20 p-6 rounded-lg border border-green-100 dark:border-green-900">
+                                        <h3 className="font-semibold mb-3 text-green-900 dark:text-green-200">Study Strategies</h3>
                                         <ul className="list-disc pl-5 space-y-2">
                                             {analysis.studyStrategies.map((strat, i) => (
-                                                <li key={i} className="text-green-800 dark:text-green-200 text-sm">{strat}</li>
+                                                <li key={i} className="text-green-800 dark:text-green-300 text-sm">{strat}</li>
                                             ))}
                                         </ul>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-center text-red-400">Analysis unavailable</p>
+                            <p className="text-center text-destructive">Analysis unavailable</p>
                         )}
                     </CardContent>
                     <CardFooter className="flex gap-4">
-                        <Button variant="outline" className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100" onClick={() => router.push("/dashboard")}>
+                        <Button variant="outline" className="flex-1" onClick={() => router.push("/dashboard")}>
                             Dashboard
                         </Button>
-                        <Button className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" onClick={() => window.location.reload()}>
+                        <Button className="flex-1" onClick={() => window.location.reload()}>
                             Retry Test
                         </Button>
                     </CardFooter>
@@ -235,18 +235,18 @@ export default function StudyPage() {
     const progress = ((currentQuestionIndex + 1) / allQuestions.length) * 100;
 
     return (
-        <div className="container mx-auto p-6 max-w-2xl min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="container mx-auto p-6 max-w-2xl min-h-screen bg-background">
             <div className="mb-6 space-y-2">
-                <div className="flex justify-between text-sm text-slate-400">
+                <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Question {currentQuestionIndex + 1} of {allQuestions.length}</span>
                     <span>{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} className="h-2" />
             </div>
 
-            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
+            <Card>
                 <CardHeader>
-                    <CardTitle className="text-xl leading-relaxed text-slate-100">
+                    <CardTitle className="text-xl leading-relaxed">
                         {currentQuestion.question}
                     </CardTitle>
                 </CardHeader>
@@ -258,8 +258,8 @@ export default function StudyPage() {
                             const isSelected = index === selectedOption;
 
                             if (selectedOption !== null) {
-                                if (isCorrect) className += " bg-green-500 hover:bg-green-600 text-white border-green-500";
-                                else if (isSelected) className += " bg-red-500 hover:bg-red-600 text-white border-red-500";
+                                if (isCorrect) className += " bg-green-500 hover:bg-green-600 text-white border-green-500 dark:bg-green-900 dark:border-green-700";
+                                else if (isSelected) className += " bg-red-500 hover:bg-red-600 text-white border-red-500 dark:bg-red-900 dark:border-red-700";
                             }
 
                             return (
@@ -278,15 +278,15 @@ export default function StudyPage() {
                     </div>
 
                     {showExplanation && (
-                        <div className="mt-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                            <h4 className="font-semibold mb-2 text-slate-200">Explanation:</h4>
-                            <p className="text-sm text-slate-400">{currentQuestion.explanation}</p>
+                        <div className="mt-6 p-4 bg-secondary rounded-lg">
+                            <h4 className="font-semibold mb-2">Explanation:</h4>
+                            <p className="text-sm text-muted-foreground">{currentQuestion.explanation}</p>
                         </div>
                     )}
                 </CardContent>
                 <CardFooter className="justify-end pt-2">
                     {selectedOption !== null && (
-                        <Button onClick={handleNextQuestion} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                        <Button onClick={handleNextQuestion}>
                             {currentQuestionIndex < allQuestions.length - 1 ? "Next Question" : "Finish"}
                         </Button>
                     )}

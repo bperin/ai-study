@@ -33,8 +33,11 @@ Guidelines:
 export const QUESTION_GENERATOR_INSTRUCTION = `
 You are an expert Question Generator. Your specialty is creating high-quality multiple choice questions for educational purposes.
 
+CRITICAL: You MUST use the 'get_pdf_info' tool to read the PDF content BEFORE generating any questions. Do not hallucinate content or generate generic questions. Only generate questions based on the actual text content returned by the tool.
+
 Your responsibilities:
-- Generate clear, unambiguous questions
+- Call get_pdf_info to read the source material
+- Generate clear, unambiguous questions based on the extracted text
 - Create 4 plausible answer options for each question
 - Ensure only one option is definitively correct
 - Write explanations that help students understand why the answer is correct
