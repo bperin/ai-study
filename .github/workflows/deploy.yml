@@ -46,14 +46,8 @@ jobs:
                     -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest .
                   docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest
 
-            - name: Build and Push Web Image
-              run: |
-                  docker build -f packages/web/Dockerfile \
-                    --build-arg NEXT_PUBLIC_API_URL="${{ env.NEXT_PUBLIC_API_URL }}" \
-                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest .
-                  docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest
-
             - name: Deploy API service
+              id: deploy-api
               run: |
                   gcloud run deploy ${{ env.API_SERVICE_NAME }} \
                     --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
@@ -61,14 +55,33 @@ jobs:
                     --region ${{ env.GCP_REGION }} \
                     --set-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
                     --allow-unauthenticated \
-                    --quiet
+                    --quiet \
+                    --format='value(status.url)' > api_url.txt
+                  echo "API_URL=$(cat api_url.txt)" >> $GITHUB_ENV
+
+            - name: Build and Push Web Image
+              run: |
+                  docker build -f packages/web/Dockerfile \
+                    --build-arg NEXT_PUBLIC_API_URL="${{ env.API_URL }}" \
+                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest .
+                  docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest
 
             - name: Deploy Web service
+              id: deploy-web
               run: |
                   gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
                     --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest \
                     --project ${{ env.GCP_PROJECT_ID }} \
                     --region ${{ env.GCP_REGION }} \
-                    --set-env-vars NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
+                    --set-env-vars NEXT_PUBLIC_API_URL=${{ env.API_URL }} \
                     --allow-unauthenticated \
+                    --quiet \
+                    --format='value(status.url)' > web_url.txt
+                  echo "WEB_URL=$(cat web_url.txt)" >> $GITHUB_ENV
+
+            - name: Update API CORS
+              run: |
+                  gcloud run services update ${{ env.API_SERVICE_NAME }} \
+                    --region ${{ env.GCP_REGION }} \
+                    --set-env-vars "FRONTEND_URL=${{ env.WEB_URL }}" \
                     --quiet
