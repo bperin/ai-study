@@ -1,80 +1,34 @@
 'use client'
 
-import { ChangeEvent, useMemo, useState } from 'react'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null)
-  const [status, setStatus] = useState<string>('')
-  const [error, setError] = useState<string>('')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const router = useRouter()
 
-  const token = useMemo(
-    () => (typeof window !== 'undefined' ? localStorage.getItem('access_token') : null),
-    [],
-  )
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0]
-    setFile(selectedFile ?? null)
-    setError('')
-    setStatus('')
-  }
-
-  const requestSignedUrl = async () => {
-    if (!file) {
-      throw new Error('No file selected')
+  useEffect(() => {
+    const token = localStorage.getItem('access_token')
+    if (token) {
+      setIsAuthenticated(true)
     }
+  }, [])
 
-    const response = await fetch(`${API_BASE_URL}/uploads/sign`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        fileName: file.name,
-        contentType: file.type || 'application/pdf',
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error('Unable to create an upload URL')
-    }
-
-    return response.json() as Promise<{
-      uploadUrl: string
-      filePath: string
-      expiresAt: string
-    }>
-  }
-
-  const uploadFile = async () => {
-    setError('')
-    setStatus('Creating secure upload URL...')
-
-    try {
-      const { uploadUrl, filePath } = await requestSignedUrl()
-      setStatus('Uploading your PDF to Google Cloud Storage...')
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': file?.type || 'application/pdf',
-        },
-        body: file,
-      })
-
-      if (!uploadResponse.ok) {
-        throw new Error('Upload failed')
-      }
-
-      setStatus(`Upload complete! Stored at: ${filePath}`)
-    } catch (err) {
-      console.error(err)
-      setError('We could not upload your file. Please try again.')
-      setStatus('')
-    }
+  if (!isAuthenticated) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-24">
+        <h1 className="text-4xl font-bold mb-8">Welcome to Memorang</h1>
+        <div className="flex gap-4">
+          <Link href="/login" className="rounded bg-blue-600 px-6 py-3 text-white hover:bg-blue-700">
+            Login
+          </Link>
+          <Link href="/register" className="rounded border border-blue-600 px-6 py-3 text-blue-600 hover:bg-blue-50">
+            Register
+          </Link>
+        </div>
+      </main>
+    )
   }
 
   return (

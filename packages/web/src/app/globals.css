@@ -25,3 +25,9 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+@layer base {
+  input {
+    @apply dark:bg-zinc-800 dark:text-white dark:border-zinc-700;
+  }
+}
