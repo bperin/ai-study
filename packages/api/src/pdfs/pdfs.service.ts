@@ -7,7 +7,7 @@ export class PdfsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly geminiService: GeminiService
-    ) {}
+    ) { }
 
     async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
         // 1. Get PDF from database
@@ -24,7 +24,7 @@ export class PdfsService {
             userPrompt,
             pdfId,
             pdf.filename,
-            pdf.content // GCS path
+            pdf.gcsPath || pdf.content || "" // GCS path (fallback to content for old records)
         );
 
         // 3. Fetch the created objectives from database
