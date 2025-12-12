@@ -49,3 +49,4 @@ packages/api/prisma/*.db-journal
 *.njsproj
 *.sln
 *.sw?
+packages/api/openapi.json

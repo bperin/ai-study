@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
+import { authApi } from '../../api-client'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -16,21 +18,15 @@ export default function RegisterPage() {
 
     try {
       console.log('Sending registration request...');
-      const res = await fetch('http://localhost:3000/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const data = await authApi.authControllerRegister({
+        createUserDto: { email, password }
       })
 
-      console.log('Registration response:', res.status);
-      if (!res.ok) {
-        throw new Error('Registration failed')
-      }
-
-      const data = await res.json()
-      localStorage.setItem('access_token', data.access_token)
+      localStorage.setItem('access_token', data.accessToken)
+      toast.success('Registration successful')
       router.push('/')
     } catch (err) {
+      toast.error('Registration failed. Please try again.')
       setError('Registration failed. Please try again.')
     }
   }
