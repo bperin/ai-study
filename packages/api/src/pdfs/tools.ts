@@ -75,7 +75,7 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
 
                     // Limit content length if too large
                     // Use structured text which is cleaner than raw text
-                    const content = extracted.structuredText.substring(0, 100000);
+                    const content = extracted.structuredText.substring(0, 2000000);
 
                     return {
                         filename: pdfFilename,
@@ -88,7 +88,7 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
                 } else {
                     // Fallback to old method
                     const data = await pdfParse(buffer);
-                    const content = data.text.substring(0, 100000);
+                    const content = data.text.substring(0, 2000000);
 
                     return {
                         filename: pdfFilename,
@@ -103,6 +103,38 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
                 return {
                     filename: pdfFilename,
                     error: "Failed to extract PDF content. Please use the filename to infer the topic.",
+                };
+            }
+        },
+    });
+}
+
+/**
+ * Tool for fetching content from a URL (Web Search / Link)
+ */
+export function createWebSearchTool() {
+    return new FunctionTool({
+        name: "fetch_url_content",
+        description: "Fetches the text content from a given URL to use as context for generating questions.",
+        parameters: z.object({
+            url: z.string().describe("The URL to fetch content from"),
+        }),
+        execute: async ({ url }) => {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Failed to fetch URL: ${response.statusText}`);
+                const html = await response.text();
+                // Simple regex to strip HTML tags (basic implementation)
+                const text = html.replace(/<[^>]*>?/gm, " ").substring(0, 100000);
+                return {
+                    url,
+                    content: text,
+                    message: "Content fetched successfully.",
+                };
+            } catch (error) {
+                return {
+                    url,
+                    error: `Failed to fetch URL: ${error}`,
                 };
             }
         },

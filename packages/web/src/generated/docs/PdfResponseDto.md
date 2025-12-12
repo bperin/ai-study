@@ -21,7 +21,7 @@ const example = {
   "id": null,
   "filename": null,
   "createdAt": null,
-  "objectives": [{"title":"Objective Title","difficulty":"easy"}],
+  "objectives": [{"title":"Objective Title","difficulty":"easy","_count":{"mcqs":5}}],
 } satisfies PdfResponseDto
 
 console.log(example)

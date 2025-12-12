@@ -22,6 +22,15 @@ import {
     SubmitTestDtoToJSON,
 } from '../models/index';
 
+export interface TestsControllerGetGlobalLeaderboardRequest {
+    limit: string;
+}
+
+export interface TestsControllerGetPdfLeaderboardRequest {
+    pdfId: string;
+    limit: string;
+}
+
 export interface TestsControllerSubmitTestRequest {
     submitTestDto: SubmitTestDto;
 }
@@ -30,6 +39,138 @@ export interface TestsControllerSubmitTestRequest {
  * 
  */
 export class TestsApi extends runtime.BaseAPI {
+
+    /**
+     */
+    async testsControllerGetGlobalLeaderboardRaw(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['limit'] == null) {
+            throw new runtime.RequiredError(
+                'limit',
+                'Required parameter "limit" was null or undefined when calling testsControllerGetGlobalLeaderboard().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/leaderboard`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async testsControllerGetGlobalLeaderboard(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.testsControllerGetGlobalLeaderboardRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     */
+    async testsControllerGetMyRankRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/leaderboard/me`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async testsControllerGetMyRank(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.testsControllerGetMyRankRaw(initOverrides);
+    }
+
+    /**
+     */
+    async testsControllerGetPdfLeaderboardRaw(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['pdfId'] == null) {
+            throw new runtime.RequiredError(
+                'pdfId',
+                'Required parameter "pdfId" was null or undefined when calling testsControllerGetPdfLeaderboard().'
+            );
+        }
+
+        if (requestParameters['limit'] == null) {
+            throw new runtime.RequiredError(
+                'limit',
+                'Required parameter "limit" was null or undefined when calling testsControllerGetPdfLeaderboard().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/leaderboard/pdf/{pdfId}`;
+        urlPath = urlPath.replace(`{${"pdfId"}}`, encodeURIComponent(String(requestParameters['pdfId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async testsControllerGetPdfLeaderboard(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.testsControllerGetPdfLeaderboardRaw(requestParameters, initOverrides);
+    }
 
     /**
      */
