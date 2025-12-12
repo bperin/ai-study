@@ -14,6 +14,7 @@ Name | Type
 `percentage` | number
 `completedAt` | Date
 `report` | string
+`summary` | string
 `answers` | [Array&lt;TestResultAnswerDto&gt;](TestResultAnswerDto.md)
 
 ## Example
@@ -31,6 +32,7 @@ const example = {
   "percentage": null,
   "completedAt": null,
   "report": null,
+  "summary": null,
   "answers": null,
 } satisfies TestHistoryItemDto
 

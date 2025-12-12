@@ -77,6 +77,12 @@ export interface TestHistoryItemDto {
     report?: string;
     /**
      * 
+     * @type {string}
+     * @memberof TestHistoryItemDto
+     */
+    summary?: string;
+    /**
+     * 
      * @type {Array<TestResultAnswerDto>}
      * @memberof TestHistoryItemDto
      */
@@ -115,6 +121,7 @@ export function TestHistoryItemDtoFromJSONTyped(json: any, ignoreDiscriminator: 
         'percentage': json['percentage'],
         'completedAt': (new Date(json['completedAt'])),
         'report': json['report'] == null ? undefined : json['report'],
+        'summary': json['summary'] == null ? undefined : json['summary'],
         'answers': json['answers'] == null ? undefined : ((json['answers'] as Array<any>).map(TestResultAnswerDtoFromJSON)),
     };
 }
@@ -138,6 +145,7 @@ export function TestHistoryItemDtoToJSONTyped(value?: TestHistoryItemDto | null,
         'percentage': value['percentage'],
         'completedAt': value['completedAt'].toISOString(),
         'report': value['report'],
+        'summary': value['summary'],
         'answers': value['answers'] == null ? undefined : ((value['answers'] as Array<any>).map(TestResultAnswerDtoToJSON)),
     };
 }
