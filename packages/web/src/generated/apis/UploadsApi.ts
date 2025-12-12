@@ -15,9 +15,12 @@
 
 import * as runtime from '../runtime';
 import type {
+  ConfirmUploadResponseDto,
   UploadUrlResponseDto,
 } from '../models/index';
 import {
+    ConfirmUploadResponseDtoFromJSON,
+    ConfirmUploadResponseDtoToJSON,
     UploadUrlResponseDtoFromJSON,
     UploadUrlResponseDtoToJSON,
 } from '../models/index';
@@ -37,7 +40,7 @@ export class UploadsApi extends runtime.BaseAPI {
 
     /**
      */
-    async uploadsControllerConfirmUploadRaw(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async uploadsControllerConfirmUploadRaw(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConfirmUploadResponseDto>> {
         if (requestParameters['body'] == null) {
             throw new runtime.RequiredError(
                 'body',
@@ -62,13 +65,14 @@ export class UploadsApi extends runtime.BaseAPI {
             body: requestParameters['body'] as any,
         }, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConfirmUploadResponseDtoFromJSON(jsonValue));
     }
 
     /**
      */
-    async uploadsControllerConfirmUpload(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.uploadsControllerConfirmUploadRaw(requestParameters, initOverrides);
+    async uploadsControllerConfirmUpload(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConfirmUploadResponseDto> {
+        const response = await this.uploadsControllerConfirmUploadRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**
