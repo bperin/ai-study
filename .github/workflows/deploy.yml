@@ -42,8 +42,8 @@ jobs:
             --source packages/api \
             --project ${{ env.GCP_PROJECT_ID }} \
             --region ${{ env.GCP_REGION }} \
-            --set-env-vars DATABASE_URL=${{ env.DATABASE_URL }} \
-            --set-build-env-vars DATABASE_URL=${{ env.DATABASE_URL }} \
+            --set-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
+            --set-build-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
             --allow-unauthenticated \
             --quiet
 
