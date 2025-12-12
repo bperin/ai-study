@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { FileText, Sparkles, ArrowRight, Loader2, Lightbulb } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { FileText, Sparkles, ArrowRight, Loader2, Lightbulb } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 export default function CustomizePage() {
     const router = useRouter();
@@ -16,21 +16,16 @@ export default function CustomizePage() {
     const [pdfInfo, setPdfInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
-    const [prompt, setPrompt] = useState('');
+    const [prompt, setPrompt] = useState("");
 
     // Example prompts
-    const examples = [
-        "Create 15 hard questions focusing on key concepts",
-        "Make 20 easy flashcards with hints and explanations",
-        "Generate 10 medium difficulty questions about the main topics",
-        "Create 25 challenging questions with detailed explanations",
-    ];
+    const examples = ["Create 15 hard questions focusing on key concepts", "Make 20 easy flashcards with hints and explanations", "Generate 10 medium difficulty questions about the main topics", "Create 25 challenging questions with detailed explanations"];
 
     useEffect(() => {
         // TODO: Fetch PDF info from backend
         setPdfInfo({
             id: pdfId,
-            filename: 'Study Guide.pdf',
+            filename: "Study Guide.pdf",
             uploadedAt: new Date().toISOString(),
         });
         setLoading(false);
@@ -38,20 +33,20 @@ export default function CustomizePage() {
 
     const handleGenerateTest = async () => {
         if (!prompt.trim()) {
-            alert('Please describe what kind of test you want');
+            alert("Please describe what kind of test you want");
             return;
         }
 
         setGenerating(true);
 
         try {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem("access_token");
 
             // Call backend API to generate flashcards with Gemini
             const response = await fetch(`http://localhost:3000/pdfs/${pdfId}/generate`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
@@ -60,7 +55,7 @@ export default function CustomizePage() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate flashcards');
+                throw new Error("Failed to generate flashcards");
             }
 
             await response.json();
@@ -68,8 +63,8 @@ export default function CustomizePage() {
             // Redirect to study page
             router.push(`/study/${pdfId}`);
         } catch (error: any) {
-            console.error('Failed to generate test:', error);
-            alert(error.message || 'Failed to generate flashcards. Please try again.');
+            console.error("Failed to generate test:", error);
+            alert(error.message || "Failed to generate flashcards. Please try again.");
         } finally {
             setGenerating(false);
         }
@@ -88,11 +83,7 @@ export default function CustomizePage() {
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="space-y-2">
-                    <Button
-                        variant="ghost"
-                        onClick={() => router.push('/dashboard')}
-                        className="mb-4"
-                    >
+                    <Button variant="ghost" onClick={() => router.push("/dashboard")} className="mb-4">
                         ← Back to Dashboard
                     </Button>
                     <div className="flex items-center gap-3">
@@ -101,9 +92,7 @@ export default function CustomizePage() {
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold">Generate Your Flashcards</h1>
-                            <p className="text-slate-600 dark:text-slate-400">
-                                {pdfInfo?.filename}
-                            </p>
+                            <p className="text-slate-600 dark:text-slate-400">{pdfInfo?.filename}</p>
                         </div>
                     </div>
                 </div>
@@ -115,9 +104,7 @@ export default function CustomizePage() {
                             <Sparkles className="w-5 h-5 text-purple-600" />
                             Describe Your Test
                         </CardTitle>
-                        <CardDescription>
-                            Tell AI what kind of flashcards you want in your own words
-                        </CardDescription>
+                        <CardDescription>Tell AI what kind of flashcards you want in your own words</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Text Input */}
@@ -136,9 +123,7 @@ export default function CustomizePage() {
                          bg-white dark:bg-slate-900"
                                 disabled={generating}
                             />
-                            <p className="text-sm text-slate-500">
-                                Be specific about difficulty, number of questions, and any special requirements
-                            </p>
+                            <p className="text-sm text-slate-500">Be specific about difficulty, number of questions, and any special requirements</p>
                         </div>
 
                         {/* Example Prompts */}
@@ -198,10 +183,7 @@ export default function CustomizePage() {
                             </div>
                             <div className="space-y-2">
                                 <h3 className="font-semibold text-lg">Powered by Gemini 2.0 Flash</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    Our AI will analyze your PDF content and generate personalized flashcards based on your requirements.
-                                    The more specific you are, the better the results!
-                                </p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Our AI will analyze your PDF content and generate personalized flashcards based on your requirements. The more specific you are, the better the results!</p>
                                 <div className="flex flex-wrap gap-2 mt-3">
                                     <Badge variant="secondary">Smart Question Generation</Badge>
                                     <Badge variant="secondary">Adaptive Difficulty</Badge>

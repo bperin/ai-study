@@ -1,6 +1,7 @@
 # Google Cloud Storage Setup for PDF Uploads
 
 ## Overview
+
 The backend provides a secure signed URL endpoint for uploading PDFs to Google Cloud Storage. This implementation includes:
 
 - **JWT Authentication**: Only authenticated users can request upload URLs
@@ -58,6 +59,7 @@ gcloud iam service-accounts keys create ~/ai-study-key.json \
 ### 3. Extract Credentials from JSON Key
 
 From the downloaded `ai-study-key.json`:
+
 - Copy `project_id` → `GCP_PROJECT_ID`
 - Copy `client_email` → `GCP_CLIENT_EMAIL`
 - Copy `private_key` → `GCP_PRIVATE_KEY`
@@ -65,31 +67,36 @@ From the downloaded `ai-study-key.json`:
 ## API Usage
 
 ### Endpoint
+
 ```
 POST /uploads/sign
 ```
 
 ### Authentication
+
 Requires JWT token in Authorization header:
+
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
 ### Request Body
+
 ```json
 {
-  "fileName": "my-study-guide.pdf",
-  "contentType": "application/pdf"
+    "fileName": "my-study-guide.pdf",
+    "contentType": "application/pdf"
 }
 ```
 
 ### Response
+
 ```json
 {
-  "uploadUrl": "https://storage.googleapis.com/...",
-  "filePath": "uploads/user-123/uuid-my-study-guide.pdf",
-  "expiresAt": "2025-12-11T19:05:00.000Z",
-  "maxSizeBytes": 10485760
+    "uploadUrl": "https://storage.googleapis.com/...",
+    "filePath": "uploads/user-123/uuid-my-study-guide.pdf",
+    "expiresAt": "2025-12-11T19:05:00.000Z",
+    "maxSizeBytes": 10485760
 }
 ```
 
@@ -98,59 +105,59 @@ Authorization: Bearer <your-jwt-token>
 ```typescript
 // 1. Get signed URL from backend
 async function getUploadUrl(file: File, token: string) {
-  const response = await fetch('http://localhost:3000/uploads/sign', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      fileName: file.name,
-      contentType: file.type,
-    }),
-  });
-  
-  return response.json();
+    const response = await fetch("http://localhost:3000/uploads/sign", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            fileName: file.name,
+            contentType: file.type,
+        }),
+    });
+
+    return response.json();
 }
 
 // 2. Upload file directly to GCS
 async function uploadToGCS(file: File, uploadUrl: string) {
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/pdf',
-    },
-    body: file,
-  });
-  
-  if (!response.ok) {
-    throw new Error('Upload failed');
-  }
-  
-  return response;
+    const response = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/pdf",
+        },
+        body: file,
+    });
+
+    if (!response.ok) {
+        throw new Error("Upload failed");
+    }
+
+    return response;
 }
 
 // 3. Complete flow
 async function handlePdfUpload(file: File, jwtToken: string) {
-  // Validate file
-  if (file.type !== 'application/pdf') {
-    throw new Error('Only PDF files are allowed');
-  }
-  
-  if (file.size > 10485760) {
-    throw new Error('File size must be less than 10MB');
-  }
-  
-  // Get signed URL
-  const { uploadUrl, filePath } = await getUploadUrl(file, jwtToken);
-  
-  // Upload to GCS
-  await uploadToGCS(file, uploadUrl);
-  
-  // Now you can save filePath to your database
-  console.log('File uploaded successfully:', filePath);
-  
-  return filePath;
+    // Validate file
+    if (file.type !== "application/pdf") {
+        throw new Error("Only PDF files are allowed");
+    }
+
+    if (file.size > 10485760) {
+        throw new Error("File size must be less than 10MB");
+    }
+
+    // Get signed URL
+    const { uploadUrl, filePath } = await getUploadUrl(file, jwtToken);
+
+    // Upload to GCS
+    await uploadToGCS(file, uploadUrl);
+
+    // Now you can save filePath to your database
+    console.log("File uploaded successfully:", filePath);
+
+    return filePath;
 }
 ```
 

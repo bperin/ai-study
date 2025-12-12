@@ -5,15 +5,18 @@
 ## ✅ Completed Features
 
 ### 1. Database Setup (Prisma 7)
+
 **Status**: ✅ Complete and Tested
 
 **Implementation Details**:
+
 - **ORM**: Prisma 7 with PostgreSQL adapter
 - **Database Provider**: Neon (Prisma-hosted PostgreSQL)
 - **Driver**: `@prisma/adapter-pg` with `pg` connection pool
 - **Configuration**: `prisma.config.ts` for CLI, adapter in `PrismaService`
 
 **Database Schema**:
+
 ```prisma
 - User (id, email, password, createdAt, updatedAt)
 - Pdf (id, filename, content, userId, createdAt)
@@ -24,11 +27,13 @@
 ```
 
 **Key Changes for Prisma 7**:
+
 - Removed `url` from `schema.prisma` datasource
 - Added constructor with `PrismaPg` adapter in `PrismaService`
 - Database URL now passed via adapter, not schema file
 
 **Files Modified**:
+
 - `packages/api/src/prisma/prisma.service.ts`
 - `packages/api/prisma/schema.prisma`
 - `packages/api/prisma.config.ts`
@@ -36,34 +41,41 @@
 ---
 
 ### 2. Authentication System
+
 **Status**: ✅ Complete
 
 **Implementation Details**:
+
 - **Strategy**: JWT (JSON Web Tokens)
 - **Library**: `@nestjs/jwt`, `@nestjs/passport`
 - **Password Hashing**: bcrypt
 - **Token Expiration**: 1 hour
 
 **Endpoints**:
+
 - `POST /auth/register` - User registration
 - `POST /auth/login` - User login (returns JWT)
 - `GET /users/me` - Get current user (requires JWT)
 
 **Security Features**:
+
 - Passwords hashed with bcrypt
 - JWT tokens signed with secret key
 - Protected routes use `JwtAuthGuard`
 
 **Files**:
+
 - `packages/api/src/auth/` (auth module)
 - `packages/api/src/users/` (users module)
 
 ---
 
 ### 3. Secure PDF Upload to Google Cloud Storage
+
 **Status**: ✅ Complete and Tested
 
 **Implementation Details**:
+
 - **Cloud Provider**: Google Cloud Storage
 - **Project**: `pro-pulsar-274402`
 - **Bucket**: `ai-study-pdfs-1765508603`
@@ -71,6 +83,7 @@
 - **Upload Method**: Signed URLs (direct client-to-GCS upload)
 
 **Security Features**:
+
 1. **JWT Authentication Required**: Only logged-in users can request upload URLs
 2. **User Isolation**: Files stored in `uploads/{userId}/{uuid}-{filename}`
 3. **Content Type Validation**: Only `application/pdf` accepted
@@ -80,6 +93,7 @@
 7. **Direct Upload**: Files bypass server, go straight to GCS
 
 **API Endpoint**:
+
 ```
 POST /uploads/sign
 Authorization: Bearer {jwt-token}
@@ -101,18 +115,21 @@ Response:
 ```
 
 **Upload Flow**:
+
 1. User logs in → receives JWT token
 2. Frontend requests signed URL from `/uploads/sign`
 3. Frontend uploads PDF directly to GCS using signed URL
 4. Backend saves `filePath` to database for later retrieval
 
 **GCP Configuration**:
+
 - **Bucket Location**: `us-central1`
 - **Access Control**: Uniform bucket-level access
 - **IAM Role**: Service account has `roles/storage.objectAdmin`
 - **Authentication**: Service account JSON key credentials
 
 **Environment Variables**:
+
 ```bash
 GCP_PROJECT_ID=pro-pulsar-274402
 GCP_BUCKET_NAME=ai-study-pdfs-1765508603
@@ -121,6 +138,7 @@ GCP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ```
 
 **Files Modified/Created**:
+
 - `packages/api/src/uploads/uploads.service.ts` - Core upload logic
 - `packages/api/src/uploads/uploads.controller.ts` - API endpoint with auth
 - `packages/api/src/uploads/uploads.module.ts` - Module definition
@@ -130,6 +148,7 @@ GCP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 - `test-upload.sh` - End-to-end test script
 
 **Testing**:
+
 - ✅ User registration works
 - ✅ User login returns valid JWT
 - ✅ Signed URL generation requires authentication
@@ -141,15 +160,18 @@ GCP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ## 🚧 In Progress / Next Steps
 
 ### 4. PDF Processing & Text Extraction
+
 **Status**: 🔜 Not Started
 
 **Planned Implementation**:
+
 - Use `pdf-parse` library (already installed)
 - Extract text content from uploaded PDFs
 - Store extracted text in `Pdf.content` field
 - Trigger processing after successful upload
 
 **Technical Approach**:
+
 ```typescript
 // After upload, download from GCS and process
 const file = storage.bucket(bucketName).file(filePath);
@@ -159,26 +181,29 @@ const extractedText = pdfData.text;
 
 // Save to database
 await prisma.pdf.create({
-  data: {
-    filename,
-    content: extractedText,
-    userId,
-  }
+    data: {
+        filename,
+        content: extractedText,
+        userId,
+    },
 });
 ```
 
 ---
 
 ### 5. AI-Powered Flashcard Generation
+
 **Status**: 🔜 Not Started
 
 **Planned Implementation**:
+
 - Use Google Generative AI (Gemini)
 - Library: `@google/generative-ai` (already installed)
 - Generate learning objectives from PDF content
 - Create multiple-choice questions with explanations
 
 **Technical Approach**:
+
 ```typescript
 // Use Gemini to analyze PDF content
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -200,9 +225,11 @@ const result = await model.generateContent(prompt);
 ---
 
 ### 6. Frontend Implementation
+
 **Status**: 🔜 Not Started
 
 **Planned Features**:
+
 - PDF upload interface with drag-and-drop
 - Progress indicator for uploads
 - Study session interface
@@ -210,6 +237,7 @@ const result = await model.generateContent(prompt);
 - Test taking and scoring
 
 **Tech Stack**:
+
 - Next.js (already set up in `packages/web`)
 - TypeScript
 - Generated API client (OpenAPI)
@@ -219,6 +247,7 @@ const result = await model.generateContent(prompt);
 ## 📊 System Architecture
 
 ### Current Stack
+
 ```
 Frontend (Port 3001)
 ├── Next.js
@@ -241,6 +270,7 @@ Cloud Storage
 ```
 
 ### Data Flow
+
 ```
 1. User uploads PDF
    Frontend → Backend (/uploads/sign) → Returns signed URL
@@ -261,17 +291,20 @@ Cloud Storage
 ## 🔧 Development Commands
 
 ### Start Services
+
 ```bash
 ./run.sh  # Starts both backend and frontend
 ```
 
 ### Backend Only
+
 ```bash
 cd packages/api
 npm run dev
 ```
 
 ### Database Operations
+
 ```bash
 cd packages/api
 npx prisma generate  # Generate Prisma Client
@@ -280,6 +313,7 @@ npx prisma studio    # Open database GUI
 ```
 
 ### Test Upload System
+
 ```bash
 ./test-upload.sh  # End-to-end upload test
 ```
@@ -289,6 +323,7 @@ npx prisma studio    # Open database GUI
 ## 📝 Environment Configuration
 
 ### Required Variables
+
 ```bash
 # Database
 DATABASE_URL="postgresql://..."
@@ -312,17 +347,21 @@ GOOGLE_AI_API_KEY="your-gemini-api-key"
 ## 🐛 Known Issues & Solutions
 
 ### Issue: Prisma 7 Compatibility
+
 **Problem**: `PrismaClient needs to be constructed with non-empty, valid PrismaClientOptions`
 
 **Solution**: ✅ Fixed
+
 - Added `@prisma/adapter-pg` and `pg` packages
 - Updated `PrismaService` constructor to use adapter
 - Removed `url` from `schema.prisma` datasource
 
 ### Issue: GCS Upload Headers
+
 **Problem**: `MalformedSecurityHeader` when using `extensionHeaders`
 
 **Solution**: ✅ Fixed
+
 - Removed `x-goog-content-length-range` from signed URL
 - File size validation now enforced client-side
 - Simpler signed URL without custom headers
@@ -341,28 +380,29 @@ GOOGLE_AI_API_KEY="your-gemini-api-key"
 ## 🎯 Immediate Next Steps
 
 1. **PDF Processing**:
-   - Create webhook/callback after upload
-   - Download file from GCS
-   - Extract text using `pdf-parse`
-   - Store in database
+    - Create webhook/callback after upload
+    - Download file from GCS
+    - Extract text using `pdf-parse`
+    - Store in database
 
 2. **Flashcard Generation**:
-   - Set up Gemini API key
-   - Create prompt engineering for flashcard generation
-   - Parse AI response into structured data
-   - Store objectives and MCQs in database
+    - Set up Gemini API key
+    - Create prompt engineering for flashcard generation
+    - Parse AI response into structured data
+    - Store objectives and MCQs in database
 
 3. **Frontend Integration**:
-   - Build upload UI component
-   - Add authentication flow
-   - Create study session interface
-   - Implement flashcard review system
+    - Build upload UI component
+    - Add authentication flow
+    - Create study session interface
+    - Implement flashcard review system
 
 ---
 
 ## 🔐 Security Considerations
 
 ### Implemented
+
 - ✅ JWT authentication for all protected endpoints
 - ✅ Password hashing with bcrypt
 - ✅ User isolation in file storage
@@ -371,6 +411,7 @@ GOOGLE_AI_API_KEY="your-gemini-api-key"
 - ✅ Filename sanitization
 
 ### To Implement
+
 - 🔜 Rate limiting on upload endpoint
 - 🔜 File virus scanning
 - 🔜 CORS configuration for production
@@ -383,11 +424,13 @@ GOOGLE_AI_API_KEY="your-gemini-api-key"
 ## 📈 Performance Considerations
 
 ### Current Optimizations
+
 - Direct client-to-GCS upload (no server bandwidth usage)
 - Connection pooling for database (via pg adapter)
 - JWT stateless authentication (no session storage)
 
 ### Future Optimizations
+
 - 🔜 CDN for static assets
 - 🔜 Database query optimization with indexes
 - 🔜 Caching layer (Redis) for frequently accessed data

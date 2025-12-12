@@ -3,10 +3,12 @@
 ## ✅ Completed
 
 ### 1. Infrastructure & Project Structure
+
 - [x] **Monorepo Setup**: Initialized workspace with `packages/api` (Backend) and `packages/web` (Frontend).
 - [x] **Global Configuration**: Configured root `package.json`, `tsconfig.json`, and `jest.config.js` for monorepo management.
 
 ### 2. Backend (@memorang/api)
+
 - [x] **Framework**: Initialized **NestJS** application.
 - [x] **Database ORM**: Configured **Prisma 7.x** with PostgreSQL support.
 - [x] **Schema Design**: Defined initial data models:
@@ -17,6 +19,7 @@
 - [x] **Dependencies**: Installed `@google/generative-ai` (Gemini), `pdf-parse`, and core NestJS modules.
 
 ### 3. Frontend (@memorang/web)
+
 - [x] **Framework**: Re-initialized with **Next.js 14** (React 18).
 - [x] **Styling**: Configured **Tailwind CSS** and `globals.css`.
 - [x] **UI Libraries**: Installed `@copilotkit/react-core` and `@copilotkit/react-ui`.
@@ -27,6 +30,7 @@
 ## 🚧 What Needs to be Done (Roadmap)
 
 ### 1. Backend Development (@memorang/api)
+
 - [ ] **PDF Processing**:
     - Implement file upload endpoint (multipart/form-data).
     - Create service to parse PDF text using `pdf-parse`.
@@ -40,6 +44,7 @@
     - Implement Quiz Session tracking (scoring, progress).
 
 ### 2. Frontend Development (@memorang/web)
+
 - [ ] **Upload Experience**:
     - Build file drag-and-drop component.
     - Handle upload progress and error states.
@@ -53,6 +58,7 @@
     - Show session summary and study tips.
 
 ### 3. Infrastructure & storage
+
 - [ ] **File Storage**: Connect to Supabase Storage or AWS S3 for persisting raw PDFs.
 - [ ] **Authentication**: Implement Auth guards (likely Supabase Auth or mock for MVP).
 - [ ] **Production DB**: Transition from local PostgreSQL to AWS Aurora.

@@ -5,6 +5,7 @@ AI-based study guide that ingests PDFs and turns them into interactive flashcard
 ## 🎯 Overview
 
 AI Study is a full-stack application that helps students learn more effectively by:
+
 1. Uploading study materials (PDFs)
 2. Automatically extracting and analyzing content
 3. Generating intelligent flashcards and multiple-choice questions
@@ -13,16 +14,18 @@ AI Study is a full-stack application that helps students learn more effectively 
 ## ✨ Current Features
 
 ### ✅ Completed
+
 - **User Authentication**: JWT-based login and registration
 - **Secure PDF Upload**: Direct-to-cloud upload via Google Cloud Storage
-  - User-isolated file storage
-  - 10MB file size limit
-  - PDF-only validation
-  - Time-limited signed URLs
+    - User-isolated file storage
+    - 10MB file size limit
+    - PDF-only validation
+    - Time-limited signed URLs
 - **Database**: Prisma 7 with PostgreSQL (Neon)
 - **API Documentation**: Auto-generated OpenAPI/Swagger docs
 
 ### 🚧 In Progress
+
 - PDF text extraction
 - AI-powered flashcard generation (using Google Gemini)
 - Frontend study interface
@@ -30,6 +33,7 @@ AI Study is a full-stack application that helps students learn more effectively 
 ## 🛠 Tech Stack
 
 ### Backend (`packages/api`)
+
 - **Framework**: NestJS
 - **Database**: Prisma 7 + PostgreSQL (Neon)
 - **Authentication**: JWT with Passport
@@ -37,6 +41,7 @@ AI Study is a full-stack application that helps students learn more effectively 
 - **AI**: Google Generative AI (Gemini)
 
 ### Frontend (`packages/web`)
+
 - **Framework**: Next.js
 - **Language**: TypeScript
 - **API Client**: Auto-generated from OpenAPI spec
@@ -44,6 +49,7 @@ AI Study is a full-stack application that helps students learn more effectively 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
 
@@ -58,6 +64,7 @@ npm install
 ```
 
 The services will start on:
+
 - **Backend**: http://localhost:3000
 - **Frontend**: http://localhost:3001
 - **API Docs**: http://localhost:3000/api

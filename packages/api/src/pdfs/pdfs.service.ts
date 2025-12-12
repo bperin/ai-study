@@ -1,13 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { GeminiService } from './gemini.service';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { GeminiService } from "./gemini.service";
 
 @Injectable()
 export class PdfsService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly geminiService: GeminiService,
-    ) { }
+        private readonly geminiService: GeminiService
+    ) {}
 
     async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
         // 1. Get PDF from database
@@ -16,7 +16,7 @@ export class PdfsService {
         });
 
         if (!pdf) {
-            throw new NotFoundException('PDF not found');
+            throw new NotFoundException("PDF not found");
         }
 
         // 2. Let the agent orchestrate everything using tools
@@ -24,7 +24,7 @@ export class PdfsService {
             userPrompt,
             pdfId,
             pdf.filename,
-            pdf.content, // GCS path
+            pdf.content // GCS path
         );
 
         // 3. Fetch the created objectives from database
@@ -34,7 +34,7 @@ export class PdfsService {
         });
 
         return {
-            message: 'Flashcards generated successfully',
+            message: "Flashcards generated successfully",
             objectivesCount: result.objectivesCount,
             questionsCount: result.questionsCount,
             summary: result.summary,

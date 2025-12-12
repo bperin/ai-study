@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { refreshApiConfig } from '@/api-client';
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useDropzone } from "react-dropzone";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { refreshApiConfig } from "@/api-client";
 
 export default function UploadPage() {
     const router = useRouter();
@@ -22,7 +22,7 @@ export default function UploadPage() {
         const pdfFile = acceptedFiles[0];
         if (pdfFile) {
             if (pdfFile.size > 10 * 1024 * 1024) {
-                setError('File size must be less than 10MB');
+                setError("File size must be less than 10MB");
                 return;
             }
             setFile(pdfFile);
@@ -33,7 +33,7 @@ export default function UploadPage() {
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
         accept: {
-            'application/pdf': ['.pdf'],
+            "application/pdf": [".pdf"],
         },
         multiple: false,
         maxSize: 10 * 1024 * 1024,
@@ -48,44 +48,44 @@ export default function UploadPage() {
 
         try {
             // Get JWT token from localStorage
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem("access_token");
             if (!token) {
-                throw new Error('Please log in to upload files');
+                throw new Error("Please log in to upload files");
             }
 
             // Step 1: Get signed URL from backend
             setProgress(10);
             const { defaultApi } = refreshApiConfig();
-            const { uploadUrl, filePath } = await defaultApi.uploadsControllerCreateSignedUploadUrl({
+            const { uploadUrl, filePath } = (await defaultApi.uploadsControllerCreateSignedUploadUrl({
                 body: {
                     filename: file.name,
-                    contentType: 'application/pdf',
-                }
-            }) as any; // Cast as any because the generated type might be void if not correctly defined in swagger
+                    contentType: "application/pdf",
+                },
+            })) as any; // Cast as any because the generated type might be void if not correctly defined in swagger
             setProgress(30);
 
             // Step 2: Upload file directly to GCS
             const uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
+                method: "PUT",
                 headers: {
-                    'Content-Type': 'application/pdf',
+                    "Content-Type": "application/pdf",
                 },
                 body: file,
             });
 
             if (!uploadResponse.ok) {
-                throw new Error('Failed to upload file to cloud storage');
+                throw new Error("Failed to upload file to cloud storage");
             }
 
             setProgress(70);
 
             // Step 3: Confirm upload with backend
-            const { id } = await defaultApi.uploadsControllerConfirmUpload({
+            const { id } = (await defaultApi.uploadsControllerConfirmUpload({
                 body: {
                     filePath,
                     filename: file.name,
-                }
-            }) as any;
+                },
+            })) as any;
             setProgress(100);
             setUploadedPdfId(id);
 
@@ -94,7 +94,7 @@ export default function UploadPage() {
                 router.push(`/customize/${id}`);
             }, 1000);
         } catch (err: any) {
-            setError(err.message || 'Upload failed');
+            setError(err.message || "Upload failed");
             setProgress(0);
         } finally {
             setUploading(false);
@@ -102,11 +102,11 @@ export default function UploadPage() {
     };
 
     const formatFileSize = (bytes: number) => {
-        if (bytes === 0) return '0 Bytes';
+        if (bytes === 0) return "0 Bytes";
         const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB'];
+        const sizes = ["Bytes", "KB", "MB"];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
     };
 
     return (
@@ -114,21 +114,15 @@ export default function UploadPage() {
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        Upload Your Study Material
-                    </h1>
-                    <p className="text-slate-600 dark:text-slate-400">
-                        Upload a PDF and we'll turn it into interactive flashcards
-                    </p>
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Upload Your Study Material</h1>
+                    <p className="text-slate-600 dark:text-slate-400">Upload a PDF and we'll turn it into interactive flashcards</p>
                 </div>
 
                 {/* Upload Card */}
                 <Card className="border-2 shadow-xl">
                     <CardHeader>
                         <CardTitle>Select PDF File</CardTitle>
-                        <CardDescription>
-                            Upload a PDF file (max 10MB) to get started
-                        </CardDescription>
+                        <CardDescription>Upload a PDF file (max 10MB) to get started</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Dropzone */}
@@ -137,11 +131,8 @@ export default function UploadPage() {
                             className={`
                 border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
                 transition-all duration-200 ease-in-out
-                ${isDragActive
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20 scale-105'
-                                    : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900'
-                                }
-                ${file ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : ''}
+                ${isDragActive ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 scale-105" : "border-slate-300 dark:border-slate-700 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900"}
+                ${file ? "border-green-500 bg-green-50 dark:bg-green-950/20" : ""}
               `}
                         >
                             <input {...getInputProps()} />
@@ -150,12 +141,8 @@ export default function UploadPage() {
                                     <>
                                         <FileText className="w-16 h-16 text-green-600" />
                                         <div className="space-y-1">
-                                            <p className="text-lg font-semibold text-green-700 dark:text-green-400">
-                                                {file.name}
-                                            </p>
-                                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                                {formatFileSize(file.size)}
-                                            </p>
+                                            <p className="text-lg font-semibold text-green-700 dark:text-green-400">{file.name}</p>
+                                            <p className="text-sm text-slate-600 dark:text-slate-400">{formatFileSize(file.size)}</p>
                                         </div>
                                         <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
                                             <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -166,12 +153,8 @@ export default function UploadPage() {
                                     <>
                                         <Upload className="w-16 h-16 text-slate-400" />
                                         <div className="space-y-2">
-                                            <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">
-                                                {isDragActive ? 'Drop your PDF here' : 'Drag & drop your PDF here'}
-                                            </p>
-                                            <p className="text-sm text-slate-500">
-                                                or click to browse files
-                                            </p>
+                                            <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">{isDragActive ? "Drop your PDF here" : "Drag & drop your PDF here"}</p>
+                                            <p className="text-sm text-slate-500">or click to browse files</p>
                                         </div>
                                         <Badge variant="secondary">PDF only • Max 10MB</Badge>
                                     </>
@@ -202,20 +185,13 @@ export default function UploadPage() {
                         {uploadedPdfId && (
                             <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
                                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                <p className="text-sm text-green-700 dark:text-green-400">
-                                    Upload successful! Redirecting to customize your test...
-                                </p>
+                                <p className="text-sm text-green-700 dark:text-green-400">Upload successful! Redirecting to customize your test...</p>
                             </div>
                         )}
 
                         {/* Upload Button */}
                         <div className="flex gap-3">
-                            <Button
-                                onClick={handleUpload}
-                                disabled={!file || uploading || !!uploadedPdfId}
-                                className="flex-1 h-12 text-base font-semibold"
-                                size="lg"
-                            >
+                            <Button onClick={handleUpload} disabled={!file || uploading || !!uploadedPdfId} className="flex-1 h-12 text-base font-semibold" size="lg">
                                 {uploading ? (
                                     <>
                                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -258,9 +234,7 @@ export default function UploadPage() {
                                     <Upload className="w-6 h-6 text-blue-600" />
                                 </div>
                                 <h3 className="font-semibold">1. Upload</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    Upload your study material in PDF format
-                                </p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Upload your study material in PDF format</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -271,9 +245,7 @@ export default function UploadPage() {
                                     <FileText className="w-6 h-6 text-indigo-600" />
                                 </div>
                                 <h3 className="font-semibold">2. Customize</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    Choose difficulty and number of questions
-                                </p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Choose difficulty and number of questions</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -284,9 +256,7 @@ export default function UploadPage() {
                                     <CheckCircle2 className="w-6 h-6 text-green-600" />
                                 </div>
                                 <h3 className="font-semibold">3. Study</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    Practice with AI-generated flashcards
-                                </p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Practice with AI-generated flashcards</p>
                             </div>
                         </CardContent>
                     </Card>
