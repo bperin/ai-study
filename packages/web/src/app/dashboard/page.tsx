@@ -9,6 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPdfsApi } from "@/api-client";
 import { PdfResponseDto } from "@/generated";
 
+type PdfObjective = {
+    title?: string;
+    _count?: {
+        mcqs?: number;
+    };
+};
+
 export default function DashboardPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -105,8 +112,8 @@ export default function DashboardPage() {
                         <TabsContent value="tests" className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                 {pdfs.map((pdf) => {
-                                    // @ts-ignore
-                                    const questionCount = pdf.objectives?.reduce((sum, obj) => sum + (obj._count?.mcqs || 0), 0) || 0;
+                                    const objectives = (pdf.objectives as PdfObjective[]) || [];
+                                    const questionCount = objectives.reduce((sum, obj) => sum + (obj._count?.mcqs || 0), 0);
                                     return (
                                         <Card key={pdf.id} className="flex flex-col h-full hover:bg-muted/50 transition-all duration-200">
                                             <CardHeader>
@@ -116,13 +123,13 @@ export default function DashboardPage() {
                                             <CardContent className="flex-1">
                                                 <p className="mb-2 text-sm font-medium">{questionCount} Questions</p>
                                                 <div className="space-y-1">
-                                                    {pdf.objectives?.slice(0, 2).map((obj, i) => (
+                                                    {objectives.slice(0, 2).map((obj, i) => (
                                                         <p key={i} className="text-sm text-muted-foreground line-clamp-1">
-                                                            • {obj.title}
+                                                            • {obj.title || "Objective"}
                                                         </p>
                                                     ))}
-                                                    {(pdf.objectives?.length || 0) > 2 && (
-                                                        <p className="text-xs text-muted-foreground">+{pdf.objectives.length - 2} more objectives</p>
+                                                    {objectives.length > 2 && (
+                                                        <p className="text-xs text-muted-foreground">+{objectives.length - 2} more objectives</p>
                                                     )}
                                                 </div>
                                             </CardContent>
