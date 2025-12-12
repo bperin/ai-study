@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "scripts": {
         "prisma": "prisma db push && prisma generate",
-        "build": "nest build --watch",
+        "build": "nest build",
+        "build:watch": "nest build --watch",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "start": "nest start",
         "dev": "nest start --watch",
