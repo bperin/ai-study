@@ -106,4 +106,21 @@ export class PdfsService {
             ...analysis,
         };
     }
+
+    async forkPdf(pdfId: string, userId: string, newTitle?: string) {
+        const originalPdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+        if (!originalPdf) throw new NotFoundException("PDF not found");
+
+        // Create a new PDF record pointing to the same content/storage
+        const newPdf = await this.prisma.pdf.create({
+            data: {
+                filename: newTitle || `${originalPdf.filename} (Copy)`,
+                content: originalPdf.content,
+                gcsPath: originalPdf.gcsPath,
+                userId: userId,
+            },
+        });
+
+        return newPdf;
+    }
 }

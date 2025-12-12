@@ -1,16 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { GcsService } from "./gcs.service";
+import { PdfTextService } from "./pdf-text.service";
 import { LlmAgent, InMemoryRunner } from "@google/adk";
+import * as pdfParse from "pdf-parse";
 import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION } from "./prompts";
 // @ts-ignore
-import { createGetPdfInfoTool, createSaveObjectiveTool } from "./tools";
+import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from "./tools";
 
 // Model constants
 // @ts-ignore
-const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-flash";
+const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-pro";
 // @ts-ignore
-const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-flash";
+const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-pro";
 
 interface QuestionGenerationTask {
     difficulty: "easy" | "medium" | "hard";
@@ -21,8 +23,9 @@ interface QuestionGenerationTask {
 export class ParallelGenerationService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly gcsService: GcsService
-    ) {}
+        private readonly gcsService: GcsService,
+        private readonly pdfTextService: PdfTextService
+    ) { }
 
     /**
      * Generate flashcards using parallel agent execution
@@ -32,7 +35,20 @@ export class ParallelGenerationService {
         const tasks = this.parseUserPrompt(userPrompt);
 
         // Step 1: Generate questions in parallel by difficulty
-        const generationPromises = tasks.map((task) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt));
+        // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
+        const CHUNK_SIZE = 5;
+        const chunkedTasks = tasks.flatMap(task => {
+            const chunks: QuestionGenerationTask[] = [];
+            let remaining = task.count;
+            while (remaining > 0) {
+                const count = Math.min(remaining, CHUNK_SIZE);
+                chunks.push({ difficulty: task.difficulty, count });
+                remaining -= count;
+            }
+            return chunks;
+        });
+
+        const generationPromises = chunkedTasks.map((task) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt));
 
         // Wait for all parallel generations to complete
         const results = await Promise.all(generationPromises);
@@ -116,7 +132,11 @@ ${difficulty === "hard" ? "Make questions challenging, testing deep understandin
 
 Use the save_objective tool to save the questions you generate.
 `,
-            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService), createSaveObjectiveTool(this.prisma, pdfId)],
+            tools: [
+                createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService),
+                createSaveObjectiveTool(this.prisma, pdfId),
+                createWebSearchTool(),
+            ],
         });
 
         const runner = new InMemoryRunner({
@@ -135,6 +155,32 @@ Use the save_objective tool to save the questions you generate.
             state: { pdfId, difficulty, count },
         });
 
+        // Extract PDF text directly to ensure the model has it
+        let pdfContext = "";
+        try {
+            const buffer = await this.gcsService.downloadFile(gcsPath);
+            // Use existing PDF service if available, else simple parse
+            if (this.pdfTextService) {
+                const extracted = await this.pdfTextService.extractText(buffer);
+                pdfContext = extracted.structuredText.substring(0, 500000); // 500k chars ~ 125k tokens
+            } else {
+                const data = await pdfParse(buffer);
+                pdfContext = data.text.substring(0, 500000);
+            }
+        } catch (error) {
+            console.error("Error pre-fetching PDF content:", error);
+            // Fallback: Agent will try to use tool if context is missing, though we'd prefer direct injection
+        }
+
+        const prompt = `
+Generate ${count} ${difficulty} difficulty questions.
+
+USER INSTRUCTIONS: "${userPrompt}"
+
+SOURCE MATERIAL:
+${pdfContext}
+`;
+
         // Run agent
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         // @ts-ignore
@@ -143,7 +189,7 @@ Use the save_objective tool to save the questions you generate.
             sessionId,
             newMessage: {
                 role: "user",
-                parts: [{ text: `Generate ${count} ${difficulty} difficulty questions based on: ${userPrompt}` }],
+                parts: [{ text: prompt }],
             },
         })) {
             // Tools are executed automatically by the runner
@@ -245,7 +291,8 @@ Use the save_objective tool to save the questions you generate.
             // @ts-ignore
             model: GEMINI_QUALITY_ANALYZER_MODEL, // Reusing the model constant
             instruction: TEST_ANALYZER_INSTRUCTION,
-            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService)],
+            // Still include tool just in case, but rely on direct injection
+            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService)],
         });
 
         const runner = new InMemoryRunner({
@@ -263,6 +310,21 @@ Use the save_objective tool to save the questions you generate.
             state: { pdfId, missedQuestions },
         });
 
+        // Extract PDF text directly to ensure the model has it
+        let pdfContext = "";
+        try {
+            const buffer = await this.gcsService.downloadFile(gcsPath);
+            if (this.pdfTextService) {
+                const extracted = await this.pdfTextService.extractText(buffer);
+                pdfContext = extracted.structuredText.substring(0, 500000);
+            } else {
+                const data = await pdfParse(buffer);
+                pdfContext = data.text.substring(0, 500000);
+            }
+        } catch (error) {
+            console.error("Error pre-fetching PDF content for analysis:", error);
+        }
+
         let analysisResult = {
             summary: "Analysis failed to generate.",
             weakAreas: [],
@@ -277,11 +339,19 @@ Use the save_objective tool to save the questions you generate.
                 role: "user",
                 parts: [
                     {
-                        text: `Here are the questions the student missed: ${JSON.stringify(
-                            missedQuestions,
-                            null,
-                            2
-                        )}. Analyze these and cross-reference with the PDF content to provide study strategies. Return valid JSON.`,
+                        text: `
+Here are the questions the student missed:
+${JSON.stringify(missedQuestions, null, 2)}
+
+SOURCE MATERIAL FROM PDF:
+${pdfContext}
+
+INSTRUCTIONS:
+Analyze the missed questions. Cross-reference them with the Source Material above.
+Identify why they might have missed them (e.g., specific concepts in the text).
+Provide actionable study strategies based on the text.
+Return ONLY valid JSON with keys: summary, weakAreas, studyStrategies.
+`,
                     },
                 ],
             },

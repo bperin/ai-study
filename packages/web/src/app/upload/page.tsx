@@ -140,12 +140,12 @@ export default function UploadPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 p-6">
+        <div className="min-h-screen bg-background text-foreground p-6">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Upload Your Study Material</h1>
-                    <p className="text-slate-600 dark:text-slate-400">Upload a PDF and we'll turn it into interactive flashcards</p>
+                    <h1 className="text-4xl font-bold">Upload Your Study Material</h1>
+                    <p className="text-muted-foreground">Upload a PDF and we'll turn it into interactive flashcards</p>
                 </div>
 
                 {/* Upload Card */}
@@ -161,30 +161,30 @@ export default function UploadPage() {
                             className={`
                 border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
                 transition-all duration-200 ease-in-out
-                ${isDragActive ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 scale-105" : "border-slate-300 dark:border-slate-700 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900"}
-                ${file ? "border-green-500 bg-green-50 dark:bg-green-950/20" : ""}
+                ${isDragActive ? "border-primary bg-secondary scale-105" : "border-border hover:border-primary/50 hover:bg-secondary/50"}
+                ${file ? "border-primary bg-secondary/50" : ""}
               `}
                         >
                             <input {...getInputProps()} />
                             <div className="flex flex-col items-center space-y-4">
                                 {file ? (
                                     <>
-                                        <FileText className="w-16 h-16 text-green-600" />
+                                        <FileText className="w-16 h-16 text-primary" />
                                         <div className="space-y-1">
-                                            <p className="text-lg font-semibold text-green-700 dark:text-green-400">{file.name}</p>
-                                            <p className="text-sm text-slate-600 dark:text-slate-400">{formatFileSize(file.size)}</p>
+                                            <p className="text-lg font-semibold">{file.name}</p>
+                                            <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
                                         </div>
-                                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                                        <Badge variant="outline" className="bg-secondary text-primary border-primary">
                                             <CheckCircle2 className="w-3 h-3 mr-1" />
                                             Ready to upload
                                         </Badge>
                                     </>
                                 ) : (
                                     <>
-                                        <Upload className="w-16 h-16 text-slate-400" />
+                                        <Upload className="w-16 h-16 text-muted-foreground" />
                                         <div className="space-y-2">
-                                            <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">{isDragActive ? "Drop your PDF here" : "Drag & drop your PDF here"}</p>
-                                            <p className="text-sm text-slate-500">or click to browse files</p>
+                                            <p className="text-lg font-semibold">{isDragActive ? "Drop your PDF here" : "Drag & drop your PDF here"}</p>
+                                            <p className="text-sm text-muted-foreground">or click to browse files</p>
                                         </div>
                                         <Badge variant="secondary">PDF only • Max 50MB</Badge>
                                     </>
@@ -204,8 +204,8 @@ export default function UploadPage() {
                         {uploading && (
                             <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-600 dark:text-slate-400">Uploading...</span>
-                                    <span className="font-semibold text-blue-600">{progress}%</span>
+                                    <span className="text-muted-foreground">Uploading...</span>
+                                    <span className="font-semibold">{progress}%</span>
                                 </div>
                                 <Progress value={progress} className="h-2" />
                             </div>
@@ -260,33 +260,33 @@ export default function UploadPage() {
                     <Card>
                         <CardContent className="pt-6">
                             <div className="flex flex-col items-center text-center space-y-2">
-                                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                    <Upload className="w-6 h-6 text-blue-600" />
+                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                                    <Upload className="w-6 h-6 text-primary" />
                                 </div>
                                 <h3 className="font-semibold">1. Upload</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Upload your study material in PDF format</p>
+                                <p className="text-sm text-muted-foreground">Upload your study material in PDF format</p>
                             </div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardContent className="pt-6">
                             <div className="flex flex-col items-center text-center space-y-2">
-                                <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
-                                    <FileText className="w-6 h-6 text-indigo-600" />
+                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                                    <FileText className="w-6 h-6 text-primary" />
                                 </div>
                                 <h3 className="font-semibold">2. Customize</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Choose difficulty and number of questions</p>
+                                <p className="text-sm text-muted-foreground">Choose difficulty and number of questions</p>
                             </div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardContent className="pt-6">
                             <div className="flex flex-col items-center text-center space-y-2">
-                                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                                    <CheckCircle2 className="w-6 h-6 text-primary" />
                                 </div>
                                 <h3 className="font-semibold">3. Study</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Practice with AI-generated flashcards</p>
+                                <p className="text-sm text-muted-foreground">Practice with AI-generated flashcards</p>
                             </div>
                         </CardContent>
                     </Card>

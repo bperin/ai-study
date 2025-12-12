@@ -18,7 +18,7 @@
 
 @layer base {
     input {
-        @apply dark:bg-zinc-800 dark:text-white dark:border-zinc-700;
+        @apply dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800;
     }
     :root {
         --background: 0 0% 100%;
@@ -48,25 +48,31 @@
         --radius: 0.5rem;
     }
     .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
+        /* Off-black backgrounds */
+        --background: 0 0% 7%;
+        --foreground: 0 0% 95%;
+        --card: 0 0% 10%;
+        --card-foreground: 0 0% 95%;
+        --popover: 0 0% 10%;
+        --popover-foreground: 0 0% 95%;
+        /* Off-white primary */
+        --primary: 0 0% 95%;
+        --primary-foreground: 0 0% 10%;
+        /* Subtle grays */
+        --secondary: 0 0% 15%;
+        --secondary-foreground: 0 0% 95%;
+        --muted: 0 0% 15%;
+        --muted-foreground: 0 0% 60%;
+        --accent: 0 0% 15%;
+        --accent-foreground: 0 0% 95%;
+        /* Destructive */
         --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
+        --destructive-foreground: 0 0% 95%;
+        /* Borders and inputs */
+        --border: 0 0% 20%;
+        --input: 0 0% 20%;
+        --ring: 0 0% 80%;
+        /* Charts */
         --chart-1: 220 70% 50%;
         --chart-2: 160 60% 45%;
         --chart-3: 30 80% 55%;
