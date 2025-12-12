@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, Request } from "@nestjs/common";
+import { Controller, Post, Get, Delete, Param, Body, UseGuards, Request, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AdminGuard } from "../auth/admin.guard";
@@ -28,10 +28,10 @@ export class PdfsController {
     }
 
     @Get()
-    @ApiOperation({ summary: "List all PDFs for the user" })
+    @ApiOperation({ summary: "List all PDFs for the user with pagination" })
     @ApiResponse({ status: 200, type: [PdfResponseDto] })
-    listPdfs(@Request() req: any) {
-        return this.pdfsService.listPdfs(req.user.userId);
+    listPdfs(@Request() req: any, @Query("page") page: number = 1, @Query("limit") limit: number = 10) {
+        return this.pdfsService.listPdfs(req.user.userId, Number(page), Number(limit));
     }
 
     @Delete(":id")

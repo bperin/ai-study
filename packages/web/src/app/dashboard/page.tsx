@@ -22,6 +22,7 @@ export default function DashboardPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [pdfs, setPdfs] = useState<PdfResponseDto[]>([]);
+    const [page, setPage] = useState(1);
     const [history, setHistory] = useState<TestHistoryItemDto[]>([]);
     const [user, setUser] = useState<UserResponseDto | null>(null);
     const [pdfToDelete, setPdfToDelete] = useState<string | null>(null);
@@ -49,12 +50,14 @@ export default function DashboardPage() {
         if (!token) {
             router.push("/login");
         } else {
-            const pdfsApi = getPdfsApi();
             const usersApi = getUsersApi();
             const testsApi = getTestsApi();
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
             Promise.all([
-                pdfsApi.pdfsControllerListPdfs().then(setPdfs),
+                fetch(`${baseUrl}/pdfs?page=${page}&limit=8`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                }).then(res => res.json()).then(setPdfs),
                 usersApi.usersControllerGetMe().then((u) => setUser(u)),
                 testsApi.testsControllerGetTestHistory().then((res) => setHistory(res.attempts))
             ])
@@ -65,7 +68,7 @@ export default function DashboardPage() {
                     setLoading(false);
                 });
         }
-    }, [router]);
+    }, [router, page]);
 
     if (loading) {
         return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -136,7 +139,6 @@ export default function DashboardPage() {
                     <Tabs defaultValue="tests" className="space-y-4">
                         <TabsList>
                             <TabsTrigger value="tests">Available Tests</TabsTrigger>
-                            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
                             <TabsTrigger value="history">History</TabsTrigger>
                         </TabsList>
                         <TabsContent value="tests" className="space-y-4">
@@ -195,47 +197,22 @@ export default function DashboardPage() {
                                     </div>
                                 )}
                             </div>
-                        </TabsContent>
-                        <TabsContent value="leaderboard" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Global Rankings</CardTitle>
-                                    <CardDescription>See how you compare to other learners</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        {[
-                                            { rank: 1, name: "Sarah Chen", score: 98, tests: 24, badge: "🥇" },
-                                            { rank: 2, name: "Alex Learner", score: 95, tests: 18, badge: "🥈", isYou: true },
-                                            { rank: 3, name: "Mike Johnson", score: 92, tests: 21, badge: "🥉" },
-                                            { rank: 4, name: "Emily Davis", score: 89, tests: 15, badge: "" },
-                                            { rank: 5, name: "Chris Park", score: 87, tests: 19, badge: "" },
-                                        ].map((user) => (
-                                            <div
-                                                key={user.rank}
-                                                className={`flex items-center justify-between p-4 rounded-lg ${user.isYou ? "bg-secondary border border-primary/20" : "bg-muted/30"
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="text-2xl font-bold text-muted-foreground w-8">
-                                                        {user.badge || `#${user.rank}`}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-semibold">
-                                                            {user.name} {user.isYou && <span className="text-xs text-primary">(You)</span>}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">{user.tests} tests completed</p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-2xl font-bold">{user.score}%</p>
-                                                    <p className="text-xs text-muted-foreground">avg score</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <div className="flex justify-center gap-2 mt-4">
+                                <Button
+                                    variant="outline"
+                                    disabled={page === 1}
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    disabled={pdfs.length < 8}
+                                    onClick={() => setPage(p => p + 1)}
+                                >
+                                    Next
+                                </Button>
+                            </div>
                         </TabsContent>
                         <TabsContent value="history" className="space-y-4">
                             <Card>
