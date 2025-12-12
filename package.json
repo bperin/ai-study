@@ -6,19 +6,10 @@
         "packages/*"
     ],
     "scripts": {
-        "test": "jest",
-        "lint": "echo 'Root linting skipped'",
-        "format": "prettier --write .",
+        "test": "echo 'Run tests in specific packages'",
+        "lint": "echo 'Run lint in specific packages'",
+        "format": "echo 'Run format in specific packages'",
         "start:studio": "prisma studio --schema packages/api/prisma/schema.prisma",
         "start:dev": "npm run dev --workspaces"
-    },
-    "devDependencies": {
-        "eslint": "^8.0.0",
-        "jest": "^29.0.0",
-        "prettier": "^3.0.0",
-        "typescript": "^5.0.0",
-        "ts-jest": "^29.0.0",
-        "@types/jest": "^29.0.0",
-        "@types/node": "^18.0.0"
     }
 }
