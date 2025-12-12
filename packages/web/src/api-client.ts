@@ -23,6 +23,7 @@ export const uploadsApi = new UploadsApi(getConfig());
 export const pdfsApi = new PdfsApi(getConfig());
 
 export const getPdfsApi = () => new PdfsApi(getConfig());
+export const getUsersApi = () => new UsersApi(getConfig());
 
 // Helper to refresh API instances when token changes (e.g. after login)
 export const refreshApiConfig = () => {
