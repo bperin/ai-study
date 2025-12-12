@@ -34,6 +34,10 @@ import {
     TestAnalysisResponseDtoToJSON,
 } from '../models/index';
 
+export interface PdfsControllerDeletePdfRequest {
+    id: string;
+}
+
 export interface PdfsControllerGenerateFlashcardsRequest {
     id: string;
     body: object;
@@ -55,6 +59,86 @@ export interface PdfsControllerSubmitAttemptRequest {
  * 
  */
 export class PdfsApi extends runtime.BaseAPI {
+
+    /**
+     * Chat with AI to plan test generation
+     */
+    async pdfsControllerChatPlanRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/pdfs/chat`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Chat with AI to plan test generation
+     */
+    async pdfsControllerChatPlan(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.pdfsControllerChatPlanRaw(initOverrides);
+    }
+
+    /**
+     * Delete a PDF and all associated data (Admin only)
+     */
+    async pdfsControllerDeletePdfRaw(requestParameters: PdfsControllerDeletePdfRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling pdfsControllerDeletePdf().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/pdfs/{id}`;
+        urlPath = urlPath.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete a PDF and all associated data (Admin only)
+     */
+    async pdfsControllerDeletePdf(requestParameters: PdfsControllerDeletePdfRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.pdfsControllerDeletePdfRaw(requestParameters, initOverrides);
+    }
 
     /**
      * Generate flashcards from a PDF
@@ -238,7 +322,7 @@ export class PdfsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Submit test attempt and get analysis
+     * Submit test attempt and get AI-enhanced analysis with web resources
      */
     async pdfsControllerSubmitAttemptRaw(requestParameters: PdfsControllerSubmitAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestAnalysisResponseDto>> {
         if (requestParameters['submitTestResultsDto'] == null) {
@@ -277,7 +361,7 @@ export class PdfsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Submit test attempt and get analysis
+     * Submit test attempt and get AI-enhanced analysis with web resources
      */
     async pdfsControllerSubmitAttempt(requestParameters: PdfsControllerSubmitAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestAnalysisResponseDto> {
         const response = await this.pdfsControllerSubmitAttemptRaw(requestParameters, initOverrides);

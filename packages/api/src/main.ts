@@ -7,6 +7,14 @@ import { json, urlencoded } from "express";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    // Increase timeout for long-running AI operations (10 minutes)
+    app.use((req, res, next) => {
+        req.setTimeout(600000); // 10 minutes
+        res.setTimeout(600000); // 10 minutes
+        next();
+    });
+
     app.use(json({ limit: "50mb" }));
     app.use(urlencoded({ extended: true, limit: "50mb" }));
     app.enableCors({
