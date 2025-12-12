@@ -1,14 +1,18 @@
 # TestsApi
 
-All URIs are relative to _http://localhost_
+All URIs are relative to *http://localhost*
 
-| Method                                                                 | HTTP request           | Description |
-| ---------------------------------------------------------------------- | ---------------------- | ----------- |
-| [**testsControllerSubmitTest**](TestsApi.md#testscontrollersubmittest) | **POST** /tests/submit |             |
+| Method | HTTP request | Description |
+|------------- | ------------- | -------------|
+| [**testsControllerSubmitTest**](TestsApi.md#testscontrollersubmittest) | **POST** /tests/submit |  |
+
+
 
 ## testsControllerSubmitTest
 
 > testsControllerSubmitTest(submitTestDto)
+
+
 
 ### Example
 
@@ -21,7 +25,7 @@ import type { TestsControllerSubmitTestRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // Configure HTTP bearer authorization: bearer
     accessToken: "YOUR BEARER TOKEN",
   });
@@ -46,9 +50,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name              | Type                              | Description | Notes |
-| ----------------- | --------------------------------- | ----------- | ----- |
-| **submitTestDto** | [SubmitTestDto](SubmitTestDto.md) |             |       |
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **submitTestDto** | [SubmitTestDto](SubmitTestDto.md) |  | |
 
 ### Return type
 
@@ -63,10 +68,11 @@ example().catch(console.error);
 - **Content-Type**: `application/json`
 - **Accept**: Not defined
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
-| **201**     |             | -                |
+|-------------|-------------|------------------|
+| **201** |  |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

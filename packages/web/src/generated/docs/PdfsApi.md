@@ -1,0 +1,213 @@
+# PdfsApi
+
+All URIs are relative to *http://localhost*
+
+| Method | HTTP request | Description |
+|------------- | ------------- | -------------|
+| [**pdfsControllerGenerateFlashcards**](PdfsApi.md#pdfscontrollergenerateflashcards) | **POST** /pdfs/{id}/generate | Generate flashcards from a PDF |
+| [**pdfsControllerGetObjectives**](PdfsApi.md#pdfscontrollergetobjectives) | **GET** /pdfs/{id}/objectives | Get generated objectives and questions for a PDF |
+| [**pdfsControllerListPdfs**](PdfsApi.md#pdfscontrollerlistpdfs) | **GET** /pdfs | List all PDFs for the user |
+
+
+
+## pdfsControllerGenerateFlashcards
+
+> pdfsControllerGenerateFlashcards(id, body)
+
+Generate flashcards from a PDF
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PdfsApi,
+} from '';
+import type { PdfsControllerGenerateFlashcardsRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new PdfsApi(config);
+
+  const body = {
+    // string
+    id: id_example,
+    // object
+    body: Object,
+  } satisfies PdfsControllerGenerateFlashcardsRequest;
+
+  try {
+    const data = await api.pdfsControllerGenerateFlashcards(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **id** | `string` |  | [Defaults to `undefined`] |
+| **body** | `object` |  | |
+
+### Return type
+
+`void` (Empty response body)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## pdfsControllerGetObjectives
+
+> Array&lt;ObjectiveResponseDto&gt; pdfsControllerGetObjectives(id)
+
+Get generated objectives and questions for a PDF
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PdfsApi,
+} from '';
+import type { PdfsControllerGetObjectivesRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new PdfsApi(config);
+
+  const body = {
+    // string
+    id: id_example,
+  } satisfies PdfsControllerGetObjectivesRequest;
+
+  try {
+    const data = await api.pdfsControllerGetObjectives(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **id** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**Array&lt;ObjectiveResponseDto&gt;**](ObjectiveResponseDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## pdfsControllerListPdfs
+
+> Array&lt;PdfResponseDto&gt; pdfsControllerListPdfs()
+
+List all PDFs for the user
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PdfsApi,
+} from '';
+import type { PdfsControllerListPdfsRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new PdfsApi(config);
+
+  try {
+    const data = await api.pdfsControllerListPdfs();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**Array&lt;PdfResponseDto&gt;**](PdfResponseDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

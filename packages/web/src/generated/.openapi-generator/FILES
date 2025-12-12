@@ -1,5 +1,6 @@
 apis/AuthApi.ts
 apis/DefaultApi.ts
+apis/PdfsApi.ts
 apis/TestsApi.ts
 apis/UploadsApi.ts
 apis/UsersApi.ts
@@ -11,6 +12,10 @@ docs/ConfirmUploadResponseDto.md
 docs/CreateUserDto.md
 docs/DefaultApi.md
 docs/LoginDto.md
+docs/McqDto.md
+docs/ObjectiveResponseDto.md
+docs/PdfResponseDto.md
+docs/PdfsApi.md
 docs/SubmitTestDto.md
 docs/TestsApi.md
 docs/UploadUrlResponseDto.md
@@ -22,6 +27,9 @@ models/AuthResponseDto.ts
 models/ConfirmUploadResponseDto.ts
 models/CreateUserDto.ts
 models/LoginDto.ts
+models/McqDto.ts
+models/ObjectiveResponseDto.ts
+models/PdfResponseDto.ts
 models/SubmitTestDto.ts
 models/UploadUrlResponseDto.ts
 models/index.ts

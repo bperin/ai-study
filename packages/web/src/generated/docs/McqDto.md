@@ -1,5 +1,5 @@
 
-# ConfirmUploadResponseDto
+# McqDto
 
 
 ## Properties
@@ -7,20 +7,26 @@
 Name | Type
 ------------ | -------------
 `id` | string
-`filename` | string
-`userId` | string
+`question` | string
+`options` | Array&lt;string&gt;
+`correctIdx` | number
+`explanation` | string
+`hint` | string
 
 ## Example
 
 ```typescript
-import type { ConfirmUploadResponseDto } from ''
+import type { McqDto } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "id": 12cb4237-d74f-4cda-998d-4ef35f56...,
-  "filename": study-material.pdf,
-  "userId": 2778db4c-ec62-49d4-a0d1-229f6f3c15de,
-} satisfies ConfirmUploadResponseDto
+  "id": null,
+  "question": null,
+  "options": null,
+  "correctIdx": null,
+  "explanation": null,
+  "hint": null,
+} satisfies McqDto
 
 console.log(example)
 
@@ -29,7 +35,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as ConfirmUploadResponseDto
+const exampleParsed = JSON.parse(exampleJSON) as McqDto
 console.log(exampleParsed)
 ```
 

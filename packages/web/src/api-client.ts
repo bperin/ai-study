@@ -1,4 +1,4 @@
-import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi } from "./generated";
+import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi, PdfsApi } from "./generated";
 
 const getConfig = () => {
     if (typeof window === "undefined") {
@@ -18,6 +18,7 @@ export const authApi = new AuthApi(getConfig());
 export const usersApi = new UsersApi(getConfig());
 export const defaultApi = new DefaultApi(getConfig());
 export const uploadsApi = new UploadsApi(getConfig());
+export const pdfsApi = new PdfsApi(getConfig());
 
 // Helper to refresh API instances when token changes (e.g. after login)
 export const refreshApiConfig = () => {
@@ -27,5 +28,6 @@ export const refreshApiConfig = () => {
         usersApi: new UsersApi(config),
         defaultApi: new DefaultApi(config),
         uploadsApi: new UploadsApi(config),
+        pdfsApi: new PdfsApi(config),
     };
 };
