@@ -37,8 +37,11 @@ COPY --from=builder /app/package.json ./package.json
 RUN mkdir -p ./packages/web/public
 COPY --from=builder /app/packages/web/public/ ./packages/web/public/
 
+# Set default PORT for deployment
+ENV PORT=3000
+
 # Expose the port
-EXPOSE 3001
+EXPOSE 3000
 
 # Start the application
 CMD ["npm", "start", "--workspace=packages/web"]
