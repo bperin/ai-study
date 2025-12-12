@@ -1,7 +1,0 @@
-steps:
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', 'packages/api/Dockerfile', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/ai-study/api:latest', '--build-arg', 'DATABASE_URL=$_DATABASE_URL', '.']
-images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/ai-study/api:latest'
-substitutions:
-  _DATABASE_URL: ''

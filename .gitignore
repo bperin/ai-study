@@ -50,3 +50,5 @@ packages/api/prisma/*.db-journal
 *.sln
 *.sw?
 packages/api/openapi.json
+
+google-services.json

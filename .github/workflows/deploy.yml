@@ -36,12 +36,22 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
-      - name: Build API Image
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build and Push API Image
         run: |
-          gcloud builds submit . \
-            --config packages/api/cloudbuild.yaml \
-            --substitutions=_DATABASE_URL="${{ env.DATABASE_URL }}" \
-            --project ${{ env.GCP_PROJECT_ID }}
+          docker build -f packages/api/Dockerfile \
+            --build-arg DATABASE_URL="${{ env.DATABASE_URL }}" \
+            -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest .
+          docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest
+
+      - name: Build and Push Web Image
+        run: |
+          docker build -f packages/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="${{ env.NEXT_PUBLIC_API_URL }}" \
+            -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest .
+          docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest
 
       - name: Deploy API service
         run: |
@@ -52,13 +62,6 @@ jobs:
             --set-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
             --allow-unauthenticated \
             --quiet
-
-      - name: Build Web Image
-        run: |
-          gcloud builds submit . \
-            --config packages/web/cloudbuild.yaml \
-            --substitutions=_NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
-            --project ${{ env.GCP_PROJECT_ID }}
 
       - name: Deploy Web service
         run: |
