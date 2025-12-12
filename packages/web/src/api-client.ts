@@ -1,6 +1,18 @@
-import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi, PdfsApi, TestTakingApi, TestsApi } from "./generated";
+import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi, PdfsApi, TestTakingApi, TestsApi, Middleware } from "./generated";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+const authMiddleware: Middleware = {
+    post: async (context) => {
+        if (context.response.status === 401) {
+            if (typeof window !== "undefined") {
+                localStorage.removeItem("access_token");
+                window.location.href = "/login";
+            }
+        }
+        return context.response;
+    }
+};
 
 const getConfig = () => {
     if (typeof window === "undefined") {
@@ -13,6 +25,7 @@ const getConfig = () => {
         basePath: BASE_PATH,
         accessToken: token || undefined,
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        middleware: [authMiddleware],
     });
 };
 
