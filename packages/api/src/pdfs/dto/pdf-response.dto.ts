@@ -12,7 +12,7 @@ export class PdfResponseDto {
 
     @ApiProperty({
         type: [Object],
-        example: [{ title: "Objective Title", difficulty: "easy" }],
+        example: [{ title: "Objective Title", difficulty: "easy", _count: { mcqs: 5 } }],
     })
-    objectives: { title: string; difficulty: string }[];
+    objectives: { title: string; difficulty: string; _count: { mcqs: number } }[];
 }

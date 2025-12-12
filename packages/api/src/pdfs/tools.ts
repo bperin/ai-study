@@ -1,6 +1,8 @@
 import { FunctionTool } from "@google/adk";
 import { PrismaService } from "../prisma/prisma.service";
 import { z } from "zod";
+import * as pdfParse from "pdf-parse";
+import { GcsService } from "./gcs.service";
 
 /**
  * Tool for saving a single objective with its questions to the database
@@ -58,18 +60,51 @@ export function createSaveObjectiveTool(prisma: PrismaService, pdfId: string) {
 /**
  * Tool for getting PDF information from GCS
  */
-export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string) {
+export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsService: GcsService, pdfTextService?: any) {
     return new FunctionTool({
         name: "get_pdf_info",
-        description: "Gets information about the PDF file to generate flashcards from",
+        description: "Gets information about the PDF file to generate flashcards from. This returns the cleaned and structured text content of the PDF.",
         execute: async () => {
-            // TODO: In the future, we can extract actual PDF text here
-            return {
-                filename: pdfFilename,
-                gcsPath,
-                contentSummary: `This is a PDF study material titled "${pdfFilename}". The content would be extracted from the PDF file.`,
-                note: "PDF text extraction will be implemented soon",
-            };
+            try {
+                // Download file from GCS
+                const buffer = await gcsService.downloadFile(gcsPath);
+
+                // If we have the new PDF text service, use it for better extraction
+                if (pdfTextService) {
+                    const extracted = await pdfTextService.extractText(buffer);
+
+                    // Limit content length if too large
+                    // Use structured text which is cleaner than raw text
+                    const content = extracted.structuredText.substring(0, 100000);
+
+                    return {
+                        filename: pdfFilename,
+                        gcsPath,
+                        content,
+                        pageCount: extracted.pageCount,
+                        info: extracted.metadata,
+                        note: "This is cleaned and structured text from the PDF, optimized for AI processing.",
+                    };
+                } else {
+                    // Fallback to old method
+                    const data = await pdfParse(buffer);
+                    const content = data.text.substring(0, 100000);
+
+                    return {
+                        filename: pdfFilename,
+                        gcsPath,
+                        content,
+                        pageCount: data.numpages,
+                        info: data.info,
+                    };
+                }
+            } catch (error) {
+                console.error("Error processing PDF:", error);
+                return {
+                    filename: pdfFilename,
+                    error: "Failed to extract PDF content. Please use the filename to infer the topic.",
+                };
+            }
         },
     });
 }

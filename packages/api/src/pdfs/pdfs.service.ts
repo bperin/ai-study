@@ -61,13 +61,49 @@ export class PdfsService {
                     select: {
                         title: true,
                         difficulty: true,
+                        _count: {
+                            select: { mcqs: true },
+                        },
                     },
                 },
             },
         });
     }
 
-    async analyzeTest(pdfId: string, missedQuestions: any[]) {
-        return this.parallelGenerationService.analyzeTestResults(pdfId, missedQuestions);
+    async startAttempt(pdfId: string, userId: string) {
+        return this.prisma.testAttempt.create({
+            data: {
+                userId,
+                pdfId,
+                score: 0,
+                total: 0, // Will be updated on completion
+                startedAt: new Date(),
+            },
+        });
+    }
+
+    async submitTest(attemptId: string, score: number, totalQuestions: number, missedQuestions: any[]) {
+        const attempt = await this.prisma.testAttempt.findUnique({ where: { id: attemptId } });
+        if (!attempt) throw new Error("Attempt not found");
+
+        // Analyze results
+        const analysis = await this.parallelGenerationService.analyzeTestResults(attempt.pdfId, missedQuestions);
+
+        // Update attempt with feedback and score
+        await this.prisma.testAttempt.update({
+            where: { id: attemptId },
+            data: {
+                score,
+                total: totalQuestions,
+                percentage: (score / totalQuestions) * 100,
+                completedAt: new Date(),
+                feedback: analysis as any,
+            },
+        });
+
+        return {
+            attemptId,
+            ...analysis,
+        };
     }
 }
