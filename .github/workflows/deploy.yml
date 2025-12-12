@@ -13,6 +13,7 @@ env:
   API_SERVICE_NAME: ai-study-api
   WEB_SERVICE_NAME: ai-study-web
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
   deploy:
@@ -42,6 +43,8 @@ jobs:
             --project ${{ env.GCP_PROJECT_ID }} \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
+            --set-env-vars DATABASE_URL=${{ env.DATABASE_URL }} \
+            --set-build-env-vars DATABASE_URL=${{ env.DATABASE_URL }} \
             --quiet
 
       - name: Deploy Web service
