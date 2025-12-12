@@ -6,7 +6,7 @@ import { PdfsService } from "./pdfs.service";
 import { GenerateFlashcardsDto } from "./dto/generate-flashcards.dto";
 import { ObjectiveResponseDto } from "./dto/objective-response.dto";
 import { PdfResponseDto } from "./dto/pdf-response.dto";
-import { SubmitTestResultsDto, TestAnalysisResponseDto } from "./dto/submit-test-results.dto";
+import { SubmitTestResultsDto, TestAnalysisResponseDto, TestHistoryResponseDto } from "./dto/submit-test-results.dto";
 import { StartAttemptResponseDto } from "./dto/start-attempt-response.dto";
 
 @ApiTags("pdfs")
@@ -70,4 +70,5 @@ export class PdfsController {
     async chatPlan(@Body() body: { message: string; pdfId: string; history?: any[] }, @Request() req: any) {
         return this.pdfsService.chatPlan(body.message, body.pdfId, req.user.userId, body.history);
     }
+
 }
