@@ -1,6 +1,7 @@
-import { Controller, Post, Get, Param, Body, UseGuards, Request } from "@nestjs/common";
+import { Controller, Post, Get, Delete, Param, Body, UseGuards, Request } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { AdminGuard } from "../auth/admin.guard";
 import { PdfsService } from "./pdfs.service";
 import { GenerateFlashcardsDto } from "./dto/generate-flashcards.dto";
 import { ObjectiveResponseDto } from "./dto/objective-response.dto";
@@ -53,5 +54,13 @@ export class PdfsController {
             body.missedQuestions,
             body.allAnswers
         );
+    }
+
+    @Delete(":id")
+    @UseGuards(AdminGuard)
+    @ApiOperation({ summary: "Delete a PDF and all associated data (Admin only)" })
+    @ApiResponse({ status: 200, description: "PDF deleted successfully" })
+    deletePdf(@Param("id") pdfId: string) {
+        return this.pdfsService.deletePdf(pdfId);
     }
 }
