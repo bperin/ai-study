@@ -1,13 +1,15 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { GeminiService } from "./gemini.service";
+import { ParallelGenerationService } from "./parallel-generation.service";
 
 @Injectable()
 export class PdfsService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly geminiService: GeminiService
-    ) { }
+        private readonly geminiService: GeminiService,
+        private readonly parallelGenerationService: ParallelGenerationService
+    ) {}
 
     async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
         // 1. Get PDF from database
@@ -19,8 +21,8 @@ export class PdfsService {
             throw new NotFoundException("PDF not found");
         }
 
-        // 2. Let the agent orchestrate everything using tools
-        const result = await this.geminiService.generateFlashcards(
+        // 2. Use parallel generation for faster results
+        const result = await this.parallelGenerationService.generateFlashcardsParallel(
             userPrompt,
             pdfId,
             pdf.filename,
@@ -34,7 +36,7 @@ export class PdfsService {
         });
 
         return {
-            message: "Flashcards generated successfully",
+            message: "Flashcards generated successfully with parallel agents",
             objectivesCount: result.objectivesCount,
             questionsCount: result.questionsCount,
             summary: result.summary,

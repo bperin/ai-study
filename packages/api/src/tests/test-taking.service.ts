@@ -232,12 +232,12 @@ export class TestTakingService {
         const currentTopic =
             state.answers.length > 0
                 ? (() => {
-                    // Find topic from topicScores
-                    for (const [_, score] of state.topicScores.entries()) {
-                        return score.objectiveTitle;
-                    }
-                    return "";
-                })()
+                      // Find topic from topicScores
+                      for (const [_, score] of state.topicScores.entries()) {
+                          return score.objectiveTitle;
+                      }
+                      return "";
+                  })()
                 : "";
 
         const replacements: Record<string, string> = {
