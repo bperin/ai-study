@@ -11,7 +11,7 @@ All URIs are relative to *http://localhost*
 
 ## usersControllerFindAll
 
-> usersControllerFindAll()
+> Array&lt;UserResponseDto&gt; usersControllerFindAll()
 
 
 
@@ -50,7 +50,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-`void` (Empty response body)
+[**Array&lt;UserResponseDto&gt;**](UserResponseDto.md)
 
 ### Authorization
 
@@ -59,7 +59,7 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: `application/json`
 
 
 ### HTTP response details
@@ -72,7 +72,7 @@ This endpoint does not need any parameter.
 
 ## usersControllerGetMe
 
-> usersControllerGetMe()
+> UserResponseDto usersControllerGetMe()
 
 
 
@@ -111,7 +111,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-`void` (Empty response body)
+[**UserResponseDto**](UserResponseDto.md)
 
 ### Authorization
 
@@ -120,7 +120,7 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: `application/json`
 
 
 ### HTTP response details
