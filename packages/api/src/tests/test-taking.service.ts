@@ -383,6 +383,7 @@ export class TestTakingService {
                 total: state.totalQuestions,
                 completedAt: new Date(),
                 feedback: feedback as any, // Save feedback JSON
+                summary: feedback.aiSummary, // Save AI summary as text blob
             },
         });
 
@@ -422,6 +423,9 @@ export class TestTakingService {
                 correctAnswer: `Option ${a.correctAnswer + 1}`,
             }));
 
+        // Generate AI summary report
+        const aiSummary = await this.generateAISummaryReport(state, byObjective, strengths, weaknesses);
+
         return {
             strengths,
             weaknesses,
@@ -430,7 +434,155 @@ export class TestTakingService {
             longestStreak: state.longestStreak,
             averageTimePerQuestion: Math.round(state.totalTimeSpent / state.totalQuestions),
             encouragement: this.generateFinalEncouragement(state),
+            aiSummary, // Add AI-generated summary report
         };
+    }
+
+    /**
+     * Generate AI-powered summary report with web search and resource links
+     */
+    private async generateAISummaryReport(state: TestSessionState, byObjective: any[], strengths: string[], weaknesses: string[]): Promise<string> {
+        try {
+            const { GoogleGenerativeAI } = require("@google/generative-ai");
+            const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-2.5-flash",
+                tools: [{
+                    googleSearchRetrieval: {
+                        dynamicRetrievalConfig: {
+                            mode: "MODE_DYNAMIC",
+                            dynamicThreshold: 0.7
+                        }
+                    }
+                }]
+            });
+
+            const percentage = (state.correctCount / state.totalQuestions) * 100;
+            
+            const prompt = `Generate a personalized test summary report for a student who just completed a flashcard test. Use web search to find relevant study resources and include specific links.
+
+Test Results:
+- Score: ${state.correctCount}/${state.totalQuestions} (${percentage.toFixed(1)}%)
+- Longest streak: ${state.longestStreak} correct answers in a row
+- Average time per question: ${Math.round(state.totalTimeSpent / state.totalQuestions)} seconds
+- Total time: ${Math.round(state.totalTimeSpent / 60)} minutes
+
+Performance by Topic:
+${byObjective.map(obj => `- ${obj.objectiveTitle}: ${obj.correct}/${obj.total} (${obj.percentage.toFixed(1)}%)`).join('\n')}
+
+Strong Areas: ${strengths.length > 0 ? strengths.join(', ') : 'Building foundation'}
+Areas for Improvement: ${weaknesses.length > 0 ? weaknesses.join(', ') : 'Great performance across all topics'}
+
+Generate a comprehensive summary that includes:
+
+1. **Performance Analysis** (1-2 paragraphs):
+   - Acknowledge their performance with specific insights
+   - Highlight strongest areas and learning patterns
+   - Identify areas needing improvement
+
+2. **Study Recommendations** with web-sourced links:
+   - For each weak area, search for and suggest 2-3 specific educational resources
+   - Include direct links to Khan Academy, Coursera, educational YouTube channels, or reputable study sites
+   - Provide brief descriptions of why each resource is helpful
+
+3. **Next Steps** (encouraging tone):
+   - Actionable study plan based on their performance
+   - Motivational message to keep them engaged
+
+Format the response in markdown with clickable links. Search the web for current, high-quality educational resources related to their weak topics.`;
+
+            const result = await model.generateContent(prompt);
+            return result.response.text();
+        } catch (error) {
+            console.error('Error generating AI summary with web search:', error);
+            // Fallback to enhanced summary without web search
+            return await this.generateFallbackSummaryWithLinks(state, byObjective, strengths, weaknesses);
+        }
+    }
+
+    /**
+     * Fallback summary generator with curated educational links
+     */
+    private async generateFallbackSummaryWithLinks(state: TestSessionState, byObjective: any[], strengths: string[], weaknesses: string[]): Promise<string> {
+        const percentage = (state.correctCount / state.totalQuestions) * 100;
+        
+        // Curated educational resources by topic
+        const resourceMap: Record<string, string[]> = {
+            'biology': [
+                '[Khan Academy Biology](https://www.khanacademy.org/science/biology) - Comprehensive biology lessons',
+                '[Crash Course Biology](https://www.youtube.com/playlist?list=PL3EED4C1D684D3ADF) - Engaging video series',
+                '[Biology Online](https://www.biologyonline.com/) - Detailed biology reference'
+            ],
+            'cell': [
+                '[Khan Academy Cell Biology](https://www.khanacademy.org/science/biology/structure-of-a-cell) - Cell structure and function',
+                '[Cells Alive!](https://www.cellsalive.com/) - Interactive cell animations',
+                '[Nature Cell Biology](https://www.nature.com/ncb/) - Advanced cell biology research'
+            ],
+            'genetics': [
+                '[Khan Academy Genetics](https://www.khanacademy.org/science/biology/classical-genetics) - Genetics fundamentals',
+                '[Genetics Home Reference](https://ghr.nlm.nih.gov/) - NIH genetics resource',
+                '[Learn.Genetics](https://learn.genetics.utah.edu/) - University of Utah genetics tutorials'
+            ],
+            'chemistry': [
+                '[Khan Academy Chemistry](https://www.khanacademy.org/science/chemistry) - Complete chemistry course',
+                '[ChemLibreTexts](https://chem.libretexts.org/) - Open-access chemistry textbook',
+                '[Crash Course Chemistry](https://www.youtube.com/playlist?list=PL8dPuuaLjXtPHzzYuWy6fYEaX9mQQ8oGr) - Chemistry video series'
+            ],
+            'physics': [
+                '[Khan Academy Physics](https://www.khanacademy.org/science/physics) - Physics fundamentals',
+                '[Physics Classroom](https://www.physicsclassroom.com/) - Interactive physics tutorials',
+                '[MIT OpenCourseWare Physics](https://ocw.mit.edu/courses/physics/) - University-level physics courses'
+            ]
+        };
+
+        let summary = `## Performance Summary\n\n`;
+        summary += `Great work completing this test! You scored **${state.correctCount} out of ${state.totalQuestions}** questions (${percentage.toFixed(1)}%). `;
+        
+        if (percentage >= 80) {
+            summary += `This shows strong mastery of the material. `;
+        } else if (percentage >= 60) {
+            summary += `You're making good progress and building a solid foundation. `;
+        } else {
+            summary += `Every attempt helps you learn - keep building your understanding! `;
+        }
+
+        if (state.longestStreak > 3) {
+            summary += `Your longest streak of ${state.longestStreak} correct answers shows you can maintain focus and apply concepts consistently.\n\n`;
+        } else {
+            summary += `Focus on building consistency in your understanding.\n\n`;
+        }
+
+        if (strengths.length > 0) {
+            summary += `### 🎯 Strong Areas\nYou demonstrated solid understanding in: **${strengths.join(', ')}**. These are great foundations to build upon!\n\n`;
+        }
+
+        if (weaknesses.length > 0) {
+            summary += `### 📚 Study Recommendations\n\n`;
+            weaknesses.forEach(weakness => {
+                summary += `**${weakness}:**\n`;
+                
+                // Find matching resources
+                const topicKey = Object.keys(resourceMap).find(key => 
+                    weakness.toLowerCase().includes(key) || 
+                    key.includes(weakness.toLowerCase().split(' ')[0])
+                );
+                
+                const resources = topicKey ? resourceMap[topicKey] : resourceMap['biology']; // Default to biology
+                resources.forEach(resource => {
+                    summary += `- ${resource}\n`;
+                });
+                summary += `\n`;
+            });
+        }
+
+        summary += `### 🚀 Next Steps\n`;
+        summary += `1. Review the topics where you scored below 70%\n`;
+        summary += `2. Use the recommended resources above for targeted study\n`;
+        summary += `3. Retake this test in a few days to track your improvement\n`;
+        summary += `4. Focus on understanding concepts rather than memorizing facts\n\n`;
+        summary += `Keep up the excellent work! Consistent practice leads to mastery. 💪`;
+
+        return summary;
     }
 
     /**
