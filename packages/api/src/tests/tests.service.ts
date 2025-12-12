@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Mcq } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SubmitTestDto } from "./dto/submit-test.dto";
-import { TestHistoryResponseDto } from "../pdfs/dto/submit-test-results.dto";
+import { TestHistoryResponseDto } from "./dto/test-results.dto";
 
 @Injectable()
 export class TestsService {
