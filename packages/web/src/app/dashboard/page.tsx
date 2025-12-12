@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getPdfsApi } from "@/api-client";
+import { getPdfsApi, getUsersApi } from "@/api-client";
 import { PdfResponseDto } from "@/generated";
 
 type PdfObjective = {
@@ -20,6 +20,7 @@ export default function DashboardPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [pdfs, setPdfs] = useState<PdfResponseDto[]>([]);
+    const [user, setUser] = useState<{ email: string } | null>(null);
 
     const handleLogout = useCallback(() => {
         localStorage.removeItem("access_token");
@@ -31,15 +32,17 @@ export default function DashboardPage() {
         if (!token) {
             router.push("/login");
         } else {
-            // Fetch PDFs
-            const api = getPdfsApi();
-            api.pdfsControllerListPdfs()
-                .then(data => {
-                    setPdfs(data);
-                    setLoading(false);
-                })
+            const pdfsApi = getPdfsApi();
+            const usersApi = getUsersApi();
+
+            Promise.all([
+                pdfsApi.pdfsControllerListPdfs().then(setPdfs),
+                usersApi.usersControllerGetMe().then((u: any) => setUser(u))
+            ])
                 .catch(err => {
-                    console.error("Failed to fetch PDFs", err);
+                    console.error("Failed to fetch data", err);
+                })
+                .finally(() => {
                     setLoading(false);
                 });
         }
@@ -55,12 +58,13 @@ export default function DashboardPage() {
                 <h1 className="text-2xl font-bold">Memorang</h1>
                 <div className="flex items-center gap-3">
                     <div className="text-right">
-                        <p className="text-sm font-medium">Alex Learner</p>
-                        <p className="text-xs text-muted-foreground">alex@example.com</p>
+                        <p className="text-sm font-medium">{user?.email?.split('@')[0]}</p>
+                        <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </div>
                     <Avatar>
-                        <AvatarImage src="/avatars/01.png" alt="@user" />
-                        <AvatarFallback>AL</AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                            {user?.email?.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
                     </Avatar>
                 </div>
             </header>

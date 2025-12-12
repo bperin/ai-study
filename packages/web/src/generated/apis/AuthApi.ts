@@ -21,7 +21,10 @@ import type {
 } from '../models/index';
 import {
     AuthResponseDtoFromJSON,
+    AuthResponseDtoToJSON,
+    CreateUserDtoFromJSON,
     CreateUserDtoToJSON,
+    LoginDtoFromJSON,
     LoginDtoToJSON,
 } from '../models/index';
 
