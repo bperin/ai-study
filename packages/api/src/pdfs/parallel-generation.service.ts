@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { GcsService } from "./gcs.service";
 import { LlmAgent, InMemoryRunner } from "@google/adk";
 import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION } from "./prompts";
 // @ts-ignore
@@ -18,7 +19,10 @@ interface QuestionGenerationTask {
 
 @Injectable()
 export class ParallelGenerationService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly gcsService: GcsService
+    ) {}
 
     /**
      * Generate flashcards using parallel agent execution
@@ -112,7 +116,7 @@ ${difficulty === "hard" ? "Make questions challenging, testing deep understandin
 
 Use the save_objective tool to save the questions you generate.
 `,
-            tools: [createGetPdfInfoTool(pdfFilename, gcsPath), createSaveObjectiveTool(this.prisma, pdfId)],
+            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService), createSaveObjectiveTool(this.prisma, pdfId)],
         });
 
         const runner = new InMemoryRunner({
@@ -241,7 +245,7 @@ Use the save_objective tool to save the questions you generate.
             // @ts-ignore
             model: GEMINI_QUALITY_ANALYZER_MODEL, // Reusing the model constant
             instruction: TEST_ANALYZER_INSTRUCTION,
-            tools: [createGetPdfInfoTool(pdfFilename, gcsPath)],
+            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService)],
         });
 
         const runner = new InMemoryRunner({

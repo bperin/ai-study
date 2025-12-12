@@ -16,7 +16,7 @@ export class MissedQuestionDto {
 
 export class SubmitTestResultsDto {
     @ApiProperty()
-    pdfId: string;
+    attemptId: string;
 
     @ApiProperty()
     score: number;

@@ -7,6 +7,8 @@ All URIs are relative to *http://localhost*
 | [**pdfsControllerGenerateFlashcards**](PdfsApi.md#pdfscontrollergenerateflashcards) | **POST** /pdfs/{id}/generate | Generate flashcards from a PDF |
 | [**pdfsControllerGetObjectives**](PdfsApi.md#pdfscontrollergetobjectives) | **GET** /pdfs/{id}/objectives | Get generated objectives and questions for a PDF |
 | [**pdfsControllerListPdfs**](PdfsApi.md#pdfscontrollerlistpdfs) | **GET** /pdfs | List all PDFs for the user |
+| [**pdfsControllerStartAttempt**](PdfsApi.md#pdfscontrollerstartattempt) | **POST** /pdfs/{id}/start-attempt | Start a new test attempt |
+| [**pdfsControllerSubmitAttempt**](PdfsApi.md#pdfscontrollersubmitattempt) | **POST** /pdfs/submit-attempt | Submit test attempt and get analysis |
 
 
 
@@ -201,6 +203,144 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
 - **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## pdfsControllerStartAttempt
+
+> StartAttemptResponseDto pdfsControllerStartAttempt(id)
+
+Start a new test attempt
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PdfsApi,
+} from '';
+import type { PdfsControllerStartAttemptRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new PdfsApi(config);
+
+  const body = {
+    // string
+    id: id_example,
+  } satisfies PdfsControllerStartAttemptRequest;
+
+  try {
+    const data = await api.pdfsControllerStartAttempt(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **id** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**StartAttemptResponseDto**](StartAttemptResponseDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## pdfsControllerSubmitAttempt
+
+> TestAnalysisResponseDto pdfsControllerSubmitAttempt(submitTestResultsDto)
+
+Submit test attempt and get analysis
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PdfsApi,
+} from '';
+import type { PdfsControllerSubmitAttemptRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new PdfsApi(config);
+
+  const body = {
+    // SubmitTestResultsDto
+    submitTestResultsDto: ...,
+  } satisfies PdfsControllerSubmitAttemptRequest;
+
+  try {
+    const data = await api.pdfsControllerSubmitAttempt(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **submitTestResultsDto** | [SubmitTestResultsDto](SubmitTestResultsDto.md) |  | |
+
+### Return type
+
+[**TestAnalysisResponseDto**](TestAnalysisResponseDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
 

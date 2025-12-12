@@ -1,18 +1,45 @@
-import { Body, Controller, Post, UseGuards, Request } from "@nestjs/common";
+import { Body, Controller, Post, Get, UseGuards, Request, Param, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { SubmitTestDto } from "./dto/submit-test.dto";
 import { TestsService } from "./tests.service";
+import { LeaderboardService } from "./leaderboard.service";
 
 @ApiTags("tests")
 @Controller("tests")
 export class TestsController {
-    constructor(private testsService: TestsService) {}
+    constructor(
+        private testsService: TestsService,
+        private leaderboardService: LeaderboardService
+    ) { }
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Post("submit")
     submitTest(@Request() req: any, @Body() dto: SubmitTestDto) {
         return this.testsService.submitTest(req.user.userId, dto);
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Get("leaderboard")
+    async getGlobalLeaderboard(@Query("limit") limit?: string) {
+        const limitNum = limit ? parseInt(limit) : 10;
+        return this.leaderboardService.getGlobalLeaderboard(limitNum);
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Get("leaderboard/me")
+    async getMyRank(@Request() req: any) {
+        return this.leaderboardService.getUserRank(req.user.userId);
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Get("leaderboard/pdf/:pdfId")
+    async getPdfLeaderboard(@Param("pdfId") pdfId: string, @Query("limit") limit?: string) {
+        const limitNum = limit ? parseInt(limit) : 10;
+        return this.leaderboardService.getPdfLeaderboard(pdfId, limitNum);
     }
 }
