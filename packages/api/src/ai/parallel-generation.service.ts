@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { GcsService } from "./gcs.service";
-import { PdfTextService } from "./pdf-text.service";
+import { GcsService } from "../pdfs/gcs.service";
+import { PdfTextService } from "../pdfs/pdf-text.service";
 import { LlmAgent, InMemoryRunner } from "@google/adk";
 import * as pdfParse from "pdf-parse";
 import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION } from "./prompts";
