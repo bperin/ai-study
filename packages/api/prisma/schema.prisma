@@ -7,43 +7,71 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String        @id @default(uuid())
+  email     String        @unique
   password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   pdfs      Pdf[]
+  attempts  TestAttempt[]
 }
 
 model Pdf {
-  id         String      @id @default(uuid())
+  id         String        @id @default(uuid())
   filename   String
-  content    String?     @db.Text
+  content    String?       @db.Text
   userId     String
-  user       User        @relation(fields: [userId], references: [id])
-  createdAt  DateTime    @default(now())
+  user       User          @relation(fields: [userId], references: [id])
+  createdAt  DateTime      @default(now())
   objectives Objective[]
+  attempts   TestAttempt[]
 }
 
 model Objective {
-  id         String   @id @default(uuid())
+  id         String @id @default(uuid())
   title      String
   difficulty String
   pdfId      String
-  pdf        Pdf      @relation(fields: [pdfId], references: [id])
+  pdf        Pdf    @relation(fields: [pdfId], references: [id])
   mcqs       Mcq[]
 }
 
 model Mcq {
-  id          String    @id @default(uuid())
-  question    String
-  options     String[]
-  correctIdx  Int
-  explanation String?
-  objectiveId String
-  objective   Objective @relation(fields: [objectiveId], references: [id])
+  id           String       @id @default(uuid())
+  question     String
+  options      String[]
+  correctIdx   Int
+  explanation  String?
+  hint         String?
+  externalLink String?
+  objectiveId  String
+  objective    Objective    @relation(fields: [objectiveId], references: [id])
+  userAnswers  UserAnswer[]
+}
+
+model TestAttempt {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  pdfId       String
+  pdf         Pdf          @relation(fields: [pdfId], references: [id])
+  score       Int
+  total       Int
+  startedAt   DateTime     @default(now())
+  completedAt DateTime?
+  answers     UserAnswer[]
+}
+
+model UserAnswer {
+  id          String      @id @default(uuid())
+  attemptId   String
+  attempt     TestAttempt @relation(fields: [attemptId], references: [id])
+  mcqId       String
+  mcq         Mcq         @relation(fields: [mcqId], references: [id])
+  selectedIdx Int
+  isCorrect   Boolean
+  createdAt   DateTime    @default(now())
 }
