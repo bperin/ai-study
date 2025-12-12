@@ -10,9 +10,6 @@
         "codegen": "openapi-generator-cli generate -i ../../packages/api/openapi.json -g typescript-fetch -o src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec"
     },
     "dependencies": {
-        "@copilotkit/react-core": "^1.50.0",
-        "@copilotkit/react-ui": "^1.50.0",
-        "@copilotkit/runtime": "^1.50.0",
         "@google/generative-ai": "^0.1.0",
         "@radix-ui/react-avatar": "^1.1.11",
         "@radix-ui/react-dialog": "^1.1.15",
