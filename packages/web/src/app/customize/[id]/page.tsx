@@ -2,11 +2,30 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { FileText, Sparkles, ArrowRight, Loader2, Lightbulb } from "lucide-react";
+import { FileText, Sparkles, ArrowRight, Loader2, Lightbulb, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+
+interface TestPlan {
+    objectives: Array<{
+        title: string;
+        difficulty: string;
+        questionCount: number;
+    }>;
+    totalQuestions: number;
+    estimatedTime: string;
+    summary: string;
+}
 
 export default function CustomizePage() {
     const router = useRouter();
@@ -15,11 +34,19 @@ export default function CustomizePage() {
 
     const [pdfInfo, setPdfInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [generating, setGenerating] = useState(false);
+    const [generatingPlan, setGeneratingPlan] = useState(false);
+    const [generatingCards, setGeneratingCards] = useState(false);
     const [prompt, setPrompt] = useState("");
+    const [testPlan, setTestPlan] = useState<TestPlan | null>(null);
+    const [showPlanDialog, setShowPlanDialog] = useState(false);
 
     // Example prompts
-    const examples = ["Create 15 hard questions focusing on key concepts", "Make 20 easy flashcards with hints and explanations", "Generate 10 medium difficulty questions about the main topics", "Create 25 challenging questions with detailed explanations"];
+    const examples = [
+        "Create 15 hard questions focusing on key concepts",
+        "Make 20 easy flashcards with hints and explanations",
+        "Generate 10 medium difficulty questions about the main topics",
+        "Create 25 challenging questions with detailed explanations",
+    ];
 
     useEffect(() => {
         // TODO: Fetch PDF info from backend
@@ -31,18 +58,48 @@ export default function CustomizePage() {
         setLoading(false);
     }, [pdfId]);
 
-    const handleGenerateTest = async () => {
+    const handleGeneratePlan = async () => {
         if (!prompt.trim()) {
             alert("Please describe what kind of test you want");
             return;
         }
 
-        setGenerating(true);
+        setGeneratingPlan(true);
+
+        try {
+            // TODO: Call backend to generate test plan (not the full questions yet)
+            // For now, simulate with mock data
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            const mockPlan: TestPlan = {
+                objectives: [
+                    { title: "Introduction to Key Concepts", difficulty: "easy", questionCount: 5 },
+                    { title: "Advanced Applications", difficulty: "hard", questionCount: 10 },
+                    { title: "Problem Solving Techniques", difficulty: "medium", questionCount: 5 },
+                ],
+                totalQuestions: 20,
+                estimatedTime: "30-40 minutes",
+                summary: "This test will cover the main topics from your PDF with a focus on practical applications and problem-solving.",
+            };
+
+            setTestPlan(mockPlan);
+            setShowPlanDialog(true);
+        } catch (error: any) {
+            console.error("Failed to generate plan:", error);
+            alert(error.message || "Failed to generate test plan. Please try again.");
+        } finally {
+            setGeneratingPlan(false);
+        }
+    };
+
+    const handleApprovePlan = async () => {
+        setShowPlanDialog(false);
+        setGeneratingCards(true);
 
         try {
             const token = localStorage.getItem("access_token");
 
-            // Call backend API to generate flashcards with Gemini
+            // Now generate the actual flashcards
             const response = await fetch(`http://localhost:3000/pdfs/${pdfId}/generate`, {
                 method: "POST",
                 headers: {
@@ -63,17 +120,22 @@ export default function CustomizePage() {
             // Redirect to study page
             router.push(`/study/${pdfId}`);
         } catch (error: any) {
-            console.error("Failed to generate test:", error);
+            console.error("Failed to generate flashcards:", error);
             alert(error.message || "Failed to generate flashcards. Please try again.");
         } finally {
-            setGenerating(false);
+            setGeneratingCards(false);
         }
+    };
+
+    const handleRejectPlan = () => {
+        setShowPlanDialog(false);
+        setTestPlan(null);
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Loader2 className="w-8 h-8 animate-spin" />
             </div>
         );
     }
@@ -118,10 +180,10 @@ export default function CustomizePage() {
                                 onChange={(e) => setPrompt(e.target.value)}
                                 placeholder="e.g., Create 20 medium difficulty questions with hints and explanations focusing on the main concepts..."
                                 className="w-full min-h-[150px] p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 
-                         focus:border-purple-500 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900
+                         focus:border-primary focus:ring-2 focus:ring-primary/20
                          resize-none text-base transition-all duration-200
                          bg-white dark:bg-slate-900"
-                                disabled={generating}
+                                disabled={generatingPlan || generatingCards}
                             />
                             <p className="text-sm text-muted-foreground">Be specific about difficulty, number of questions, and any special requirements</p>
                         </div>
@@ -137,7 +199,7 @@ export default function CustomizePage() {
                                     <button
                                         key={index}
                                         onClick={() => setPrompt(example)}
-                                        disabled={generating}
+                                        disabled={generatingPlan || generatingCards}
                                         className="text-left p-3 rounded-lg border border-border
                              hover:border-primary hover:bg-secondary
                              transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -148,22 +210,27 @@ export default function CustomizePage() {
                             </div>
                         </div>
 
-                        {/* Generate Button */}
+                        {/* Generate Plan Button */}
                         <Button
-                            onClick={handleGenerateTest}
-                            disabled={!prompt.trim() || generating}
+                            onClick={handleGeneratePlan}
+                            disabled={!prompt.trim() || generatingPlan || generatingCards}
                             className="w-full h-14 text-lg font-semibold disabled:opacity-50"
                             size="lg"
                         >
-                            {generating ? (
+                            {generatingPlan ? (
                                 <>
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                    AI is generating your flashcards...
+                                    AI is creating your test plan...
+                                </>
+                            ) : generatingCards ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    Generating flashcards...
                                 </>
                             ) : (
                                 <>
                                     <Sparkles className="w-5 h-5 mr-2" />
-                                    Generate with AI
+                                    Create Test Plan
                                     <ArrowRight className="w-5 h-5 ml-2" />
                                 </>
                             )}
@@ -182,17 +249,79 @@ export default function CustomizePage() {
                             </div>
                             <div className="space-y-2">
                                 <h3 className="font-semibold text-lg">Powered by Gemini 2.0 Flash</h3>
-                                <p className="text-sm text-muted-foreground">Our AI will analyze your PDF content and generate personalized flashcards based on your requirements. The more specific you are, the better the results!</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Our AI will first create a test plan for your approval, then generate personalized flashcards. You'll review the plan before any questions are created!
+                                </p>
                                 <div className="flex flex-wrap gap-2 mt-3">
                                     <Badge variant="secondary">Smart Question Generation</Badge>
                                     <Badge variant="secondary">Adaptive Difficulty</Badge>
                                     <Badge variant="secondary">Contextual Hints</Badge>
+                                    <Badge variant="secondary">Plan Approval</Badge>
                                 </div>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Test Plan Approval Dialog */}
+            <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5" />
+                            Review Your Test Plan
+                        </DialogTitle>
+                        <DialogDescription>AI has created a test plan based on your request. Review and approve to generate the flashcards.</DialogDescription>
+                    </DialogHeader>
+
+                    {testPlan && (
+                        <div className="space-y-4">
+                            {/* Summary */}
+                            <div className="p-4 bg-secondary rounded-lg">
+                                <p className="text-sm">{testPlan.summary}</p>
+                            </div>
+
+                            {/* Stats */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 border rounded-lg">
+                                    <p className="text-sm text-muted-foreground">Total Questions</p>
+                                    <p className="text-2xl font-bold">{testPlan.totalQuestions}</p>
+                                </div>
+                                <div className="p-4 border rounded-lg">
+                                    <p className="text-sm text-muted-foreground">Estimated Time</p>
+                                    <p className="text-2xl font-bold">{testPlan.estimatedTime}</p>
+                                </div>
+                            </div>
+
+                            {/* Objectives */}
+                            <div className="space-y-2">
+                                <h4 className="font-semibold">Learning Objectives:</h4>
+                                {testPlan.objectives.map((obj, index) => (
+                                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div>
+                                            <p className="font-medium">{obj.title}</p>
+                                            <p className="text-sm text-muted-foreground capitalize">{obj.difficulty} difficulty</p>
+                                        </div>
+                                        <Badge variant="outline">{obj.questionCount} questions</Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={handleRejectPlan} className="flex items-center gap-2">
+                            <XCircle className="w-4 h-4" />
+                            Modify Plan
+                        </Button>
+                        <Button onClick={handleApprovePlan} className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Approve & Generate
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
