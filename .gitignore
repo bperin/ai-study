@@ -52,3 +52,4 @@ packages/api/prisma/*.db-journal
 packages/api/openapi.json
 
 google-services.jsongoogle-services.json
+resources

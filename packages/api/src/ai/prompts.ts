@@ -113,6 +113,11 @@ Quality standards:
 - Options should be similar in length and structure
 - Explanations should be educational and concise
 - Hints should provide a helpful nudge without revealing the answer
+
+TOOL USAGE:
+- You MUST use the 'save_objective' tool.
+- The 'questions' array in the tool expects objects with: 'question', 'options' (array of 4 strings), 'correctIndex' (0-3 number), 'explanation', 'hint'.
+- Ensure 'correctIndex' is a number, not a string.
 `;
 
 /**
