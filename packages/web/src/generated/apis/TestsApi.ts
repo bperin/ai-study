@@ -174,6 +174,40 @@ export class TestsApi extends runtime.BaseAPI {
 
     /**
      */
+    async testsControllerGetTestHistoryRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/history`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async testsControllerGetTestHistory(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.testsControllerGetTestHistoryRaw(initOverrides);
+    }
+
+    /**
+     */
     async testsControllerSubmitTestRaw(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
         if (requestParameters['submitTestDto'] == null) {
             throw new runtime.RequiredError(
