@@ -1,15 +1,13 @@
-
 # UploadUrlResponseDto
-
 
 ## Properties
 
-Name | Type
------------- | -------------
-`uploadUrl` | string
-`filePath` | string
-`expiresAt` | string
-`maxSizeBytes` | number
+| Name           | Type   |
+| -------------- | ------ |
+| `uploadUrl`    | string |
+| `filePath`     | string |
+| `expiresAt`    | string |
+| `maxSizeBytes` | number |
 
 ## Example
 
@@ -36,5 +34,3 @@ console.log(exampleParsed)
 ```
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
