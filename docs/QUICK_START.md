@@ -18,6 +18,7 @@ npx prisma db push
 ```
 
 This will apply the schema changes to your database:
+
 - Add `PdfSession` model for HITL workflow
 - Add picture card fields to `Mcq`
 - Add engagement metrics to `UserAnswer`
@@ -28,74 +29,62 @@ This will apply the schema changes to your database:
 Create `packages/api/src/tests/test-taking.controller.ts`:
 
 ```typescript
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
-import { TestTakingService } from './test-taking.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Controller, Post, Get, Body, Param } from "@nestjs/common";
+import { TestTakingService } from "./test-taking.service";
+import { PrismaService } from "../prisma/prisma.service";
 
-@Controller('test-attempts')
+@Controller("test-attempts")
 export class TestTakingController {
-  constructor(
-    private readonly testTakingService: TestTakingService,
-    private readonly prisma: PrismaService,
-  ) {}
+    constructor(
+        private readonly testTakingService: TestTakingService,
+        private readonly prisma: PrismaService
+    ) {}
 
-  @Post()
-  async startTest(@Body('userId') userId: string, @Body('pdfId') pdfId: string) {
-    // Create test attempt in database
-    const attempt = await this.prisma.testAttempt.create({
-      data: {
-        userId,
-        pdfId,
-        total: 0, // Will be updated
-      },
-    });
+    @Post()
+    async startTest(@Body("userId") userId: string, @Body("pdfId") pdfId: string) {
+        // Create test attempt in database
+        const attempt = await this.prisma.testAttempt.create({
+            data: {
+                userId,
+                pdfId,
+                total: 0, // Will be updated
+            },
+        });
 
-    // Initialize in-memory session
-    const state = await this.testTakingService.initializeTestSession(
-      attempt.id,
-      userId,
-      pdfId
-    );
+        // Initialize in-memory session
+        const state = await this.testTakingService.initializeTestSession(attempt.id, userId, pdfId);
 
-    return {
-      attemptId: attempt.id,
-      totalQuestions: state.totalQuestions,
-    };
-  }
-
-  @Post(':id/answer')
-  async submitAnswer(
-    @Param('id') attemptId: string,
-    @Body() body: { questionId: string; selectedAnswer: number; timeSpent: number }
-  ) {
-    return this.testTakingService.recordAnswer(
-      attemptId,
-      body.questionId,
-      body.selectedAnswer,
-      body.timeSpent
-    );
-  }
-
-  @Get(':id/state')
-  async getState(@Param('id') attemptId: string) {
-    const state = this.testTakingService.getSessionState(attemptId);
-    if (!state) {
-      throw new Error('Session not found');
+        return {
+            attemptId: attempt.id,
+            totalQuestions: state.totalQuestions,
+        };
     }
 
-    return {
-      currentQuestionIndex: state.currentQuestionIndex,
-      totalQuestions: state.totalQuestions,
-      correctCount: state.correctCount,
-      incorrectCount: state.incorrectCount,
-      currentStreak: state.currentStreak,
-    };
-  }
+    @Post(":id/answer")
+    async submitAnswer(@Param("id") attemptId: string, @Body() body: { questionId: string; selectedAnswer: number; timeSpent: number }) {
+        return this.testTakingService.recordAnswer(attemptId, body.questionId, body.selectedAnswer, body.timeSpent);
+    }
 
-  @Post(':id/complete')
-  async completeTest(@Param('id') attemptId: string) {
-    return this.testTakingService.completeTest(attemptId);
-  }
+    @Get(":id/state")
+    async getState(@Param("id") attemptId: string) {
+        const state = this.testTakingService.getSessionState(attemptId);
+        if (!state) {
+            throw new Error("Session not found");
+        }
+
+        return {
+            currentQuestionIndex: state.currentQuestionIndex,
+            totalQuestions: state.totalQuestions,
+            correctCount: state.correctCount,
+            incorrectCount: state.incorrectCount,
+            currentStreak: state.currentStreak,
+        };
+    }
+
+    @Post(":id/complete")
+    async completeTest(@Param("id") attemptId: string) {
+        return this.testTakingService.completeTest(attemptId);
+    }
 }
 ```
 
@@ -104,18 +93,18 @@ export class TestTakingController {
 Update `packages/api/src/tests/tests.module.ts`:
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { TestsController } from './tests.controller';
-import { TestsService } from './tests.service';
-import { TestTakingController } from './test-taking.controller';
-import { TestTakingService } from './test-taking.service';
-import { PrismaModule } from '../prisma/prisma.module';
+import { Module } from "@nestjs/common";
+import { TestsController } from "./tests.controller";
+import { TestsService } from "./tests.service";
+import { TestTakingController } from "./test-taking.controller";
+import { TestTakingService } from "./test-taking.service";
+import { PrismaModule } from "../prisma/prisma.module";
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [TestsController, TestTakingController],
-  providers: [TestsService, TestTakingService],
-  exports: [TestTakingService],
+    imports: [PrismaModule],
+    controllers: [TestsController, TestTakingController],
+    providers: [TestsService, TestTakingService],
+    exports: [TestTakingService],
 })
 export class TestsModule {}
 ```
@@ -125,57 +114,57 @@ export class TestsModule {}
 Create `packages/api/src/pdfs/pdf-sessions.service.ts`:
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class PdfSessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) {}
 
-  async createSession(userId: string, pdfId: string, preferences: any) {
-    return this.prisma.pdfSession.create({
-      data: {
-        userId,
-        pdfId,
-        userPreferences: preferences,
-        status: 'planning',
-      },
-    });
-  }
+    async createSession(userId: string, pdfId: string, preferences: any) {
+        return this.prisma.pdfSession.create({
+            data: {
+                userId,
+                pdfId,
+                userPreferences: preferences,
+                status: "planning",
+            },
+        });
+    }
 
-  async proposePlan(sessionId: string, plan: any) {
-    return this.prisma.pdfSession.update({
-      where: { id: sessionId },
-      data: {
-        proposedPlan: plan,
-        planStatus: 'pending',
-      },
-    });
-  }
+    async proposePlan(sessionId: string, plan: any) {
+        return this.prisma.pdfSession.update({
+            where: { id: sessionId },
+            data: {
+                proposedPlan: plan,
+                planStatus: "pending",
+            },
+        });
+    }
 
-  async approvePlan(sessionId: string) {
-    return this.prisma.pdfSession.update({
-      where: { id: sessionId },
-      data: {
-        planStatus: 'approved',
-        status: 'generating',
-      },
-    });
-  }
+    async approvePlan(sessionId: string) {
+        return this.prisma.pdfSession.update({
+            where: { id: sessionId },
+            data: {
+                planStatus: "approved",
+                status: "generating",
+            },
+        });
+    }
 
-  async rejectPlan(sessionId: string, feedback: string) {
-    const session = await this.prisma.pdfSession.findUnique({
-      where: { id: sessionId },
-    });
+    async rejectPlan(sessionId: string, feedback: string) {
+        const session = await this.prisma.pdfSession.findUnique({
+            where: { id: sessionId },
+        });
 
-    return this.prisma.pdfSession.update({
-      where: { id: sessionId },
-      data: {
-        planStatus: 'rejected',
-        planIterations: (session?.planIterations || 0) + 1,
-      },
-    });
-  }
+        return this.prisma.pdfSession.update({
+            where: { id: sessionId },
+            data: {
+                planStatus: "rejected",
+                planIterations: (session?.planIterations || 0) + 1,
+            },
+        });
+    }
 }
 ```
 
@@ -189,6 +178,7 @@ npx prisma studio
 ```
 
 Verify all new fields are present:
+
 - `PdfSession` table exists
 - `Mcq` has `hasPicture`, `pictureUrl`, `picturePrompt`
 - `UserAnswer` has `timeSpent`, `hintsUsed`, `confidence`
@@ -199,52 +189,52 @@ Verify all new fields are present:
 Create a simple test script `packages/api/test-taking-demo.ts`:
 
 ```typescript
-import { PrismaClient } from '@prisma/client';
-import { TestTakingService } from './src/tests/test-taking.service';
-import { ConfigService } from '@nestjs/config';
+import { PrismaClient } from "@prisma/client";
+import { TestTakingService } from "./src/tests/test-taking.service";
+import { ConfigService } from "@nestjs/config";
 
 async function demo() {
-  const prisma = new PrismaClient();
-  const configService = new ConfigService();
-  const service = new TestTakingService(configService, prisma);
+    const prisma = new PrismaClient();
+    const configService = new ConfigService();
+    const service = new TestTakingService(configService, prisma);
 
-  // Assuming you have a test user and PDF
-  const userId = 'your-user-id';
-  const pdfId = 'your-pdf-id';
+    // Assuming you have a test user and PDF
+    const userId = "your-user-id";
+    const pdfId = "your-pdf-id";
 
-  // Create test attempt
-  const attempt = await prisma.testAttempt.create({
-    data: {
-      userId,
-      pdfId,
-      total: 0,
-    },
-  });
+    // Create test attempt
+    const attempt = await prisma.testAttempt.create({
+        data: {
+            userId,
+            pdfId,
+            total: 0,
+        },
+    });
 
-  // Initialize session
-  const state = await service.initializeTestSession(attempt.id, userId, pdfId);
-  console.log('Session initialized:', state);
+    // Initialize session
+    const state = await service.initializeTestSession(attempt.id, userId, pdfId);
+    console.log("Session initialized:", state);
 
-  // Get a question
-  const questions = await prisma.mcq.findMany({
-    where: { objective: { pdfId } },
-    take: 1,
-  });
+    // Get a question
+    const questions = await prisma.mcq.findMany({
+        where: { objective: { pdfId } },
+        take: 1,
+    });
 
-  if (questions.length > 0) {
-    // Record an answer
-    const result = await service.recordAnswer(
-      attempt.id,
-      questions[0].id,
-      0, // selected answer
-      15 // time spent in seconds
-    );
+    if (questions.length > 0) {
+        // Record an answer
+        const result = await service.recordAnswer(
+            attempt.id,
+            questions[0].id,
+            0, // selected answer
+            15 // time spent in seconds
+        );
 
-    console.log('Answer recorded:', result);
-    console.log('Encouragement:', result.encouragement);
-  }
+        console.log("Answer recorded:", result);
+        console.log("Encouragement:", result.encouragement);
+    }
 
-  await prisma.$disconnect();
+    await prisma.$disconnect();
 }
 
 demo();
@@ -265,49 +255,51 @@ demo();
 ## 🎯 Priority Order
 
 1. **Immediate** (Get basic flow working):
-   - Push database changes ✅ (Already done)
-   - Create Test Taking Controller
-   - Update Tests Module
-   - Test with existing flashcards
+    - Push database changes ✅ (Already done)
+    - Create Test Taking Controller
+    - Update Tests Module
+    - Test with existing flashcards
 
 2. **Short-term** (Enhance experience):
-   - Build frontend test interface
-   - Add real-time state updates
-   - Implement hint system
-   - Create results dashboard
+    - Build frontend test interface
+    - Add real-time state updates
+    - Implement hint system
+    - Create results dashboard
 
 3. **Medium-term** (Full features):
-   - Add PDF Sessions Service
-   - Implement HITL workflow
-   - Add picture card generation
-   - Build plan review UI
+    - Add PDF Sessions Service
+    - Implement HITL workflow
+    - Add picture card generation
+    - Build plan review UI
 
 ## 🔍 Testing Strategy
 
 ### Unit Tests
+
 ```typescript
-describe('TestTakingService', () => {
-  it('should initialize session with correct state', async () => {
-    const state = await service.initializeTestSession(attemptId, userId, pdfId);
-    expect(state.correctCount).toBe(0);
-    expect(state.currentStreak).toBe(0);
-  });
+describe("TestTakingService", () => {
+    it("should initialize session with correct state", async () => {
+        const state = await service.initializeTestSession(attemptId, userId, pdfId);
+        expect(state.correctCount).toBe(0);
+        expect(state.currentStreak).toBe(0);
+    });
 
-  it('should update state correctly on correct answer', async () => {
-    const result = await service.recordAnswer(attemptId, questionId, correctIdx, 10);
-    expect(result.isCorrect).toBe(true);
-    expect(result.currentStreak).toBe(1);
-  });
+    it("should update state correctly on correct answer", async () => {
+        const result = await service.recordAnswer(attemptId, questionId, correctIdx, 10);
+        expect(result.isCorrect).toBe(true);
+        expect(result.currentStreak).toBe(1);
+    });
 
-  it('should substitute brackets correctly', () => {
-    const template = 'Score: [CURRENT_SCORE], Progress: [PROGRESS]';
-    const result = service['substituteBrackets'](template, mockState);
-    expect(result).toContain('Score: 5/10');
-  });
+    it("should substitute brackets correctly", () => {
+        const template = "Score: [CURRENT_SCORE], Progress: [PROGRESS]";
+        const result = service["substituteBrackets"](template, mockState);
+        expect(result).toContain("Score: 5/10");
+    });
 });
 ```
 
 ### Integration Tests
+
 ```bash
 # Start backend
 npm run dev
@@ -327,16 +319,19 @@ curl -X POST http://localhost:3000/test-attempts \
 ## 🆘 Troubleshooting
 
 ### Issue: Prisma Client not updated
+
 ```bash
 npx prisma generate
 ```
 
 ### Issue: Database out of sync
+
 ```bash
 npx prisma db push --force-reset  # WARNING: Deletes data
 ```
 
 ### Issue: TypeScript errors
+
 ```bash
 npm run build
 ```
@@ -344,6 +339,7 @@ npm run build
 ## 🎉 Success Criteria
 
 You'll know it's working when:
+
 1. ✅ Database has all new tables/fields
 2. ✅ Test session initializes with state
 3. ✅ Answers are recorded and state updates
