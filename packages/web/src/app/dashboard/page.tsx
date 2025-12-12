@@ -50,7 +50,11 @@ export default function DashboardPage() {
             <Button variant="secondary" className="w-full justify-start">
               Dashboard
             </Button>
-            <Button variant="ghost" className="w-full justify-start">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => router.push('/upload')}
+            >
               Uploads
             </Button>
             <Button variant="ghost" className="w-full justify-start">
@@ -72,6 +76,9 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">Dashboard</p>
               <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
             </div>
+            <Button onClick={() => router.push('/upload')}>
+              Upload New PDF
+            </Button>
           </div>
           <Tabs defaultValue="tests" className="space-y-4">
             <TabsList>
