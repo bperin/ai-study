@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { AnswerDto } from './AnswerDto';
+import {
+    AnswerDtoFromJSON,
+    AnswerDtoFromJSONTyped,
+    AnswerDtoToJSON,
+    AnswerDtoToJSONTyped,
+} from './AnswerDto';
 import type { MissedQuestionDto } from './MissedQuestionDto';
 import {
     MissedQuestionDtoFromJSON,
@@ -51,6 +58,12 @@ export interface SubmitTestResultsDto {
      * @memberof SubmitTestResultsDto
      */
     missedQuestions: Array<MissedQuestionDto>;
+    /**
+     * 
+     * @type {Array<AnswerDto>}
+     * @memberof SubmitTestResultsDto
+     */
+    allAnswers?: Array<AnswerDto>;
 }
 
 /**
@@ -78,6 +91,7 @@ export function SubmitTestResultsDtoFromJSONTyped(json: any, ignoreDiscriminator
         'score': json['score'],
         'totalQuestions': json['totalQuestions'],
         'missedQuestions': ((json['missedQuestions'] as Array<any>).map(MissedQuestionDtoFromJSON)),
+        'allAnswers': json['allAnswers'] == null ? undefined : ((json['allAnswers'] as Array<any>).map(AnswerDtoFromJSON)),
     };
 }
 
@@ -96,6 +110,7 @@ export function SubmitTestResultsDtoToJSONTyped(value?: SubmitTestResultsDto | n
         'score': value['score'],
         'totalQuestions': value['totalQuestions'],
         'missedQuestions': ((value['missedQuestions'] as Array<any>).map(MissedQuestionDtoToJSON)),
+        'allAnswers': value['allAnswers'] == null ? undefined : ((value['allAnswers'] as Array<any>).map(AnswerDtoToJSON)),
     };
 }
 

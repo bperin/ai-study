@@ -26,6 +26,7 @@ export default function StudyPage() {
     const [isFinished, setIsFinished] = useState(false);
     const [attemptId, setAttemptId] = useState<string | null>(null);
     const [missedQuestions, setMissedQuestions] = useState<any[]>([]);
+    const [allAnswers, setAllAnswers] = useState<any[]>([]); // Track ALL answers for comprehensive analysis
     const [analysis, setAnalysis] = useState<TestAnalysisResponseDto | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
 
@@ -70,6 +71,17 @@ export default function StudyPage() {
         const currentQuestion = allQuestions[currentQuestionIndex];
         const isCorrect = index === currentQuestion.correctIdx;
 
+        // Track this answer
+        const answer = {
+            questionId: currentQuestion.id,
+            questionText: currentQuestion.question,
+            selectedAnswer: currentQuestion.options[index],
+            correctAnswer: currentQuestion.options[currentQuestion.correctIdx],
+            isCorrect,
+        };
+
+        setAllAnswers([...allAnswers, answer]);
+
         if (isCorrect) {
             setScore(score + 1);
         } else {
@@ -97,7 +109,30 @@ export default function StudyPage() {
 
     const finishTest = async () => {
         setIsFinished(true);
-        if (!attemptId) return;
+
+        // Calculate percentage for fallback
+        const percentage = Math.round((score / allQuestions.length) * 100);
+
+        if (!attemptId) {
+            // No attempt ID - provide basic feedback
+            setAnalysis({
+                summary: `You scored ${score} out of ${allQuestions.length} (${percentage}%). ${percentage >= 80
+                    ? "Great job! You have a strong understanding of the material."
+                    : percentage >= 60
+                        ? "Good effort! Review the areas you missed to improve further."
+                        : "Keep studying! Focus on understanding the core concepts."
+                    }`,
+                weakAreas: missedQuestions.length > 0
+                    ? missedQuestions.slice(0, 3).map(q => `Review: ${q.questionText.substring(0, 100)}...`)
+                    : ["No specific weak areas identified - great job!"],
+                studyStrategies: [
+                    "Review the questions you missed and understand why the correct answer is right",
+                    "Re-read the relevant sections of the study material",
+                    "Try taking the test again to reinforce your knowledge",
+                ],
+            });
+            return;
+        }
 
         setAnalyzing(true);
         try {
@@ -109,11 +144,29 @@ export default function StudyPage() {
                     // @ts-ignore
                     totalQuestions: allQuestions.length,
                     missedQuestions,
+                    allAnswers, // Send all answers for comprehensive analysis
                 },
             });
             setAnalysis(result);
         } catch (error) {
-            console.error("Failed to submit test", error);
+            console.error("Failed to submit test, using fallback analysis:", error);
+            // Provide fallback analysis if API fails
+            setAnalysis({
+                summary: `You scored ${score} out of ${allQuestions.length} (${percentage}%). ${percentage >= 80
+                    ? "Great job! You have a strong understanding of the material."
+                    : percentage >= 60
+                        ? "Good effort! Review the areas you missed to improve further."
+                        : "Keep studying! Focus on understanding the core concepts."
+                    }`,
+                weakAreas: missedQuestions.length > 0
+                    ? missedQuestions.slice(0, 3).map(q => `Review: ${q.questionText.substring(0, 100)}...`)
+                    : ["No specific weak areas identified - great job!"],
+                studyStrategies: [
+                    "Review the questions you missed and understand why the correct answer is right",
+                    "Re-read the relevant sections of the study material",
+                    "Try taking the test again to reinforce your knowledge",
+                ],
+            });
         } finally {
             setAnalyzing(false);
         }
@@ -213,6 +266,19 @@ export default function StudyPage() {
                                         </ul>
                                     </div>
                                 </div>
+
+                                {/* @ts-ignore */}
+                                {analysis.strengths && analysis.strengths.length > 0 && (
+                                    <div className="bg-blue-50 dark:bg-blue-950/20 p-6 rounded-lg border border-blue-100 dark:border-blue-900">
+                                        <h3 className="font-semibold mb-3 text-blue-900 dark:text-blue-200">Your Strengths 💪</h3>
+                                        <ul className="list-disc pl-5 space-y-2">
+                                            {/* @ts-ignore */}
+                                            {analysis.strengths.map((strength, i) => (
+                                                <li key={i} className="text-blue-800 dark:text-blue-300 text-sm">{strength}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <p className="text-center text-destructive">Analysis unavailable</p>

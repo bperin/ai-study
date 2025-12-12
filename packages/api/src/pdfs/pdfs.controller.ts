@@ -13,7 +13,7 @@ import { StartAttemptResponseDto } from "./dto/start-attempt-response.dto";
 @Controller("pdfs")
 @UseGuards(JwtAuthGuard)
 export class PdfsController {
-    constructor(private readonly pdfsService: PdfsService) {}
+    constructor(private readonly pdfsService: PdfsService) { }
 
     @Post(":id/generate")
     @ApiOperation({ summary: "Generate flashcards from a PDF" })
@@ -43,14 +43,15 @@ export class PdfsController {
     }
 
     @Post("submit-attempt")
-    @ApiOperation({ summary: "Submit test attempt and get analysis" })
+    @ApiOperation({ summary: "Submit test attempt and get AI-enhanced analysis with web resources" })
     @ApiResponse({ status: 200, type: TestAnalysisResponseDto })
     submitAttempt(@Body() body: SubmitTestResultsDto) {
         return this.pdfsService.submitTest(
             body.attemptId,
             body.score,
             body.totalQuestions,
-            body.missedQuestions
+            body.missedQuestions,
+            body.allAnswers
         );
     }
 }

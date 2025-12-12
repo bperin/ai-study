@@ -9,6 +9,7 @@ Name | Type
 `summary` | string
 `weakAreas` | Array&lt;string&gt;
 `studyStrategies` | Array&lt;string&gt;
+`strengths` | Array&lt;string&gt;
 
 ## Example
 
@@ -20,6 +21,7 @@ const example = {
   "summary": null,
   "weakAreas": null,
   "studyStrategies": null,
+  "strengths": null,
 } satisfies TestAnalysisResponseDto
 
 console.log(example)
