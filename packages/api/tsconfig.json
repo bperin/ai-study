@@ -19,6 +19,8 @@
         "strictBindCallApply": false,
         "forceConsistentCasingInFileNames": false,
         "noFallthroughCasesInSwitch": false,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
         "composite": true,
         "noEmit": false,
         "allowImportingTsExtensions": false

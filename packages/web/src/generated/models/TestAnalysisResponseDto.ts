@@ -37,6 +37,12 @@ export interface TestAnalysisResponseDto {
      * @memberof TestAnalysisResponseDto
      */
     studyStrategies: Array<string>;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof TestAnalysisResponseDto
+     */
+    strengths?: Array<string>;
 }
 
 /**
@@ -62,6 +68,7 @@ export function TestAnalysisResponseDtoFromJSONTyped(json: any, ignoreDiscrimina
         'summary': json['summary'],
         'weakAreas': json['weakAreas'],
         'studyStrategies': json['studyStrategies'],
+        'strengths': json['strengths'] == null ? undefined : json['strengths'],
     };
 }
 
@@ -79,6 +86,7 @@ export function TestAnalysisResponseDtoToJSONTyped(value?: TestAnalysisResponseD
         'summary': value['summary'],
         'weakAreas': value['weakAreas'],
         'studyStrategies': value['studyStrategies'],
+        'strengths': value['strengths'],
     };
 }
 

@@ -79,7 +79,7 @@ export default function CustomizePage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-slate-950 dark:via-purple-950 dark:to-pink-950 p-6">
+        <div className="min-h-screen bg-background p-6">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="space-y-2">
@@ -87,12 +87,12 @@ export default function CustomizePage() {
                         ← Back to Dashboard
                     </Button>
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
                             <FileText className="w-6 h-6 text-white" />
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold">Generate Your Flashcards</h1>
-                            <p className="text-slate-600 dark:text-slate-400">{pdfInfo?.filename}</p>
+                            <p className="text-muted-foreground">{pdfInfo?.filename}</p>
                         </div>
                     </div>
                 </div>
@@ -101,7 +101,7 @@ export default function CustomizePage() {
                 <Card className="border-2 shadow-xl">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-purple-600" />
+                            <Sparkles className="w-5 h-5" />
                             Describe Your Test
                         </CardTitle>
                         <CardDescription>Tell AI what kind of flashcards you want in your own words</CardDescription>
@@ -123,13 +123,13 @@ export default function CustomizePage() {
                          bg-white dark:bg-slate-900"
                                 disabled={generating}
                             />
-                            <p className="text-sm text-slate-500">Be specific about difficulty, number of questions, and any special requirements</p>
+                            <p className="text-sm text-muted-foreground">Be specific about difficulty, number of questions, and any special requirements</p>
                         </div>
 
                         {/* Example Prompts */}
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
-                                <Lightbulb className="w-4 h-4 text-yellow-600" />
+                                <Lightbulb className="w-4 h-4" />
                                 <Label className="text-sm font-semibold">Try these examples:</Label>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -138,8 +138,8 @@ export default function CustomizePage() {
                                         key={index}
                                         onClick={() => setPrompt(example)}
                                         disabled={generating}
-                                        className="text-left p-3 rounded-lg border border-slate-200 dark:border-slate-700
-                             hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/20
+                                        className="text-left p-3 rounded-lg border border-border
+                             hover:border-primary hover:bg-secondary
                              transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         "{example}"
@@ -152,8 +152,7 @@ export default function CustomizePage() {
                         <Button
                             onClick={handleGenerateTest}
                             disabled={!prompt.trim() || generating}
-                            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 
-                       hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
+                            className="w-full h-14 text-lg font-semibold disabled:opacity-50"
                             size="lg"
                         >
                             {generating ? (
@@ -173,17 +172,17 @@ export default function CustomizePage() {
                 </Card>
 
                 {/* Info Card */}
-                <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200 dark:border-blue-800">
+                <Card className="bg-secondary">
                     <CardContent className="pt-6">
                         <div className="flex gap-4">
                             <div className="flex-shrink-0">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                                     <Sparkles className="w-6 h-6 text-white" />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <h3 className="font-semibold text-lg">Powered by Gemini 2.0 Flash</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Our AI will analyze your PDF content and generate personalized flashcards based on your requirements. The more specific you are, the better the results!</p>
+                                <p className="text-sm text-muted-foreground">Our AI will analyze your PDF content and generate personalized flashcards based on your requirements. The more specific you are, the better the results!</p>
                                 <div className="flex flex-wrap gap-2 mt-3">
                                     <Badge variant="secondary">Smart Question Generation</Badge>
                                     <Badge variant="secondary">Adaptive Difficulty</Badge>

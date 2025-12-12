@@ -10,6 +10,7 @@ Name | Type
 `score` | number
 `totalQuestions` | number
 `missedQuestions` | [Array&lt;MissedQuestionDto&gt;](MissedQuestionDto.md)
+`allAnswers` | [Array&lt;AnswerDto&gt;](AnswerDto.md)
 
 ## Example
 
@@ -22,6 +23,7 @@ const example = {
   "score": null,
   "totalQuestions": null,
   "missedQuestions": null,
+  "allAnswers": null,
 } satisfies SubmitTestResultsDto
 
 console.log(example)
