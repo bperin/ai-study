@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { PdfsController } from './pdfs.controller';
-import { PdfsService } from './pdfs.service';
-import { GeminiService } from './gemini.service';
-import { PrismaModule } from '../prisma/prisma.module';
+import { Module } from "@nestjs/common";
+import { PdfsController } from "./pdfs.controller";
+import { PdfsService } from "./pdfs.service";
+import { GeminiService } from "./gemini.service";
+import { PrismaModule } from "../prisma/prisma.module";
 
 @Module({
     imports: [PrismaModule],
@@ -10,4 +10,4 @@ import { PrismaModule } from '../prisma/prisma.module';
     providers: [PdfsService, GeminiService],
     exports: [PdfsService],
 })
-export class PdfsModule { }
+export class PdfsModule {}
