@@ -65,16 +65,6 @@ jobs:
                     --format='value(status.url)' > api_url.txt
                   echo "API_URL=$(cat api_url.txt)" >> $GITHUB_ENV
 
-            - name: Generate API SDK for Web
-              run: |
-                  # Wait for API to be ready and generate OpenAPI spec
-                  sleep 30
-                  curl -f ${{ env.API_URL }}/api-json > packages/api/openapi.json || echo '{"openapi":"3.0.0","info":{"title":"API","version":"1.0.0"},"paths":{}}' > packages/api/openapi.json
-                  
-                  # Generate TypeScript SDK
-                  cd packages/web
-                  npm run codegen
-
             - name: Build and Push Web Image
               run: |
                   docker build -f packages/web/Dockerfile \
