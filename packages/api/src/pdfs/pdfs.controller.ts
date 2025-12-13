@@ -5,7 +5,7 @@ import { AdminGuard } from "../auth/admin.guard";
 import { PdfsService } from "./pdfs.service";
 import { GenerateFlashcardsDto } from "./dto/generate-flashcards.dto";
 import { ObjectiveResponseDto } from "./dto/objective-response.dto";
-import { PdfResponseDto } from "./dto/pdf-response.dto";
+import { PdfResponseDto, PaginatedPdfResponseDto } from "./dto/pdf-response.dto";
 
 @ApiTags("pdfs")
 @ApiBearerAuth()
@@ -29,7 +29,7 @@ export class PdfsController {
 
     @Get()
     @ApiOperation({ summary: "List all PDFs for the user with pagination" })
-    @ApiResponse({ status: 200, type: [PdfResponseDto] })
+    @ApiResponse({ status: 200, type: PaginatedPdfResponseDto })
     listPdfs(@Request() req: any, @Query("page") page: number = 1, @Query("limit") limit: number = 10) {
         return this.pdfsService.listPdfs(req.user.userId, Number(page), Number(limit));
     }

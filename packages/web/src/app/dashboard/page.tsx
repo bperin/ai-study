@@ -22,6 +22,7 @@ export default function DashboardPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [pdfs, setPdfs] = useState<PdfResponseDto[]>([]);
+    const [totalPages, setTotalPages] = useState(1);
     const [page, setPage] = useState(1);
     const [history, setHistory] = useState<TestHistoryItemDto[]>([]);
     const [user, setUser] = useState<UserResponseDto | null>(null);
@@ -59,7 +60,10 @@ export default function DashboardPage() {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                     .then((res) => res.json())
-                    .then(setPdfs),
+                    .then((data) => {
+                        setPdfs(data.data);
+                        setTotalPages(data.totalPages);
+                    }),
                 usersApi.usersControllerGetMe().then((u) => setUser(u)),
                 testsApi.testsControllerGetTestHistory().then((res) => setHistory(res.attempts)),
             ])
@@ -190,10 +194,13 @@ export default function DashboardPage() {
                                 <Button variant="outline" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                                     Previous
                                 </Button>
-                                <Button variant="outline" disabled={pdfs.length < 8} onClick={() => setPage((p) => p + 1)}>
+                                <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                                     Next
                                 </Button>
                             </div>
+                            <p className="text-center text-xs text-muted-foreground mt-2">
+                                Page {page} of {totalPages}
+                            </p>
                         </TabsContent>
                         <TabsContent value="history" className="space-y-4">
                             <Card>
