@@ -54,7 +54,8 @@ jobs:
                     --timeout 600 \
                     --allow-unauthenticated \
                     --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest,GCP_SA_KEY=ai_study_GCP_SA_KEY:latest,GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest,JWT_SECRET=ai_study_JWT_SECRET:latest \
-                    --update-env-vars=GCP_BUCKET_NAME=ai-study-public-storage \
+                    --remove-env-vars=GCP_BUCKET_NAME \
+                    --set-secrets=GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
                     --quiet \
                     --format='value(status.url)' > api_url.txt
                   echo "API_URL=$(cat api_url.txt)" >> $GITHUB_ENV
