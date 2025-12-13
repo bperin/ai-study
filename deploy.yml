@@ -1,0 +1,368 @@
+name: Build and Deploy
+
+on:
+    push:
+        branches:
+            - main
+            - dev
+            - staging
+
+env:
+    GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+    GCP_REGION: "us-central1"
+    ARTIFACT_REPO: "trakt-app"
+    GCP_SERVICE_ACCOUNT: "933072461025-compute@developer.gserviceaccount.com"
+
+jobs:
+    build-backend:
+        name: Build Backend
+        runs-on: ubuntu-latest
+        environment:
+            name: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'staging' && 'staging' || 'dev' }}
+        permissions:
+            contents: "read"
+            id-token: "write"
+        steps:
+            - name: Checkout trakt-backend repo
+              uses: actions/checkout@v3
+              with:
+                  repository: ${{ github.repository_owner }}/trakt-backend
+                  token: ${{ secrets.GH_PAT }}
+
+            - name: Authenticate to Google Cloud
+              uses: "google-github-actions/auth@v2"
+              with:
+                  credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+            - name: Configure Docker
+              run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v2
+
+            - name: Build and push trakt-backend
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  push: true
+                  tags: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/trakt-backend:${{ vars.APP_ENV }}
+                  cache-from: type=gha,scope=trakt-backend-cache-${{ github.ref_name }}
+                  cache-to: type=gha,scope=trakt-backend-cache-${{ github.ref_name }},mode=max
+
+    build-executor:
+        name: Build Executor
+        runs-on: ubuntu-latest
+        environment:
+            name: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'staging' && 'staging' || 'dev' }}
+        permissions:
+            contents: "read"
+            id-token: "write"
+        steps:
+            - name: Checkout trakt-executor repo
+              uses: actions/checkout@v3
+              with:
+                  repository: ${{ github.repository_owner }}/trakt-executor
+                  token: ${{ secrets.GH_PAT }}
+
+            - name: Authenticate to Google Cloud
+              uses: "google-github-actions/auth@v2"
+              with:
+                  credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+            - name: Configure Docker
+              run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v2
+
+            - name: Build and push trakt-executor
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  push: true
+                  tags: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/trakt-executor:${{ vars.APP_ENV }}
+                  cache-from: type=gha,scope=trakt-executor-cache-${{ github.ref_name }}
+                  cache-to: type=gha,scope=trakt-executor-cache-${{ github.ref_name }},mode=max
+
+    build-frontend:
+        name: Build Frontend
+        runs-on: ubuntu-latest
+        environment:
+            name: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'staging' && 'staging' || 'dev' }}
+        permissions:
+            contents: "read"
+            id-token: "write"
+        steps:
+            - name: Checkout trakt-frontend repo
+              uses: actions/checkout@v3
+              with:
+                  repository: ${{ github.repository_owner }}/trakt-frontend
+                  ref: ${{ github.ref_name }}
+                  token: ${{ secrets.GH_PAT }}
+
+            - name: Authenticate to Google Cloud
+              uses: "google-github-actions/auth@v2"
+              with:
+                  credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+            - name: Configure Docker
+              run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v2
+
+            - name: Get Frontend Secrets
+              id: frontend_secrets
+              uses: "google-github-actions/get-secretmanager-secrets@v2"
+              with:
+                  secrets: |-
+                      STRIPE_PUBLISHABLE_KEY:projects/${{ env.GCP_PROJECT_ID }}/secrets/stripe_publishable_key_${{ vars.APP_ENV }}/versions/latest
+                      MIXPANEL_TOKEN:projects/${{ env.GCP_PROJECT_ID }}/secrets/mixpanel_token_${{ vars.APP_ENV }}/versions/latest
+
+            - name: Build and push trakt-frontend
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  push: true
+                  tags: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/trakt-frontend:${{ vars.APP_ENV }}
+                  build-args: |
+                      VITE_APP_BACKEND_URL=${{ vars.BACKEND_URL }}
+                      VITE_APP_STRIPE_PUBLISHABLE_KEY=${{ steps.frontend_secrets.outputs.STRIPE_PUBLISHABLE_KEY }}
+                      VITE_APP_ENVIRONMENT=${{ vars.APP_ENV }}
+                      VITE_APP_MIXPANEL_PROJECT_TOKEN=${{ steps.frontend_secrets.outputs.MIXPANEL_TOKEN }}
+                  cache-from: type=gha,scope=trakt-frontend-cache-${{ github.ref_name }}
+                  cache-to: type=gha,scope=trakt-frontend-cache-${{ github.ref_name }},mode=max
+
+    deploy:
+        name: Deploy to Google Cloud
+        needs: [build-backend, build-executor, build-frontend]
+        runs-on: ubuntu-latest
+        environment:
+            name: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'staging' && 'staging' || 'dev' }}
+            url: ${{ vars.FRONTEND_URL }}
+        permissions:
+            contents: "read"
+            id-token: "write"
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Authenticate to Google Cloud
+              uses: "google-github-actions/auth@v2"
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+            - name: Set image tag
+              id: set_tag
+              run: |
+                  echo "IMAGE_TAG=${{ vars.APP_ENV }}" >> $GITHUB_ENV
+
+            - name: Deploy trakt-backend
+              run: |
+                  gcloud run deploy trakt-backend-${{ vars.APP_ENV }} \
+                    --image=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/trakt-backend:${{ vars.APP_ENV }} \
+                    --region=${{ env.GCP_REGION }} \
+                    --port=8080 \
+                    --service-account=${{ env.GCP_SERVICE_ACCOUNT }} \
+                    --timeout=600 \
+                    --cpu-boost \
+                    --allow-unauthenticated \
+                    --set-env-vars=APP_ENV=${{ vars.APP_ENV }} \
+                    --set-env-vars=GOOGLE_PROJECT_ID=${{ env.GCP_PROJECT_ID }} \
+                    --set-env-vars=GOOGLE_REGION=${{ env.GCP_REGION }} \
+                    --set-env-vars=BACKEND_URL=${{ vars.BACKEND_URL }} \
+                    --set-env-vars=FRONTEND_URL=${{ vars.FRONTEND_URL }} \
+                    --set-env-vars=PUBSUB_ENABLED=true \
+                    --set-secrets=DATABASE_URL=db_url_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=GOOGLE_CLIENT_SECRET=google_client_secret_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=JWT_SECRET=jwt_secret_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=ENCRYPTION_KEY=encryption_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=OPENAI_API_KEY=openai_api_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=PERPLEXITY_API_KEY=perplexity_api_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=MAILTRAP_API_KEY=mailtrap_api_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=STRIPE_SECRET_KEY=stripe_secret_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=STRIPE_WEBHOOK_SECRET=stripe_webhook_secret_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=STRIPE_PUBLISHABLE_KEY=stripe_publishable_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=GEMINI_API_KEY=gemini_api_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=DATA_FOR_SEO_API_KEY=data_for_seo_api_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=CUSTOMER_IO_SITE_ID=customer_io_site_id_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=CUSTOMER_IO_TRACK_API_KEY=customer_io_track_api_key_${{ vars.APP_ENV }}:latest \
+                    --set-secrets=CUSTOMER_IO_APP_API_KEY=customer_io_app_api_key_${{ vars.APP_ENV }}:latest
+
+            - name: Deploy trakt-executor
+              uses: google-github-actions/deploy-cloudrun@v2
+              with:
+                  service: trakt-executor-${{ vars.APP_ENV }}
+                  image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/trakt-executor:${{ vars.APP_ENV }}
+                  region: ${{ env.GCP_REGION }}
+                  port: "8080"
+                  service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+                  timeout: 600
+                  flags: "--cpu-boost --allow-unauthenticated"
+                  env_vars: |
+                      APP_ENV=${{ vars.APP_ENV }}
+                      GOOGLE_PROJECT_ID=${{ env.GCP_PROJECT_ID }}
+                      GOOGLE_REGION=${{ env.GCP_REGION }}
+                      PUBSUB_ENABLED=true
+                  secrets: |
+                      OPENAI_API_KEY=openai_api_key_${{ vars.APP_ENV }}:latest
+                      PERPLEXITY_API_KEY=perplexity_api_key_${{ vars.APP_ENV }}:latest
+                      GEMINI_API_KEY=gemini_api_key_${{ vars.APP_ENV }}:latest
+
+            - name: Deploy trakt-frontend
+              uses: google-github-actions/deploy-cloudrun@v2
+              with:
+                  service: trakt-frontend-${{ vars.APP_ENV }}
+                  image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/trakt-frontend:${{ vars.APP_ENV }}
+                  region: ${{ env.GCP_REGION }}
+                  port: "80"
+                  service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+                  flags: "--allow-unauthenticated"
+
+    promote-to-staging:
+        name: Promote dev to staging
+        needs: [deploy]
+        runs-on: ubuntu-latest
+        if: github.ref_name == 'dev'
+        permissions:
+            contents: write
+            pull-requests: write
+        steps:
+            - name: Merge dev to staging in frontend
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GH_PAT }}
+                  script: |
+                      const { owner } = context.repo;
+
+                      try {
+                          await github.rest.repos.merge({
+                              owner,
+                              repo: 'trakt-frontend',
+                              base: 'staging',
+                              head: 'dev',
+                              commit_message: 'Auto-merge dev to staging after successful deployment'
+                          });
+                          console.log('Successfully merged dev to staging in trakt-frontend');
+                      } catch (error) {
+                          console.log('Merge failed for trakt-frontend:', error.message);
+                          throw error;
+                      }
+
+            - name: Merge dev to staging in executor
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GH_PAT }}
+                  script: |
+                      const { owner } = context.repo;
+
+                      try {
+                          await github.rest.repos.merge({
+                              owner,
+                              repo: 'trakt-executor',
+                              base: 'staging',
+                              head: 'dev',
+                              commit_message: 'Auto-merge dev to staging after successful deployment'
+                          });
+                          console.log('Successfully merged dev to staging in trakt-executor');
+                      } catch (error) {
+                          console.log('Merge failed for trakt-executor:', error.message);
+                          throw error;
+                      }
+
+            - name: Merge dev to staging in backend
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GH_PAT }}
+                  script: |
+                      const { owner } = context.repo;
+
+                      try {
+                          await github.rest.repos.merge({
+                              owner,
+                              repo: 'trakt-backend',
+                              base: 'staging',
+                              head: 'dev',
+                              commit_message: 'Auto-merge dev to staging after successful deployment'
+                          });
+                          console.log('Successfully merged dev to staging in trakt-backend');
+                      } catch (error) {
+                          console.log('Merge failed for trakt-backend:', error.message);
+                          throw error;
+                      }
+
+    promote-to-production:
+        name: Promote staging to production
+        needs: [deploy]
+        runs-on: ubuntu-latest
+        if: github.ref_name == 'staging'
+        environment: production
+        permissions:
+            contents: write
+            pull-requests: write
+        steps:
+            - name: Merge staging to main in frontend
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GH_PAT }}
+                  script: |
+                      const { owner } = context.repo;
+
+                      try {
+                          await github.rest.repos.merge({
+                              owner,
+                              repo: 'trakt-frontend',
+                              base: 'main',
+                              head: 'staging',
+                              commit_message: 'Production release: Merge staging to main'
+                          });
+                          console.log('Successfully merged staging to main in trakt-frontend');
+                      } catch (error) {
+                          console.log('Merge failed for trakt-frontend:', error.message);
+                          throw error;
+                      }
+
+            - name: Merge staging to main in executor
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GH_PAT }}
+                  script: |
+                      const { owner } = context.repo;
+
+                      try {
+                          await github.rest.repos.merge({
+                              owner,
+                              repo: 'trakt-executor',
+                              base: 'main',
+                              head: 'staging',
+                              commit_message: 'Production release: Merge staging to main'
+                          });
+                          console.log('Successfully merged staging to main in trakt-executor');
+                      } catch (error) {
+                          console.log('Merge failed for trakt-executor:', error.message);
+                          throw error;
+                      }
+
+            - name: Merge staging to main in backend
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GH_PAT }}
+                  script: |
+                      const { owner } = context.repo;
+
+                      try {
+                          await github.rest.repos.merge({
+                              owner,
+                              repo: 'trakt-backend',
+                              base: 'main',
+                              head: 'staging',
+                              commit_message: 'Production release: Merge staging to main'
+                          });
+                          console.log('Successfully merged staging to main in trakt-backend');
+                      } catch (error) {
+                          console.log('Merge failed for trakt-backend:', error.message);
+                          throw error;
+                      }
