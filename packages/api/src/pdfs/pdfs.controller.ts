@@ -34,6 +34,13 @@ export class PdfsController {
         return this.pdfsService.listPdfs(req.user.userId, Number(page), Number(limit));
     }
 
+    @Get("all")
+    @ApiOperation({ summary: "List all PDFs from all users (for taking tests)" })
+    @ApiResponse({ status: 200, type: PaginatedPdfResponseDto })
+    listAllPdfs(@Query("page") page: number = 1, @Query("limit") limit: number = 10) {
+        return this.pdfsService.listAllPdfs(Number(page), Number(limit));
+    }
+
     @Delete(":id")
     @UseGuards(AdminGuard)
     @ApiOperation({ summary: "Delete a PDF and all associated data (Admin only)" })

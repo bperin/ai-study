@@ -57,7 +57,7 @@ export default function DashboardPage() {
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
             Promise.all([
-                fetch(`${baseUrl}/pdfs?page=${page}&limit=8`, {
+                fetch(`${baseUrl}/pdfs/all?page=${page}&limit=8`, {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                     .then((res) => res.json())

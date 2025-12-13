@@ -100,6 +100,40 @@ export class PdfsService {
         };
     }
 
+    async listAllPdfs(page: number = 1, limit: number = 10) {
+        const skip = (page - 1) * limit;
+        const [data, total] = await Promise.all([
+            this.prisma.pdf.findMany({
+                orderBy: { createdAt: "desc" },
+                skip,
+                take: limit,
+                select: {
+                    id: true,
+                    filename: true,
+                    createdAt: true,
+                    objectives: {
+                        select: {
+                            title: true,
+                            difficulty: true,
+                            _count: {
+                                select: { mcqs: true },
+                            },
+                        },
+                    },
+                },
+            }),
+            this.prisma.pdf.count(),
+        ]);
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
+    }
+
     async forkPdf(pdfId: string, userId: string, newTitle?: string) {
         const originalPdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
         if (!originalPdf) throw new NotFoundException("PDF not found");
