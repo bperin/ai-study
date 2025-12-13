@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Memorang AI Study API
- * The Memorang AI Study API description
+ * AI Study API
+ * The AI Study API description
  *
  * The version of the OpenAPI document: 1.0
  * 

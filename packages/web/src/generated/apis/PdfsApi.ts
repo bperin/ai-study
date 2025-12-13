@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Memorang AI Study API
- * The Memorang AI Study API description
+ * AI Study API
+ * The AI Study API description
  *
  * The version of the OpenAPI document: 1.0
  * 
@@ -36,6 +36,11 @@ export interface PdfsControllerGenerateFlashcardsRequest {
 
 export interface PdfsControllerGetObjectivesRequest {
     id: string;
+}
+
+export interface PdfsControllerListPdfsRequest {
+    page: number;
+    limit: number;
 }
 
 /**
@@ -223,10 +228,32 @@ export class PdfsApi extends runtime.BaseAPI {
     }
 
     /**
-     * List all PDFs for the user
+     * List all PDFs for the user with pagination
      */
-    async pdfsControllerListPdfsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PdfResponseDto>>> {
+    async pdfsControllerListPdfsRaw(requestParameters: PdfsControllerListPdfsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PdfResponseDto>>> {
+        if (requestParameters['page'] == null) {
+            throw new runtime.RequiredError(
+                'page',
+                'Required parameter "page" was null or undefined when calling pdfsControllerListPdfs().'
+            );
+        }
+
+        if (requestParameters['limit'] == null) {
+            throw new runtime.RequiredError(
+                'limit',
+                'Required parameter "limit" was null or undefined when calling pdfsControllerListPdfs().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -252,10 +279,10 @@ export class PdfsApi extends runtime.BaseAPI {
     }
 
     /**
-     * List all PDFs for the user
+     * List all PDFs for the user with pagination
      */
-    async pdfsControllerListPdfs(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PdfResponseDto>> {
-        const response = await this.pdfsControllerListPdfsRaw(initOverrides);
+    async pdfsControllerListPdfs(requestParameters: PdfsControllerListPdfsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PdfResponseDto>> {
+        const response = await this.pdfsControllerListPdfsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

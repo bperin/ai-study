@@ -8,7 +8,7 @@ All URIs are relative to *http://localhost*
 | [**pdfsControllerDeletePdf**](PdfsApi.md#pdfscontrollerdeletepdf) | **DELETE** /pdfs/{id} | Delete a PDF and all associated data (Admin only) |
 | [**pdfsControllerGenerateFlashcards**](PdfsApi.md#pdfscontrollergenerateflashcards) | **POST** /pdfs/{id}/generate | Generate flashcards from a PDF |
 | [**pdfsControllerGetObjectives**](PdfsApi.md#pdfscontrollergetobjectives) | **GET** /pdfs/{id}/objectives | Get generated objectives and questions for a PDF |
-| [**pdfsControllerListPdfs**](PdfsApi.md#pdfscontrollerlistpdfs) | **GET** /pdfs | List all PDFs for the user |
+| [**pdfsControllerListPdfs**](PdfsApi.md#pdfscontrollerlistpdfs) | **GET** /pdfs | List all PDFs for the user with pagination |
 
 
 
@@ -285,9 +285,9 @@ example().catch(console.error);
 
 ## pdfsControllerListPdfs
 
-> Array&lt;PdfResponseDto&gt; pdfsControllerListPdfs()
+> Array&lt;PdfResponseDto&gt; pdfsControllerListPdfs(page, limit)
 
-List all PDFs for the user
+List all PDFs for the user with pagination
 
 ### Example
 
@@ -306,8 +306,15 @@ async function example() {
   });
   const api = new PdfsApi(config);
 
+  const body = {
+    // number
+    page: 8.14,
+    // number
+    limit: 8.14,
+  } satisfies PdfsControllerListPdfsRequest;
+
   try {
-    const data = await api.pdfsControllerListPdfs();
+    const data = await api.pdfsControllerListPdfs(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -320,7 +327,11 @@ example().catch(console.error);
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **page** | `number` |  | [Defaults to `undefined`] |
+| **limit** | `number` |  | [Defaults to `undefined`] |
 
 ### Return type
 
