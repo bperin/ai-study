@@ -18,8 +18,8 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate --schema=packages/api/prisma/schema.prisma
 
-# Build the application
-RUN npm run build --workspace=packages/api
+# Build the application with memory limit
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build --workspace=packages/api
 
 # Production stage
 FROM node:20-alpine
