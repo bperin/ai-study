@@ -244,12 +244,23 @@ export class TestTakingService {
         state.currentQuestionIndex++;
 
         // Persist to database
-        // Check if answer already exists (deduplication)
+        // Check if answer already exists - if so, update it (allow retries)
         const existingAnswer = await this.prisma.userAnswer.findFirst({
             where: { attemptId, mcqId: questionId },
         });
 
-        if (!existingAnswer) {
+        if (existingAnswer) {
+            // Update existing answer - latest attempt counts
+            await this.prisma.userAnswer.update({
+                where: { id: existingAnswer.id },
+                data: {
+                    selectedIdx: selectedAnswer,
+                    isCorrect,
+                    timeSpent: existingAnswer.timeSpent + timeSpent, // Accumulate time spent
+                },
+            });
+        } else {
+            // Create new answer
             await this.prisma.userAnswer.create({
                 data: {
                     attemptId,
