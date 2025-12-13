@@ -74,7 +74,7 @@ export default function DashboardPage() {
     return (
         <div className="flex min-h-screen flex-col bg-background text-foreground">
             <header className="flex h-16 items-center justify-between border-b border-border bg-card/50 backdrop-blur-sm px-6">
-                <h1 className="text-2xl font-bold">Memorang</h1>
+                <h1 className="text-2xl font-bold">AI Study</h1>
                 <div className="flex items-center gap-3">
                     <div className="text-right">
                         <div className="flex items-center gap-2 justify-end">

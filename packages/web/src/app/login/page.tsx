@@ -34,7 +34,7 @@ export default function LoginPage() {
         <div className="flex min-h-screen flex-col items-center justify-center py-2">
             <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
                 <h1 className="text-6xl font-bold">
-                    Login to <span className="text-blue-600">Memorang</span>
+                    Login to <span className="text-blue-600">AI Study</span>
                 </h1>
 
                 <form onSubmit={handleSubmit} className="mt-8 flex w-full max-w-md flex-col space-y-4">
