@@ -4,6 +4,7 @@ All URIs are relative to *http://localhost*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**testsControllerChatAssist**](TestsApi.md#testscontrollerchatassist) | **POST** /tests/chat | Chat with AI for help on a question |
 | [**testsControllerGetAttemptDetails**](TestsApi.md#testscontrollergetattemptdetails) | **GET** /tests/attempt/{id} | Get detailed results for a specific test attempt |
 | [**testsControllerGetGlobalLeaderboard**](TestsApi.md#testscontrollergetgloballeaderboard) | **GET** /tests/leaderboard |  |
 | [**testsControllerGetMyRank**](TestsApi.md#testscontrollergetmyrank) | **GET** /tests/leaderboard/me |  |
@@ -11,6 +12,67 @@ All URIs are relative to *http://localhost*
 | [**testsControllerGetTestHistory**](TestsApi.md#testscontrollergettesthistory) | **GET** /tests/history | Get user\&#39;s test history with scores and reports |
 | [**testsControllerSubmitTest**](TestsApi.md#testscontrollersubmittest) | **POST** /tests/submit |  |
 
+
+
+## testsControllerChatAssist
+
+> testsControllerChatAssist()
+
+Chat with AI for help on a question
+
+### Example
+
+```ts
+import {
+  Configuration,
+  TestsApi,
+} from '';
+import type { TestsControllerChatAssistRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new TestsApi(config);
+
+  try {
+    const data = await api.testsControllerChatAssist();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+`void` (Empty response body)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | AI assistance response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## testsControllerGetAttemptDetails
