@@ -53,7 +53,7 @@ export class UploadsService {
         const bucket = this.storage.bucket(this.bucketName);
         const file = bucket.file(filePath);
 
-        // Generate signed URL with additional security constraints
+        // Generate signed URL with minimal constraints to avoid 403 errors
         const [uploadUrl] = await file.getSignedUrl({
             version: "v4",
             action: "write",
