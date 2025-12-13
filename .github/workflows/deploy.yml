@@ -85,9 +85,16 @@ jobs:
                     --format='value(status.url)' > web_url.txt
                   echo "WEB_URL=$(cat web_url.txt)" >> $GITHUB_ENV
 
-            - name: Update API CORS
+            - name: Update API CORS with deployed frontend URL
               run: |
+                  echo "${{ env.WEB_URL }}" | gcloud secrets versions add ai_study_FRONTEND_URL --data-file=- --project=${{ env.GCP_PROJECT_ID }}
                   gcloud run services update ${{ env.API_SERVICE_NAME }} \
                     --region ${{ env.GCP_REGION }} \
-                    --set-env-vars "FRONTEND_URL=${{ env.WEB_URL }}" \
+                    --clear-env-vars \
+                    --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest \
+                    --set-secrets=GCP_SA_KEY=ai_study_GCP_SA_KEY:latest \
+                    --set-secrets=GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
+                    --set-secrets=GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest \
+                    --set-secrets=JWT_SECRET=ai_study_JWT_SECRET:latest \
+                    --set-secrets=FRONTEND_URL=ai_study_FRONTEND_URL:latest \
                     --quiet
