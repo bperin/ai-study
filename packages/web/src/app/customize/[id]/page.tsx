@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { getPdfsApi } from "@/api-client";
-import { ChatMessageDtoRoleEnum } from "@/generated";
 
 interface TestPlan {
     objectives: Array<{
@@ -46,8 +45,11 @@ export default function CustomizePage() {
         const fetchPdfInfo = async () => {
             try {
                 const api = getPdfsApi();
-                const pdfs = await api.getPdfs();
-                const pdf = pdfs.find((p) => p.id === pdfId);
+                // @ts-ignore - The generated client types might be slightly off
+                const response = await api.pdfsControllerListPdfs({});
+                // Handle paginated response
+                const pdfs = response.data || [];
+                const pdf = pdfs.find((p: any) => p.id === pdfId);
                 setPdfInfo(pdf || { id: pdfId, filename: "Study Guide.pdf" });
             } catch (error) {
                 console.error("Failed to fetch PDF info:", error);
@@ -73,26 +75,31 @@ export default function CustomizePage() {
         setChatting(true);
 
         try {
-            const api = getPdfsApi();
-            const response = await api.chatWithPdf({
-                chatMessageDto: {
+            // SDK method is broken for this endpoint, falling back to fetch with env var
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            const token = localStorage.getItem("access_token");
+            const response = await fetch(`${baseUrl}/pdfs/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
                     message: userMessage,
                     pdfId,
-                    history: messages.map(m => ({
-                        role: m.role === "user" ? ChatMessageDtoRoleEnum.User : ChatMessageDtoRoleEnum.Assistant,
-                        content: m.content
-                    })),
-                }
+                    history: messages,
+                }),
             });
 
-            setMessages((prev) => [...prev, { role: "assistant", content: response.message }]);
+            const data = await response.json();
 
-            if (response.testPlan) {
-                // @ts-ignore
-                setTestPlan(response.testPlan);
+            setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+
+            if (data.testPlan) {
+                setTestPlan(data.testPlan);
             }
 
-            if (response.shouldGenerate) {
+            if (data.shouldGenerate) {
                 setShouldGenerate(true);
                 // Auto-generate after a moment
                 setTimeout(() => handleGenerate(), 1000);
@@ -115,9 +122,9 @@ export default function CustomizePage() {
             const prompt = `Generate ${testPlan.totalQuestions} questions with the following objectives:\n${testPlan.objectives.map((obj) => `- ${obj.title} (${obj.difficulty}, ${obj.questionCount} questions)`).join("\n")}`;
 
             const api = getPdfsApi();
-            await api.generateFlashcards({
+            await api.pdfsControllerGenerateFlashcards({
                 id: pdfId,
-                generateFlashcardsDto: { prompt }
+                body: { prompt }
             });
             
             router.push(`/study/${pdfId}`);
