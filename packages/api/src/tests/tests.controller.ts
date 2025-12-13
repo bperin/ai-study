@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Get, UseGuards, Request, Param, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { SubmitTestDto } from "./dto/submit-test.dto";
 import { TestsService } from "./tests.service";
@@ -47,6 +47,8 @@ export class TestsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get("history")
+    @ApiOperation({ summary: "Get user's test history with scores and reports" })
+    @ApiResponse({ status: 200, type: TestHistoryResponseDto })
     async getTestHistory(@Request() req: any): Promise<TestHistoryResponseDto> {
         return this.testsService.getTestHistory(req.user.userId);
     }
