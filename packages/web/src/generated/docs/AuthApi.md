@@ -1,15 +1,19 @@
 # AuthApi
 
-All URIs are relative to _http://localhost_
+All URIs are relative to *http://localhost*
 
-| Method                                                          | HTTP request            | Description |
-| --------------------------------------------------------------- | ----------------------- | ----------- |
-| [**authControllerRegister**](AuthApi.md#authcontrollerregister) | **POST** /auth/register |             |
-| [**authControllerSignIn**](AuthApi.md#authcontrollersignin)     | **POST** /auth/login    |             |
+| Method | HTTP request | Description |
+|------------- | ------------- | -------------|
+| [**authControllerRegister**](AuthApi.md#authcontrollerregister) | **POST** /auth/register |  |
+| [**authControllerSignIn**](AuthApi.md#authcontrollersignin) | **POST** /auth/login |  |
+
+
 
 ## authControllerRegister
 
 > AuthResponseDto authControllerRegister(createUserDto)
+
+
 
 ### Example
 
@@ -43,9 +47,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name              | Type                              | Description | Notes |
-| ----------------- | --------------------------------- | ----------- | ----- |
-| **createUserDto** | [CreateUserDto](CreateUserDto.md) |             |       |
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **createUserDto** | [CreateUserDto](CreateUserDto.md) |  | |
 
 ### Return type
 
@@ -60,17 +65,20 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
-| **201**     |             | -                |
+|-------------|-------------|------------------|
+| **201** |  |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## authControllerSignIn
 
 > AuthResponseDto authControllerSignIn(loginDto)
+
+
 
 ### Example
 
@@ -104,9 +112,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name         | Type                    | Description | Notes |
-| ------------ | ----------------------- | ----------- | ----- |
-| **loginDto** | [LoginDto](LoginDto.md) |             |       |
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **loginDto** | [LoginDto](LoginDto.md) |  | |
 
 ### Return type
 
@@ -121,10 +130,11 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
-| **200**     |             | -                |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

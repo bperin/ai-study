@@ -17,6 +17,7 @@ docs/LoginDto.md
 docs/McqDto.md
 docs/MissedQuestionDto.md
 docs/ObjectiveResponseDto.md
+docs/PaginatedPdfResponseDto.md
 docs/PdfResponseDto.md
 docs/PdfsApi.md
 docs/RecordAnswerDto.md
@@ -46,6 +47,7 @@ models/LoginDto.ts
 models/McqDto.ts
 models/MissedQuestionDto.ts
 models/ObjectiveResponseDto.ts
+models/PaginatedPdfResponseDto.ts
 models/PdfResponseDto.ts
 models/RecordAnswerDto.ts
 models/RecordAnswerResponseDto.ts
