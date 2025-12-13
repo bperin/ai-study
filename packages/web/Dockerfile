@@ -5,11 +5,11 @@ WORKDIR /app
 # Copy root package files
 COPY package*.json ./
 
-# Copy web package files only
+# Copy web package files
 COPY packages/web/package*.json ./packages/web/
 
-# Install dependencies
-RUN npm ci
+# Install dependencies fresh
+RUN npm install
 
 # Copy source code
 COPY . .
