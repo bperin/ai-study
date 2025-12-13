@@ -8,6 +8,7 @@ All URIs are relative to *http://localhost*
 | [**pdfsControllerDeletePdf**](PdfsApi.md#pdfscontrollerdeletepdf) | **DELETE** /pdfs/{id} | Delete a PDF and all associated data (Admin only) |
 | [**pdfsControllerGenerateFlashcards**](PdfsApi.md#pdfscontrollergenerateflashcards) | **POST** /pdfs/{id}/generate | Generate flashcards from a PDF |
 | [**pdfsControllerGetObjectives**](PdfsApi.md#pdfscontrollergetobjectives) | **GET** /pdfs/{id}/objectives | Get generated objectives and questions for a PDF |
+| [**pdfsControllerListAllPdfs**](PdfsApi.md#pdfscontrollerlistallpdfs) | **GET** /pdfs/all | List all PDFs from all users (for taking tests) |
 | [**pdfsControllerListPdfs**](PdfsApi.md#pdfscontrollerlistpdfs) | **GET** /pdfs | List all PDFs for the user with pagination |
 
 
@@ -264,6 +265,78 @@ example().catch(console.error);
 ### Return type
 
 [**Array&lt;ObjectiveResponseDto&gt;**](ObjectiveResponseDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## pdfsControllerListAllPdfs
+
+> PaginatedPdfResponseDto pdfsControllerListAllPdfs(page, limit)
+
+List all PDFs from all users (for taking tests)
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PdfsApi,
+} from '';
+import type { PdfsControllerListAllPdfsRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new PdfsApi(config);
+
+  const body = {
+    // number
+    page: 8.14,
+    // number
+    limit: 8.14,
+  } satisfies PdfsControllerListAllPdfsRequest;
+
+  try {
+    const data = await api.pdfsControllerListAllPdfs(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **page** | `number` |  | [Defaults to `undefined`] |
+| **limit** | `number` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**PaginatedPdfResponseDto**](PaginatedPdfResponseDto.md)
 
 ### Authorization
 

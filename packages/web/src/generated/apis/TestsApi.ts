@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * AI Study API
- * The AI Study API description
+ * Dash AI API
+ * The Dash AI API description
  *
  * The version of the OpenAPI document: 1.0
  * 
@@ -18,6 +18,7 @@ import type {
   SubmitTestDto,
   TestHistoryItemDto,
   TestHistoryResponseDto,
+  TestStatsDto,
 } from '../models/index';
 import {
     SubmitTestDtoFromJSON,
@@ -26,6 +27,8 @@ import {
     TestHistoryItemDtoToJSON,
     TestHistoryResponseDtoFromJSON,
     TestHistoryResponseDtoToJSON,
+    TestStatsDtoFromJSON,
+    TestStatsDtoToJSON,
 } from '../models/index';
 
 export interface TestsControllerGetAttemptDetailsRequest {
@@ -344,7 +347,7 @@ export class TestsApi extends runtime.BaseAPI {
     /**
      * Get test stats: attempt count, avg score, top scorer
      */
-    async testsControllerGetTestStatsRaw(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async testsControllerGetTestStatsRaw(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestStatsDto>> {
         if (requestParameters['pdfId'] == null) {
             throw new runtime.RequiredError(
                 'pdfId',
@@ -375,14 +378,15 @@ export class TestsApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => TestStatsDtoFromJSON(jsonValue));
     }
 
     /**
      * Get test stats: attempt count, avg score, top scorer
      */
-    async testsControllerGetTestStats(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.testsControllerGetTestStatsRaw(requestParameters, initOverrides);
+    async testsControllerGetTestStats(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestStatsDto> {
+        const response = await this.testsControllerGetTestStatsRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

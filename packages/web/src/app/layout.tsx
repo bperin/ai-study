@@ -6,8 +6,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "AI Study App",
-    description: "AI-powered study assistant",
+    title: "Dash AI",
+    description: "Dash AI - AI-powered study assistant",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

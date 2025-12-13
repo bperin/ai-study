@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { authApi } from "../../api-client";
+import Logo from "@/components/Logo";
 
 export default function RegisterPage() {
     const [email, setEmail] = useState("");
@@ -34,14 +35,15 @@ export default function RegisterPage() {
     return (
         <div className="flex min-h-screen flex-col items-center justify-center py-2">
             <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
-                <h1 className="text-6xl font-bold">
-                    Join <span className="text-blue-600">AI Study</span>
-                </h1>
+                <div className="mb-8">
+                    <Logo size="lg" />
+                </div>
+                <h2 className="text-2xl font-semibold mb-6">Create your account</h2>
 
                 <form onSubmit={handleSubmit} className="mt-8 flex w-full max-w-md flex-col space-y-4">
                     <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded border p-2" required />
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded border p-2" required />
-                    <button type="submit" className="rounded bg-blue-600 p-2 text-white hover:bg-blue-700">
+                    <button type="submit" className="rounded bg-red-600 p-2 text-white hover:bg-red-700">
                         Sign Up
                     </button>
                     {error && <p className="text-red-500">{error}</p>}

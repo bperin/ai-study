@@ -21,5 +21,6 @@ export * from './TestHistoryResponseDto';
 export * from './TestResultAnswerDto';
 export * from './TestSessionAnswerDto';
 export * from './TestSessionStateDto';
+export * from './TestStatsDto';
 export * from './UploadUrlResponseDto';
 export * from './UserResponseDto';

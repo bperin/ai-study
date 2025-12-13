@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * AI Study API
- * The AI Study API description
+ * Dash AI API
+ * The Dash AI API description
  *
  * The version of the OpenAPI document: 1.0
  * 
