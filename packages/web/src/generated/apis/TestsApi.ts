@@ -51,6 +51,42 @@ export interface TestsControllerSubmitTestRequest {
 export class TestsApi extends runtime.BaseAPI {
 
     /**
+     * Chat with AI for help on a question
+     */
+    async testsControllerChatAssistRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/chat`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Chat with AI for help on a question
+     */
+    async testsControllerChatAssist(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.testsControllerChatAssistRaw(initOverrides);
+    }
+
+    /**
      * Get detailed results for a specific test attempt
      */
     async testsControllerGetAttemptDetailsRaw(requestParameters: TestsControllerGetAttemptDetailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestHistoryItemDto>> {

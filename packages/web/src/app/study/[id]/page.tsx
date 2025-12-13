@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getPdfsApi } from "@/api-client";
 import { McqDto, ObjectiveResponseDto, TestAnalysisResponseDto } from "@/generated";
 import { getTestTakingApi } from "@/api-client";
-import { MessageCircle, Send, X } from "lucide-react";
-import { useRef } from "react";
+import { Send, X } from "lucide-react";
 
 interface ChatMessage {
     role: "user" | "assistant";
@@ -43,17 +42,16 @@ export default function StudyPage() {
     const [analyzing, setAnalyzing] = useState(false);
 
     // Chat state
-    const [isChatOpen, setIsChatOpen] = useState(false);
     const [chatMessage, setChatMessage] = useState("");
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [isChatLoading, setIsChatLoading] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (isChatOpen && chatEndRef.current) {
+        if (chatEndRef.current) {
             chatEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
-    }, [chatHistory, isChatOpen]);
+    }, [chatHistory]);
 
     const handleSendMessage = async () => {
         if (!chatMessage.trim() || isChatLoading) return;
@@ -336,72 +334,6 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                         </Button>
                     </CardContent>
                 </Card>
-    
-                {/* AI Tutor Chat */}
-                <div className="fixed bottom-6 right-6 z-50">
-                    {isChatOpen ? (
-                        <Card className="w-80 h-96 flex flex-col shadow-xl border-primary/20">
-                            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0 bg-primary/5 border-b">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                    🤖 AI Tutor
-                                </CardTitle>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsChatOpen(false)}>
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </CardHeader>
-                            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                                {chatHistory.length === 0 && (
-                                    <p className="text-sm text-muted-foreground text-center mt-8">
-                                        Stuck? Ask me for a hint! I won't give you the answer, but I can help you find it.
-                                    </p>
-                                )}
-                                {chatHistory.map((msg, i) => (
-                                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                                        <div className={`max-w-[85%] p-3 rounded-lg text-sm ${
-                                            msg.role === "user"
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-muted"
-                                        }`}>
-                                            {msg.content}
-                                        </div>
-                                    </div>
-                                ))}
-                                {isChatLoading && (
-                                    <div className="flex justify-start">
-                                        <div className="bg-muted p-3 rounded-lg text-sm animate-pulse">
-                                            Thinking...
-                                        </div>
-                                    </div>
-                                )}
-                                <div ref={chatEndRef} />
-                            </CardContent>
-                            <CardFooter className="p-3 border-t">
-                                <div className="flex w-full gap-2">
-                                    <Input
-                                        value={chatMessage}
-                                        onChange={(e) => setChatMessage(e.target.value)}
-                                        onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                                        placeholder="Ask for a hint..."
-                                        disabled={isChatLoading}
-                                        className="h-9 text-sm"
-                                    />
-                                    <Button size="sm" onClick={handleSendMessage} disabled={!chatMessage.trim() || isChatLoading}>
-                                        <Send className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </CardFooter>
-                        </Card>
-                    ) : (
-                        <Button
-                            size="lg"
-                            className="rounded-full h-14 w-14 shadow-lg"
-                            onClick={() => setIsChatOpen(true)}
-                            disabled={isFinished}
-                        >
-                            <MessageCircle className="h-6 w-6" />
-                        </Button>
-                    )}
-                </div>
             </div>
         );
     }
@@ -481,110 +413,167 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
     const progress = ((currentQuestionIndex + 1) / allQuestions.length) * 100;
 
     return (
-        <div className="container mx-auto p-6 max-w-2xl min-h-screen bg-background">
-            <div className="mb-6 space-y-2">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Question {currentQuestionIndex + 1} of {allQuestions.length}</span>
-                    <span>{Math.round(progress)}%</span>
-                </div>
-                <Progress value={progress} className="h-2" />
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl leading-relaxed">
-                        {currentQuestion.question}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid gap-3">
-                        {currentQuestion.options.map((option, index) => {
-                            let className = "justify-start text-left h-auto py-4 px-6 whitespace-normal";
-                            const isCorrect = index === currentQuestion.correctIdx;
-                            const isSelected = index === selectedOption;
-
-                            if (hasAnsweredCorrectly) {
-                                if (isCorrect) className += " bg-green-500 hover:bg-green-600 text-white border-green-500 dark:bg-green-900 dark:border-green-700";
-                                else if (isSelected) className += " bg-red-500 hover:bg-red-600 text-white border-red-500 dark:bg-red-900 dark:border-red-700";
-                            } else if (selectedOption !== null && !hasAnsweredCorrectly) {
-                                // Show temporary feedback but allow retry
-                                if (isSelected) className += " bg-red-100 hover:bg-red-200 text-red-900 border-red-300 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200";
-                            }
-
-                            return (
-                                <Button
-                                    key={index}
-                                    variant={selectedOption === null ? "outline" : "ghost"}
-                                    className={selectedOption === null ? "justify-start text-left h-auto py-4 px-6 whitespace-normal" : className}
-                                    onClick={() => handleOptionSelect(index)}
-                                    disabled={hasAnsweredCorrectly}
-                                >
-                                    <span className="mr-3 font-semibold">{String.fromCharCode(65 + index)}.</span>
-                                    {option}
-                                </Button>
-                            );
-                        })}
+        <div className="min-h-screen bg-background p-6">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Question */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Question {currentQuestionIndex + 1} of {allQuestions.length}</span>
+                            <span>{Math.round(progress)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-2" />
                     </div>
 
-                    {showHint && (
-                        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                            <h4 className="font-semibold mb-2 text-yellow-800 dark:text-yellow-200">💡 Hint:</h4>
-                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                {currentQuestion.hint || "Think carefully about the key concepts and try again!"}
-                            </p>
-                            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
-                                You can try again - no penalty for incorrect attempts!
-                            </p>
-                        </div>
-                    )}
+                    <Card className="h-auto">
+                        <CardHeader>
+                            <CardTitle className="text-xl leading-relaxed">
+                                {currentQuestion.question}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-3">
+                                {currentQuestion.options.map((option, index) => {
+                                    let className = "justify-start text-left h-auto py-4 px-6 whitespace-normal";
+                                    const isCorrect = index === currentQuestion.correctIdx;
+                                    const isSelected = index === selectedOption;
 
-                    {showExplanation && (
-                        <div className={`mt-6 p-4 border rounded-lg ${
-                            selectedOption === currentQuestion.correctIdx 
-                                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                                : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                        }`}>
-                            <h4 className={`font-semibold mb-2 ${
-                                selectedOption === currentQuestion.correctIdx
-                                    ? "text-green-800 dark:text-green-200"
-                                    : "text-red-900 dark:text-red-200"
-                            }`}>
-                                {selectedOption === currentQuestion.correctIdx 
-                                    ? "✅ Correct! Explanation:" 
-                                    : "❌ Incorrect. Correct Answer:"}
-                            </h4>
-                            <p className={`text-sm ${
-                                selectedOption === currentQuestion.correctIdx
-                                    ? "text-green-700 dark:text-green-300"
-                                    : "text-red-900 dark:text-red-300"
-                            }`}>
-                                {selectedOption !== currentQuestion.correctIdx && (
-                                    <span className="font-medium">
-                                        {String.fromCharCode(65 + currentQuestion.correctIdx)}. {currentQuestion.options[currentQuestion.correctIdx]}
-                                        <br /><br />
-                                    </span>
-                                )}
-                                {currentQuestion.explanation || (selectedOption === currentQuestion.correctIdx ? "Great job! You got it right." : "Better luck next time!")}
-                            </p>
-                            <p className={`text-xs mt-2 ${
-                                selectedOption === currentQuestion.correctIdx
-                                    ? "text-green-600 dark:text-green-400"
-                                    : "text-red-800 dark:text-red-400"
-                            }`}>
-                                Completed in {attemptCount} attempt{attemptCount > 1 ? 's' : ''}
-                                {attemptCount >= 2 && selectedOption !== currentQuestion.correctIdx && " (maximum attempts reached)"}
-                            </p>
-                        </div>
-                    )}
-                </CardContent>
-                <CardFooter className="justify-end pt-2">
-                    {hasAnsweredCorrectly && (
-                        <Button onClick={handleNextQuestion}>
-                            {currentQuestionIndex < allQuestions.length - 1 ? "Next Question" : "Finish"}
-                        </Button>
-                    )}
-                </CardFooter>
-            </Card>
+                                    if (hasAnsweredCorrectly) {
+                                        if (isCorrect) className += " bg-green-500 hover:bg-green-600 text-white border-green-500 dark:bg-green-900 dark:border-green-700";
+                                        else if (isSelected) className += " bg-red-500 hover:bg-red-600 text-white border-red-500 dark:bg-red-900 dark:border-red-700";
+                                    } else if (selectedOption !== null && !hasAnsweredCorrectly) {
+                                        // Show temporary feedback but allow retry
+                                        if (isSelected) className += " bg-red-100 hover:bg-red-200 text-red-900 border-red-300 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200";
+                                    }
+
+                                    return (
+                                        <Button
+                                            key={index}
+                                            variant={selectedOption === null ? "outline" : "ghost"}
+                                            className={selectedOption === null ? "justify-start text-left h-auto py-4 px-6 whitespace-normal" : className}
+                                            onClick={() => handleOptionSelect(index)}
+                                            disabled={hasAnsweredCorrectly}
+                                        >
+                                            <span className="mr-3 font-semibold">{String.fromCharCode(65 + index)}.</span>
+                                            {option}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+
+                            {showHint && (
+                                <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                    <h4 className="font-semibold mb-2 text-yellow-800 dark:text-yellow-200">💡 Hint:</h4>
+                                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                        {currentQuestion.hint || "Think carefully about the key concepts and try again!"}
+                                    </p>
+                                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                                        You can try again - no penalty for incorrect attempts!
+                                    </p>
+                                </div>
+                            )}
+
+                            {showExplanation && (
+                                <div className={`mt-6 p-4 border rounded-lg ${
+                                    selectedOption === currentQuestion.correctIdx 
+                                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                                }`}>
+                                    <h4 className={`font-semibold mb-2 ${
+                                        selectedOption === currentQuestion.correctIdx
+                                            ? "text-green-800 dark:text-green-200"
+                                            : "text-red-900 dark:text-red-200"
+                                    }`}>
+                                        {selectedOption === currentQuestion.correctIdx 
+                                            ? "✅ Correct! Explanation:" 
+                                            : "❌ Incorrect. Correct Answer:"}
+                                    </h4>
+                                    <p className={`text-sm ${
+                                        selectedOption === currentQuestion.correctIdx
+                                            ? "text-green-700 dark:text-green-300"
+                                            : "text-red-900 dark:text-red-300"
+                                    }`}>
+                                        {selectedOption !== currentQuestion.correctIdx && (
+                                            <span className="font-medium">
+                                                {String.fromCharCode(65 + currentQuestion.correctIdx)}. {currentQuestion.options[currentQuestion.correctIdx]}
+                                                <br /><br />
+                                            </span>
+                                        )}
+                                        {currentQuestion.explanation || (selectedOption === currentQuestion.correctIdx ? "Great job! You got it right." : "Better luck next time!")}
+                                    </p>
+                                    <p className={`text-xs mt-2 ${
+                                        selectedOption === currentQuestion.correctIdx
+                                            ? "text-green-600 dark:text-green-400"
+                                            : "text-red-800 dark:text-red-400"
+                                    }`}>
+                                        Completed in {attemptCount} attempt{attemptCount > 1 ? 's' : ''}
+                                        {attemptCount >= 2 && selectedOption !== currentQuestion.correctIdx && " (maximum attempts reached)"}
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                        <CardFooter className="justify-end pt-2">
+                            {hasAnsweredCorrectly && (
+                                <Button onClick={handleNextQuestion}>
+                                    {currentQuestionIndex < allQuestions.length - 1 ? "Next Question" : "Finish"}
+                                </Button>
+                            )}
+                        </CardFooter>
+                    </Card>
+                </div>
+
+                {/* Right Column: AI Tutor Chat */}
+                <div className="lg:col-span-1 h-[calc(100vh-6rem)] sticky top-6">
+                    <Card className="h-full flex flex-col shadow-lg border-primary/20">
+                        <CardHeader className="py-3 px-4 bg-primary/5 border-b">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                🤖 AI Tutor
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {chatHistory.length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center mt-8">
+                                    Stuck? Ask me for a hint! I won't give you the answer, but I can help you find it.
+                                </p>
+                            )}
+                            {chatHistory.map((msg, i) => (
+                                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                                    <div className={`max-w-[85%] p-3 rounded-lg text-sm ${
+                                        msg.role === "user" 
+                                            ? "bg-primary text-primary-foreground" 
+                                            : "bg-muted"
+                                    }`}>
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            ))}
+                            {isChatLoading && (
+                                <div className="flex justify-start">
+                                    <div className="bg-muted p-3 rounded-lg text-sm animate-pulse">
+                                        Thinking...
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </CardContent>
+                        <CardFooter className="p-3 border-t">
+                            <div className="flex w-full gap-2">
+                                <Input 
+                                    value={chatMessage} 
+                                    onChange={(e) => setChatMessage(e.target.value)}
+                                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                                    placeholder="Ask for a hint..." 
+                                    disabled={isChatLoading}
+                                    className="h-9 text-sm"
+                                />
+                                <Button size="sm" onClick={handleSendMessage} disabled={!chatMessage.trim() || isChatLoading}>
+                                    <Send className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CardFooter>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }
