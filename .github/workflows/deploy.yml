@@ -51,9 +51,9 @@ jobs:
                     --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
                     --project ${{ env.GCP_PROJECT_ID }} \
                     --region ${{ env.GCP_REGION }} \
-                    --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-                    --set-env-vars "GCP_SA_KEY=${{ secrets.GCP_SA_KEY }}" \
-                    --set-env-vars "GCP_BUCKET_NAME=${{ secrets.GCP_BUCKET_NAME }}" \
+                    --update-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+                    --update-env-vars GCP_BUCKET_NAME="${{ secrets.GCP_BUCKET_NAME }}" \
+                    --update-env-vars GCP_SA_KEY="${{ secrets.GCP_SA_KEY }}" \
                     --allow-unauthenticated \
                     --quiet \
                     --format='value(status.url)' > api_url.txt
