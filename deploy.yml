@@ -55,6 +55,7 @@ jobs:
                     --allow-unauthenticated \
                     --clear-env-vars \
                     --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest \
+                    --set-secrets=GCP_SA_KEY=ai_study_GCP_SA_KEY:latest \
                     --set-secrets=GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
                     --set-secrets=GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest \
                     --set-secrets=JWT_SECRET=ai_study_JWT_SECRET:latest \
