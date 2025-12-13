@@ -4,6 +4,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { SubmitTestDto } from "./dto/submit-test.dto";
 import { TestsService } from "./tests.service";
 import { LeaderboardService } from "./leaderboard.service";
+import { TestHistoryResponseDto } from "../pdfs/dto/submit-test-results.dto";
 
 @ApiTags("tests")
 @Controller("tests")
@@ -41,5 +42,12 @@ export class TestsController {
     async getPdfLeaderboard(@Param("pdfId") pdfId: string, @Query("limit") limit?: string) {
         const limitNum = limit ? parseInt(limit) : 10;
         return this.leaderboardService.getPdfLeaderboard(pdfId, limitNum);
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Get("history")
+    async getTestHistory(@Request() req: any): Promise<TestHistoryResponseDto> {
+        return this.testsService.getTestHistory(req.user.userId);
     }
 }

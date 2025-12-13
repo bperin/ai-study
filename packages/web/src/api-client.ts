@@ -1,4 +1,4 @@
-import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi, PdfsApi } from "./generated";
+import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi, PdfsApi, TestTakingApi } from "./generated";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -21,9 +21,11 @@ export const usersApi = new UsersApi(getConfig());
 export const defaultApi = new DefaultApi(getConfig());
 export const uploadsApi = new UploadsApi(getConfig());
 export const pdfsApi = new PdfsApi(getConfig());
+export const testTakingApi = new TestTakingApi(getConfig());
 
 export const getPdfsApi = () => new PdfsApi(getConfig());
 export const getUsersApi = () => new UsersApi(getConfig());
+export const getTestTakingApi = () => new TestTakingApi(getConfig());
 
 // Helper to refresh API instances when token changes (e.g. after login)
 export const refreshApiConfig = () => {
@@ -34,5 +36,6 @@ export const refreshApiConfig = () => {
         defaultApi: new DefaultApi(config),
         uploadsApi: new UploadsApi(config),
         pdfsApi: new PdfsApi(config),
+        testTakingApi: new TestTakingApi(config),
     };
 };

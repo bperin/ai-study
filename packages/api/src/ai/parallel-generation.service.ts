@@ -4,7 +4,7 @@ import { GcsService } from "../pdfs/gcs.service";
 import { PdfTextService } from "../pdfs/pdf-text.service";
 import { LlmAgent, InMemoryRunner } from "@google/adk";
 import * as pdfParse from "pdf-parse";
-import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION } from "./prompts";
+import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHENSIVE_ANALYSIS_PROMPT } from "./prompts";
 // @ts-ignore
 import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from "./tools";
 
@@ -281,10 +281,7 @@ ${pdfContext}
         missedQuestions: any[],
         allAnswers?: any[]
     ): Promise<{
-        summary: string;
-        weakAreas: string[];
-        studyStrategies: string[];
-        strengths?: string[];
+        report: string;
     }> {
         // Fetch PDF info
         const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
@@ -293,11 +290,11 @@ ${pdfContext}
         const pdfFilename = pdf.filename;
         const gcsPath = pdf.gcsPath || pdf.content || "";
 
+
         // Create analyzer agent with web search capability
         const agent = new LlmAgent({
             name: "test_analyzer",
             description: "Analyzes test results and suggests study strategies with web-enhanced resources",
-            // @ts-ignore
             model: GEMINI_QUALITY_ANALYZER_MODEL,
             instruction: TEST_ANALYZER_INSTRUCTION,
             tools: [
@@ -337,9 +334,7 @@ ${pdfContext}
         }
 
         let analysisResult = {
-            summary: "Analysis failed to generate.",
-            weakAreas: [],
-            studyStrategies: [],
+            report: "Analysis failed to generate. Please try again."
         };
 
         // @ts-ignore
@@ -350,46 +345,22 @@ ${pdfContext}
                 role: "user",
                 parts: [
                     {
-                        text: `
-Here are the questions the student missed:
-${JSON.stringify(missedQuestions, null, 2)}
-
-${allAnswers && allAnswers.length > 0 ? `
-Here are ALL the student's answers (for identifying strengths):
+                        text: COMPREHENSIVE_ANALYSIS_PROMPT
+                            .replace('{missedQuestions}', JSON.stringify(missedQuestions, null, 2))
+                            .replace('{allAnswersSection}', allAnswers && allAnswers.length > 0 ? `
+ALL student answers (correct and incorrect):
 ${JSON.stringify(allAnswers, null, 2)}
-` : ''}
-
-SOURCE MATERIAL FROM PDF:
-${pdfContext}
-
-INSTRUCTIONS:
-Analyze the student's performance comprehensively.
-- Cross-reference missed questions with the Source Material above
-- Identify why they missed specific questions (concepts, details, calculations)
-- If you have all answers, also identify what they did well (strengths)
-- Use the fetch_url_content tool to find 2-3 helpful online resources for weak areas
-- Provide actionable study strategies with specific resources and URLs when possible
-
-Return ONLY valid JSON with keys: summary, weakAreas, studyStrategies, strengths (optional).
-`,
+` : '')
+                            .replace('{pdfContext}', pdfContext),
                     },
                 ],
             },
         })) {
             if (event.content?.parts?.[0]?.text) {
-                try {
-                    // Simple extraction of JSON if wrapped in markdown code blocks
-                    const text = event.content.parts[0].text;
-                    const jsonMatch = text.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) {
-                        analysisResult = JSON.parse(jsonMatch[0]);
-                    } else {
-                        // Fallback if not pure JSON
-                        analysisResult = JSON.parse(text);
-                    }
-                } catch (e) {
-                    console.error("Failed to parse analysis result JSON", e);
-                }
+                // Store the raw text response as the report
+                analysisResult = {
+                    report: event.content.parts[0].text.trim()
+                };
             }
         }
 

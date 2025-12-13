@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ParallelGenerationService } from "../ai/parallel-generation.service";
+import { TestHistoryResponseDto } from "./dto/submit-test-results.dto";
 
 @Injectable()
 export class PdfsService {
@@ -116,25 +117,36 @@ export class PdfsService {
             // Analyze results with AI (now with web search and all answers)
             console.log(`Analyzing test results for PDF: ${attempt.pdfId}`);
             analysis = await this.parallelGenerationService.analyzeTestResults(attempt.pdfId, missedQuestions, allAnswers);
+            
+            // The analysis already contains the markdown report
         } catch (error) {
             console.error("AI analysis failed, using fallback:", error);
             // Fallback analysis if AI fails
-            const percentage = (score / totalQuestions) * 100;
+            const percentage = Math.round((score / totalQuestions) * 100);
             analysis = {
-                summary: `You scored ${score} out of ${totalQuestions} (${Math.round(percentage)}%). ${percentage >= 80
+                report: `# Test Performance Analysis Report
+
+## Executive Summary
+You scored ${score} out of ${totalQuestions} (${percentage}%). ${percentage >= 80
                     ? "Great job! You have a strong understanding of the material."
                     : percentage >= 60
                         ? "Good effort! Review the areas you missed to improve further."
                         : "Keep studying! Focus on understanding the core concepts."
-                    }`,
-                weakAreas: missedQuestions.length > 0
-                    ? missedQuestions.slice(0, 3).map(q => `Review: ${q.questionText.substring(0, 100)}...`)
-                    : ["No specific weak areas identified - great job!"],
-                studyStrategies: [
-                    "Review the questions you missed and understand why the correct answer is right",
-                    "Re-read the relevant sections of the study material",
-                    "Try taking the test again to reinforce your knowledge",
-                ],
+                    }
+
+## Areas for Improvement
+${missedQuestions.length > 0 
+    ? missedQuestions.slice(0, 3).map(q => `- **${q.questionText}**\n  - Your answer: ${q.selectedAnswer}\n  - Correct answer: ${q.correctAnswer}\n  - Review this concept in the study material`).join('\n\n')
+    : "- No specific areas identified - great job!"
+}
+
+## Study Strategy Recommendations
+- Review the questions you missed and understand why the correct answer is right
+- Re-read the relevant sections of the study material  
+- Try taking the test again to reinforce your knowledge
+
+## Next Steps
+Keep practicing and focus on understanding the underlying concepts. Each attempt helps you learn!`
             };
         }
 
@@ -269,4 +281,5 @@ export class PdfsService {
             shouldGenerate: false,
         };
     }
+
 }
