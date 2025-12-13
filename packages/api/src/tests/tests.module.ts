@@ -15,4 +15,4 @@ import { PdfsModule } from "../pdfs/pdfs.module";
     controllers: [TestsController, TestTakingController, TestAttemptsController],
     providers: [TestsService, LeaderboardService, TestTakingService, TestAttemptsService],
 })
-export class TestsModule { }
+export class TestsModule {}

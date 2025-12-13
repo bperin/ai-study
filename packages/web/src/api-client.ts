@@ -11,7 +11,7 @@ const authMiddleware: Middleware = {
             }
         }
         return context.response;
-    }
+    },
 };
 
 const getConfig = () => {

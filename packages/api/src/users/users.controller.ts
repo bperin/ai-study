@@ -28,6 +28,6 @@ export class UsersController {
     @ApiResponse({ status: 200, type: [UserResponseDto] })
     async findAll() {
         const users = await this.usersService.findAll();
-        return users.map(user => new UserResponseDto(user));
+        return users.map((user) => new UserResponseDto(user));
     }
 }

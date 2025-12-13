@@ -61,33 +61,33 @@ export default function StudyPage() {
 
         const userMsg = chatMessage.trim();
         setChatMessage("");
-        setChatHistory(prev => [...prev, { role: "user", content: userMsg }]);
+        setChatHistory((prev) => [...prev, { role: "user", content: userMsg }]);
         setIsChatLoading(true);
 
         try {
             const token = localStorage.getItem("access_token");
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            
+
             const response = await fetch(`${baseUrl}/tests/chat`, {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     message: userMsg,
                     questionId: currentQuestion.id,
-                    history: chatHistory
-                })
+                    history: chatHistory,
+                }),
             });
 
             if (!response.ok) throw new Error("Failed to get response");
-            
+
             const data = await response.json();
-            setChatHistory(prev => [...prev, { role: "assistant", content: data.message }]);
+            setChatHistory((prev) => [...prev, { role: "assistant", content: data.message }]);
         } catch (error) {
             console.error("Chat error:", error);
-            setChatHistory(prev => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
+            setChatHistory((prev) => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
         } finally {
             setIsChatLoading(false);
         }
@@ -119,25 +119,25 @@ export default function StudyPage() {
         try {
             const token = localStorage.getItem("access_token");
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            
+
             const response = await fetch(`${baseUrl}/tests/taking/start/${id}`, {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
             });
-            
+
             if (!response.ok) throw new Error("Failed to start session");
-            
+
             const session = await response.json();
             setAttemptId(session.attemptId);
             setHasStarted(true);
-            
+
             // Restore state if resuming
             if (session.currentQuestionIndex > 0) {
                 setCurrentQuestionIndex(session.currentQuestionIndex);
-                
+
                 // Map existing answers to our format
                 const restoredAnswers = session.answers.map((a: any) => ({
                     questionId: a.questionId,
@@ -148,7 +148,7 @@ export default function StudyPage() {
                     attempts: 1, // Assumption
                 }));
                 setAllAnswers(restoredAnswers);
-                
+
                 // Restore score
                 setScore(session.correctCount);
             }
@@ -159,7 +159,7 @@ export default function StudyPage() {
 
     const handleOptionSelect = async (index: number) => {
         if (hasAnsweredCorrectly) return; // Prevent changing answer after correct answer
-        
+
         const newAttemptCount = attemptCount + 1;
         setSelectedOption(index);
         setAttemptCount(newAttemptCount);
@@ -176,14 +176,14 @@ export default function StudyPage() {
                     await fetch(`${baseUrl}/tests/taking/${attemptId}/answer`, {
                         method: "POST",
                         headers: {
-                            "Authorization": `Bearer ${token}`,
-                            "Content-Type": "application/json"
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
                             questionId: currentQuestion.id,
                             selectedAnswer: index,
-                            timeSpent: 0 // TODO: Track time
-                        })
+                            timeSpent: 0, // TODO: Track time
+                        }),
                     });
                 } catch (err) {
                     console.error("Failed to save answer", err);
@@ -195,7 +195,7 @@ export default function StudyPage() {
             setHasAnsweredCorrectly(true);
             setShowExplanation(true);
             setShowHint(false);
-            
+
             // Track this answer
             const answer = {
                 questionId: currentQuestion.id,
@@ -215,7 +215,7 @@ export default function StudyPage() {
                 setHasAnsweredCorrectly(true);
                 setShowExplanation(true);
                 setShowHint(false);
-                
+
                 // Track this as a failed answer
                 const answer = {
                     questionId: currentQuestion.id,
@@ -231,7 +231,7 @@ export default function StudyPage() {
                 setShowHint(true);
                 setShowExplanation(false);
             }
-            
+
             // Track as missed on first incorrect attempt
             if (newAttemptCount === 1) {
                 setMissedQuestions([
@@ -274,11 +274,11 @@ export default function StudyPage() {
         setAnalyzing(true);
         try {
             const api = getTestTakingApi();
-            
+
             await api.testTakingControllerCompleteTest({
-                attemptId: attemptId
+                attemptId: attemptId,
             });
-            
+
             // The SDK method returns void, so we need to fetch the result separately
             // For now, use fallback until we fix the API response
             throw new Error("Need to implement proper result fetching");
@@ -289,17 +289,16 @@ export default function StudyPage() {
                 report: `# Test Performance Analysis Report
 
 ## Executive Summary
-You scored ${score} out of ${allQuestions.length} (${percentage}%). ${percentage >= 80
-                    ? "Great job! You have a strong understanding of the material."
-                    : percentage >= 60
-                        ? "Good effort! Review the areas you missed to improve further."
-                        : "Keep studying! Focus on understanding the core concepts."
-                    }
+You scored ${score} out of ${allQuestions.length} (${percentage}%). ${percentage >= 80 ? "Great job! You have a strong understanding of the material." : percentage >= 60 ? "Good effort! Review the areas you missed to improve further." : "Keep studying! Focus on understanding the core concepts."}
 
 ## Areas for Improvement
-${missedQuestions.length > 0 
-    ? missedQuestions.slice(0, 3).map(q => `- **${q.questionText}**\n  - Your answer: ${q.selectedAnswer}\n  - Correct answer: ${q.correctAnswer}\n  - Review this concept in the study material`).join('\n\n')
-    : "- No specific areas identified - great job!"
+${
+    missedQuestions.length > 0
+        ? missedQuestions
+              .slice(0, 3)
+              .map((q) => `- **${q.questionText}**\n  - Your answer: ${q.selectedAnswer}\n  - Correct answer: ${q.correctAnswer}\n  - Review this concept in the study material`)
+              .join("\n\n")
+        : "- No specific areas identified - great job!"
 }
 
 ## Study Strategy Recommendations
@@ -308,7 +307,7 @@ ${missedQuestions.length > 0
 - Try taking the test again to reinforce your knowledge
 
 ## Next Steps
-Keep practicing and focus on understanding the underlying concepts. Each attempt helps you learn!`
+Keep practicing and focus on understanding the underlying concepts. Each attempt helps you learn!`,
             } as any);
         } finally {
             setAnalyzing(false);
@@ -346,7 +345,9 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                         <CardTitle className="text-2xl text-center">Ready to Start?</CardTitle>
                     </CardHeader>
                     <CardContent className="text-center space-y-4">
-                        <p className="text-muted-foreground">This test contains {allQuestions.length} questions covering {objectives.length} objectives.</p>
+                        <p className="text-muted-foreground">
+                            This test contains {allQuestions.length} questions covering {objectives.length} objectives.
+                        </p>
                         <div className="text-sm text-muted-foreground text-left bg-secondary p-4 rounded-lg">
                             <ul className="list-disc pl-5 space-y-1">
                                 {objectives.map((obj) => (
@@ -356,7 +357,9 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full" size="lg" onClick={handleStartTest}>Start Test</Button>
+                        <Button className="w-full" size="lg" onClick={handleStartTest}>
+                            Start Test
+                        </Button>
                     </CardFooter>
                 </Card>
             </div>
@@ -385,10 +388,17 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                             </div>
                         ) : analysis ? (
                             <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border">
-                                <div 
+                                <div
                                     className="prose prose-slate dark:prose-invert max-w-none"
-                                    dangerouslySetInnerHTML={{ 
-                                        __html: (analysis as any).report?.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/^# (.*$)/gm, '<h1>$1</h1>').replace(/^## (.*$)/gm, '<h2>$1</h2>').replace(/^### (.*$)/gm, '<h3>$1</h3>').replace(/^- (.*$)/gm, '<li>$1</li>') || `You scored ${score} out of ${allQuestions.length} (${Math.round((score / allQuestions.length) * 100)}%).`
+                                    dangerouslySetInnerHTML={{
+                                        __html:
+                                            (analysis as any).report
+                                                ?.replace(/\n/g, "<br>")
+                                                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                                                .replace(/^# (.*$)/gm, "<h1>$1</h1>")
+                                                .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+                                                .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+                                                .replace(/^- (.*$)/gm, "<li>$1</li>") || `You scored ${score} out of ${allQuestions.length} (${Math.round((score / allQuestions.length) * 100)}%).`,
                                     }}
                                 />
                             </div>
@@ -419,7 +429,9 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                 <div className="lg:col-span-2 space-y-6">
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Question {currentQuestionIndex + 1} of {allQuestions.length}</span>
+                            <span>
+                                Question {currentQuestionIndex + 1} of {allQuestions.length}
+                            </span>
                             <span>{Math.round(progress)}%</span>
                         </div>
                         <Progress value={progress} className="h-2" />
@@ -427,9 +439,7 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
 
                     <Card className="h-auto">
                         <CardHeader>
-                            <CardTitle className="text-xl leading-relaxed">
-                                {currentQuestion.question}
-                            </CardTitle>
+                            <CardTitle className="text-xl leading-relaxed">{currentQuestion.question}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-3">
@@ -447,13 +457,7 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                                     }
 
                                     return (
-                                        <Button
-                                            key={index}
-                                            variant={selectedOption === null ? "outline" : "ghost"}
-                                            className={selectedOption === null ? "justify-start text-left h-auto py-4 px-6 whitespace-normal" : className}
-                                            onClick={() => handleOptionSelect(index)}
-                                            disabled={hasAnsweredCorrectly}
-                                        >
+                                        <Button key={index} variant={selectedOption === null ? "outline" : "ghost"} className={selectedOption === null ? "justify-start text-left h-auto py-4 px-6 whitespace-normal" : className} onClick={() => handleOptionSelect(index)} disabled={hasAnsweredCorrectly}>
                                             <span className="mr-3 font-semibold">{String.fromCharCode(65 + index)}.</span>
                                             {option}
                                         </Button>
@@ -464,61 +468,32 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                             {showHint && (
                                 <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                                     <h4 className="font-semibold mb-2 text-yellow-800 dark:text-yellow-200">💡 Hint:</h4>
-                                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                        {currentQuestion.hint || "Think carefully about the key concepts and try again!"}
-                                    </p>
-                                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
-                                        You can try again - no penalty for incorrect attempts!
-                                    </p>
+                                    <p className="text-sm text-yellow-700 dark:text-yellow-300">{currentQuestion.hint || "Think carefully about the key concepts and try again!"}</p>
+                                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">You can try again - no penalty for incorrect attempts!</p>
                                 </div>
                             )}
 
                             {showExplanation && (
-                                <div className={`mt-6 p-4 border rounded-lg ${
-                                    selectedOption === currentQuestion.correctIdx 
-                                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                                }`}>
-                                    <h4 className={`font-semibold mb-2 ${
-                                        selectedOption === currentQuestion.correctIdx
-                                            ? "text-green-800 dark:text-green-200"
-                                            : "text-red-900 dark:text-red-200"
-                                    }`}>
-                                        {selectedOption === currentQuestion.correctIdx 
-                                            ? "✅ Correct! Explanation:" 
-                                            : "❌ Incorrect. Correct Answer:"}
-                                    </h4>
-                                    <p className={`text-sm ${
-                                        selectedOption === currentQuestion.correctIdx
-                                            ? "text-green-700 dark:text-green-300"
-                                            : "text-red-900 dark:text-red-300"
-                                    }`}>
+                                <div className={`mt-6 p-4 border rounded-lg ${selectedOption === currentQuestion.correctIdx ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"}`}>
+                                    <h4 className={`font-semibold mb-2 ${selectedOption === currentQuestion.correctIdx ? "text-green-800 dark:text-green-200" : "text-red-900 dark:text-red-200"}`}>{selectedOption === currentQuestion.correctIdx ? "✅ Correct! Explanation:" : "❌ Incorrect. Correct Answer:"}</h4>
+                                    <p className={`text-sm ${selectedOption === currentQuestion.correctIdx ? "text-green-700 dark:text-green-300" : "text-red-900 dark:text-red-300"}`}>
                                         {selectedOption !== currentQuestion.correctIdx && (
                                             <span className="font-medium">
                                                 {String.fromCharCode(65 + currentQuestion.correctIdx)}. {currentQuestion.options[currentQuestion.correctIdx]}
-                                                <br /><br />
+                                                <br />
+                                                <br />
                                             </span>
                                         )}
                                         {currentQuestion.explanation || (selectedOption === currentQuestion.correctIdx ? "Great job! You got it right." : "Better luck next time!")}
                                     </p>
-                                    <p className={`text-xs mt-2 ${
-                                        selectedOption === currentQuestion.correctIdx
-                                            ? "text-green-600 dark:text-green-400"
-                                            : "text-red-800 dark:text-red-400"
-                                    }`}>
-                                        Completed in {attemptCount} attempt{attemptCount > 1 ? 's' : ''}
+                                    <p className={`text-xs mt-2 ${selectedOption === currentQuestion.correctIdx ? "text-green-600 dark:text-green-400" : "text-red-800 dark:text-red-400"}`}>
+                                        Completed in {attemptCount} attempt{attemptCount > 1 ? "s" : ""}
                                         {attemptCount >= 2 && selectedOption !== currentQuestion.correctIdx && " (maximum attempts reached)"}
                                     </p>
                                 </div>
                             )}
                         </CardContent>
-                        <CardFooter className="justify-end pt-2">
-                            {hasAnsweredCorrectly && (
-                                <Button onClick={handleNextQuestion}>
-                                    {currentQuestionIndex < allQuestions.length - 1 ? "Next Question" : "Finish"}
-                                </Button>
-                            )}
-                        </CardFooter>
+                        <CardFooter className="justify-end pt-2">{hasAnsweredCorrectly && <Button onClick={handleNextQuestion}>{currentQuestionIndex < allQuestions.length - 1 ? "Next Question" : "Finish"}</Button>}</CardFooter>
                     </Card>
                 </div>
 
@@ -526,46 +501,25 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                 <div className="lg:col-span-1 h-[calc(100vh-6rem)] sticky top-6">
                     <Card className="h-full flex flex-col shadow-lg border-primary/20">
                         <CardHeader className="py-3 px-4 bg-primary/5 border-b">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                🤖 AI Tutor
-                            </CardTitle>
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">🤖 AI Tutor</CardTitle>
                         </CardHeader>
                         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {chatHistory.length === 0 && (
-                                <p className="text-sm text-muted-foreground text-center mt-8">
-                                    Stuck? Ask me for a hint! I won't give you the answer, but I can help you find it.
-                                </p>
-                            )}
+                            {chatHistory.length === 0 && <p className="text-sm text-muted-foreground text-center mt-8">Stuck? Ask me for a hint! I won't give you the answer, but I can help you find it.</p>}
                             {chatHistory.map((msg, i) => (
                                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                                    <div className={`max-w-[85%] p-3 rounded-lg text-sm ${
-                                        msg.role === "user" 
-                                            ? "bg-primary text-primary-foreground" 
-                                            : "bg-muted"
-                                    }`}>
-                                        {msg.content}
-                                    </div>
+                                    <div className={`max-w-[85%] p-3 rounded-lg text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>{msg.content}</div>
                                 </div>
                             ))}
                             {isChatLoading && (
                                 <div className="flex justify-start">
-                                    <div className="bg-muted p-3 rounded-lg text-sm animate-pulse">
-                                        Thinking...
-                                    </div>
+                                    <div className="bg-muted p-3 rounded-lg text-sm animate-pulse">Thinking...</div>
                                 </div>
                             )}
                             <div ref={chatEndRef} />
                         </CardContent>
                         <CardFooter className="p-3 border-t">
                             <div className="flex w-full gap-2">
-                                <Input 
-                                    value={chatMessage} 
-                                    onChange={(e) => setChatMessage(e.target.value)}
-                                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                                    placeholder="Ask for a hint..." 
-                                    disabled={isChatLoading}
-                                    className="h-9 text-sm"
-                                />
+                                <Input value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyPress={(e) => e.key === "Enter" && handleSendMessage()} placeholder="Ask for a hint..." disabled={isChatLoading} className="h-9 text-sm" />
                                 <Button size="sm" onClick={handleSendMessage} disabled={!chatMessage.trim() || isChatLoading}>
                                     <Send className="h-4 w-4" />
                                 </Button>

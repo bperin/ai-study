@@ -12,7 +12,7 @@ import { PdfResponseDto } from "./dto/pdf-response.dto";
 @Controller("pdfs")
 @UseGuards(JwtAuthGuard)
 export class PdfsController {
-    constructor(private readonly pdfsService: PdfsService) { }
+    constructor(private readonly pdfsService: PdfsService) {}
 
     @Post(":id/generate")
     @ApiOperation({ summary: "Generate flashcards from a PDF" })
@@ -48,5 +48,4 @@ export class PdfsController {
     async chatPlan(@Body() body: { message: string; pdfId: string; history?: any[] }, @Request() req: any) {
         return this.pdfsService.chatPlan(body.message, body.pdfId, req.user.userId, body.history);
     }
-
 }

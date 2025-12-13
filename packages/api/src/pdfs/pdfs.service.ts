@@ -7,7 +7,7 @@ export class PdfsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly parallelGenerationService: ParallelGenerationService
-    ) { }
+    ) {}
 
     async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
         // 1. Get PDF from database
@@ -176,10 +176,10 @@ export class PdfsService {
             history: [
                 { role: "user", parts: [{ text: systemPrompt }] },
                 { role: "model", parts: [{ text: "I understand! I'll help create a test plan. What would you like to study?" }] },
-                ...conversationHistory.map(msg => ({
+                ...conversationHistory.map((msg) => ({
                     role: msg.role === "user" ? "user" : "model",
-                    parts: [{ text: msg.content }]
-                }))
+                    parts: [{ text: msg.content }],
+                })),
             ],
         });
 
@@ -202,5 +202,4 @@ export class PdfsService {
             shouldGenerate: false,
         };
     }
-
 }

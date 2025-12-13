@@ -1,74 +1,74 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - main
-      - staging
-  workflow_dispatch:
+    push:
+        branches:
+            - main
+            - staging
+    workflow_dispatch:
 
 env:
-  GCP_PROJECT_ID: pro-pulsar-274402
-  GCP_REGION: us-central1
-  API_SERVICE_NAME: ai-study-api
-  WEB_SERVICE_NAME: ai-study-web
-  NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    GCP_PROJECT_ID: pro-pulsar-274402
+    GCP_REGION: us-central1
+    API_SERVICE_NAME: ai-study-api
+    WEB_SERVICE_NAME: ai-study-web
+    NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+    DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
-  deploy:
-    name: Deploy API and Web
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    deploy:
+        name: Deploy API and Web
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+            - name: Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Set up gcloud CLI
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ env.GCP_PROJECT_ID }}
+            - name: Set up gcloud CLI
+              uses: google-github-actions/setup-gcloud@v2
+              with:
+                  project_id: ${{ env.GCP_PROJECT_ID }}
 
-      - name: Configure Docker for GCP
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+            - name: Configure Docker for GCP
+              run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
-      - name: Build and Push API Image
-        run: |
-          docker build -f packages/api/Dockerfile \
-            --build-arg DATABASE_URL="${{ env.DATABASE_URL }}" \
-            -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest .
-          docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest
+            - name: Build and Push API Image
+              run: |
+                  docker build -f packages/api/Dockerfile \
+                    --build-arg DATABASE_URL="${{ env.DATABASE_URL }}" \
+                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest .
+                  docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest
 
-      - name: Build and Push Web Image
-        run: |
-          docker build -f packages/web/Dockerfile \
-            --build-arg NEXT_PUBLIC_API_URL="${{ env.NEXT_PUBLIC_API_URL }}" \
-            -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest .
-          docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest
+            - name: Build and Push Web Image
+              run: |
+                  docker build -f packages/web/Dockerfile \
+                    --build-arg NEXT_PUBLIC_API_URL="${{ env.NEXT_PUBLIC_API_URL }}" \
+                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest .
+                  docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest
 
-      - name: Deploy API service
-        run: |
-          gcloud run deploy ${{ env.API_SERVICE_NAME }} \
-            --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --region ${{ env.GCP_REGION }} \
-            --set-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
-            --allow-unauthenticated \
-            --quiet
+            - name: Deploy API service
+              run: |
+                  gcloud run deploy ${{ env.API_SERVICE_NAME }} \
+                    --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
+                    --project ${{ env.GCP_PROJECT_ID }} \
+                    --region ${{ env.GCP_REGION }} \
+                    --set-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
+                    --allow-unauthenticated \
+                    --quiet
 
-      - name: Deploy Web service
-        run: |
-          gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
-            --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --region ${{ env.GCP_REGION }} \
-            --set-env-vars NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
-            --allow-unauthenticated \
-            --quiet
+            - name: Deploy Web service
+              run: |
+                  gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
+                    --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest \
+                    --project ${{ env.GCP_PROJECT_ID }} \
+                    --region ${{ env.GCP_REGION }} \
+                    --set-env-vars NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }} \
+                    --allow-unauthenticated \
+                    --quiet
