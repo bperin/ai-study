@@ -68,6 +68,18 @@ jobs:
                     --build-arg NEXT_PUBLIC_API_URL="${{ env.API_URL }}" \
                     -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest .
                   docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest
+            - name: Configure GCS CORS Policy
+              run: |
+                  echo '[
+                    {
+                      "origin": ["*"],
+                      "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+                      "responseHeader": ["Content-Type", "Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "Access-Control-Allow-Headers"],
+                      "maxAgeSeconds": 3600
+                    }
+                  ]' > cors.json
+                  gsutil cors set cors.json gs://ai-study-pdfs-1765508603
+
             - name: Deploy Web service
               id: deploy-web
               run: |
