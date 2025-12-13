@@ -5,8 +5,7 @@ WORKDIR /app
 # Copy root package files
 COPY package*.json ./
 
-# Copy workspace package files
-COPY packages/api/package*.json ./packages/api/
+# Copy web package files only
 COPY packages/web/package*.json ./packages/web/
 
 # Install dependencies

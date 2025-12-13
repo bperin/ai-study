@@ -5,9 +5,8 @@ WORKDIR /app
 # Copy root package files
 COPY package*.json ./
 
-# Copy workspace package files
+# Copy API package files only
 COPY packages/api/package*.json ./packages/api/
-COPY packages/web/package*.json ./packages/web/
 
 # Install dependencies fresh
 RUN npm install
