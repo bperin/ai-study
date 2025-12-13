@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getPdfsApi, getUsersApi, getTestsApi } from "@/api-client";
 import { PdfResponseDto, TestHistoryItemDto, UserResponseDto } from "@/generated";
-import { Info, Trash2 } from "lucide-react";
+import { Info, Trash2, Crown, Users } from "lucide-react";
 
 type PdfObjective = {
     title?: string;
@@ -27,6 +27,7 @@ export default function DashboardPage() {
     const [history, setHistory] = useState<TestHistoryItemDto[]>([]);
     const [user, setUser] = useState<UserResponseDto | null>(null);
     const [pdfToDelete, setPdfToDelete] = useState<string | null>(null);
+    const [testStats, setTestStats] = useState<Record<string, { attemptCount: number; avgScore: number; topScorer: string | null; topScore: number | null }>>({});
 
     const handleLogout = useCallback(() => {
         localStorage.removeItem("access_token");
@@ -60,12 +61,27 @@ export default function DashboardPage() {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                     .then((res) => res.json())
-                    .then((data) => {
+                    .then(async (data) => {
                         setPdfs(data.data);
                         setTotalPages(data.totalPages);
+                        // Fetch stats for each PDF
+                        const stats: Record<string, any> = {};
+                        await Promise.all(
+                            data.data.map(async (pdf: any) => {
+                                const res = await fetch(`${baseUrl}/tests/stats/${pdf.id}`, {
+                                    headers: { Authorization: `Bearer ${token}` },
+                                });
+                                stats[pdf.id] = await res.json();
+                            })
+                        );
+                        setTestStats(stats);
                     }),
                 usersApi.usersControllerGetMe().then((u) => setUser(u)),
-                testsApi.testsControllerGetTestHistory().then((res) => setHistory(res.attempts)),
+                fetch(`${baseUrl}/tests/history/all`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+                    .then((res) => res.json())
+                    .then((data) => setHistory(data.attempts || [])),
             ])
                 .catch((err) => {
                     console.error("Failed to fetch data", err);
@@ -167,6 +183,22 @@ export default function DashboardPage() {
                                             </CardHeader>
                                             <CardContent className="flex-1">
                                                 <p className="mb-2 text-sm font-medium">{questionCount} Questions</p>
+                                                {testStats[pdf.id] && testStats[pdf.id].attemptCount > 0 && (
+                                                    <div className="mb-3 p-2 bg-muted/50 rounded-lg space-y-1">
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <Users className="h-3 w-3" />
+                                                            <span>{testStats[pdf.id].attemptCount} attempts</span>
+                                                            <span className="text-muted-foreground">• avg {testStats[pdf.id].avgScore}%</span>
+                                                        </div>
+                                                        {testStats[pdf.id].topScorer && (
+                                                            <div className="flex items-center gap-1 text-sm text-amber-500">
+                                                                <Crown className="h-3 w-3" />
+                                                                <span className="font-medium">{testStats[pdf.id].topScorer}</span>
+                                                                <span className="text-muted-foreground">({testStats[pdf.id].topScore}%)</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <div className="space-y-1">
                                                     {objectives.slice(0, 2).map((obj, i) => (
                                                         <p key={i} className="text-sm text-muted-foreground line-clamp-1">
@@ -206,18 +238,19 @@ export default function DashboardPage() {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Recent Activity</CardTitle>
-                                    <CardDescription>Your past test results.</CardDescription>
+                                    <CardDescription>All test results from all users.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     {history.length === 0 ? (
                                         <p className="text-muted-foreground">No attempts yet.</p>
                                     ) : (
                                         <div className="space-y-4">
-                                            {history.map((attempt) => (
+                                            {history.map((attempt: any) => (
                                                 <div key={attempt.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors" onClick={() => router.push(`/history/${attempt.id}`)}>
                                                     <div>
                                                         <p className="font-medium">{attempt.pdfTitle}</p>
                                                         <p className="text-sm text-muted-foreground">
+                                                            {attempt.userEmail ? `${attempt.userEmail.split("@")[0]} • ` : ""}
                                                             {new Date(attempt.completedAt).toLocaleDateString()} at {new Date(attempt.completedAt).toLocaleTimeString()}
                                                         </p>
                                                     </div>

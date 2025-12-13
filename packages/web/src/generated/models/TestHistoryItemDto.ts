@@ -83,6 +83,18 @@ export interface TestHistoryItemDto {
     summary?: string;
     /**
      * 
+     * @type {string}
+     * @memberof TestHistoryItemDto
+     */
+    userId?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TestHistoryItemDto
+     */
+    userEmail?: string;
+    /**
+     * 
      * @type {Array<TestResultAnswerDto>}
      * @memberof TestHistoryItemDto
      */
@@ -122,6 +134,8 @@ export function TestHistoryItemDtoFromJSONTyped(json: any, ignoreDiscriminator: 
         'completedAt': (new Date(json['completedAt'])),
         'report': json['report'] == null ? undefined : json['report'],
         'summary': json['summary'] == null ? undefined : json['summary'],
+        'userId': json['userId'] == null ? undefined : json['userId'],
+        'userEmail': json['userEmail'] == null ? undefined : json['userEmail'],
         'answers': json['answers'] == null ? undefined : ((json['answers'] as Array<any>).map(TestResultAnswerDtoFromJSON)),
     };
 }
@@ -146,6 +160,8 @@ export function TestHistoryItemDtoToJSONTyped(value?: TestHistoryItemDto | null,
         'completedAt': value['completedAt'].toISOString(),
         'report': value['report'],
         'summary': value['summary'],
+        'userId': value['userId'],
+        'userEmail': value['userEmail'],
         'answers': value['answers'] == null ? undefined : ((value['answers'] as Array<any>).map(TestResultAnswerDtoToJSON)),
     };
 }

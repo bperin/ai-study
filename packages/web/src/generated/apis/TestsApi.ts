@@ -41,6 +41,10 @@ export interface TestsControllerGetPdfLeaderboardRequest {
     limit: string;
 }
 
+export interface TestsControllerGetTestStatsRequest {
+    pdfId: string;
+}
+
 export interface TestsControllerSubmitTestRequest {
     submitTestDto: SubmitTestDto;
 }
@@ -84,6 +88,43 @@ export class TestsApi extends runtime.BaseAPI {
      */
     async testsControllerChatAssist(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.testsControllerChatAssistRaw(initOverrides);
+    }
+
+    /**
+     * Get all users test history
+     */
+    async testsControllerGetAllTestHistoryRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestHistoryResponseDto>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/history/all`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TestHistoryResponseDtoFromJSON(jsonValue));
+    }
+
+    /**
+     * Get all users test history
+     */
+    async testsControllerGetAllTestHistory(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestHistoryResponseDto> {
+        const response = await this.testsControllerGetAllTestHistoryRaw(initOverrides);
+        return await response.value();
     }
 
     /**
@@ -298,6 +339,50 @@ export class TestsApi extends runtime.BaseAPI {
     async testsControllerGetTestHistory(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestHistoryResponseDto> {
         const response = await this.testsControllerGetTestHistoryRaw(initOverrides);
         return await response.value();
+    }
+
+    /**
+     * Get test stats: attempt count, avg score, top scorer
+     */
+    async testsControllerGetTestStatsRaw(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['pdfId'] == null) {
+            throw new runtime.RequiredError(
+                'pdfId',
+                'Required parameter "pdfId" was null or undefined when calling testsControllerGetTestStats().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/stats/{pdfId}`;
+        urlPath = urlPath.replace(`{${"pdfId"}}`, encodeURIComponent(String(requestParameters['pdfId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Get test stats: attempt count, avg score, top scorer
+     */
+    async testsControllerGetTestStats(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.testsControllerGetTestStatsRaw(requestParameters, initOverrides);
     }
 
     /**

@@ -5,6 +5,7 @@ import { SubmitTestDto } from "./dto/submit-test.dto";
 import { TestsService } from "./tests.service";
 import { LeaderboardService } from "./leaderboard.service";
 import { TestHistoryResponseDto, TestHistoryItemDto } from "./dto/test-results.dto";
+import { TestStatsDto } from "./dto/test-stats.dto";
 
 @ApiTags("tests")
 @Controller("tests")
@@ -51,6 +52,24 @@ export class TestsController {
     @ApiResponse({ status: 200, type: TestHistoryResponseDto })
     async getTestHistory(@Request() req: any): Promise<TestHistoryResponseDto> {
         return this.testsService.getTestHistory(req.user.userId);
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Get("history/all")
+    @ApiOperation({ summary: "Get all users test history" })
+    @ApiResponse({ status: 200, type: TestHistoryResponseDto })
+    async getAllTestHistory(): Promise<TestHistoryResponseDto> {
+        return this.testsService.getAllTestHistory();
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Get("stats/:pdfId")
+    @ApiOperation({ summary: "Get test stats: attempt count, avg score, top scorer" })
+    @ApiResponse({ status: 200, type: TestStatsDto })
+    async getTestStats(@Param("pdfId") pdfId: string): Promise<TestStatsDto> {
+        return this.testsService.getTestStats(pdfId);
     }
 
     @ApiBearerAuth()

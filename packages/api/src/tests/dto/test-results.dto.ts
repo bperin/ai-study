@@ -161,6 +161,12 @@ export class TestHistoryItemDto {
     @ApiProperty({ required: false })
     summary?: string;
 
+    @ApiProperty({ required: false })
+    userId?: string;
+
+    @ApiProperty({ required: false })
+    userEmail?: string;
+
     @ApiProperty({ type: [TestResultAnswerDto], required: false })
     answers?: TestResultAnswerDto[];
 
@@ -190,6 +196,8 @@ export class TestHistoryItemDto {
             completedAt: attempt.completedAt,
             report: (attempt.feedback as any)?.report || undefined,
             summary: attempt.summary || undefined,
+            userId: attempt.user?.id,
+            userEmail: attempt.user?.email,
             answers,
         };
     }
