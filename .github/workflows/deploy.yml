@@ -13,7 +13,6 @@ env:
     API_SERVICE_NAME: ai-study-api
     WEB_SERVICE_NAME: ai-study-web
     NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-    DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
     deploy:
@@ -42,7 +41,6 @@ jobs:
             - name: Build and Push API Image
               run: |
                   docker build -f packages/api/Dockerfile \
-                    --build-arg DATABASE_URL="${{ env.DATABASE_URL }}" \
                     -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest .
                   docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest
 
@@ -53,7 +51,9 @@ jobs:
                     --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
                     --project ${{ env.GCP_PROJECT_ID }} \
                     --region ${{ env.GCP_REGION }} \
-                    --set-env-vars "DATABASE_URL=${{ env.DATABASE_URL }}" \
+                    --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+                    --set-env-vars "GCP_SA_KEY=${{ secrets.GCP_SA_KEY }}" \
+                    --set-env-vars "GCP_BUCKET_NAME=${{ secrets.GCP_BUCKET_NAME }}" \
                     --allow-unauthenticated \
                     --quiet \
                     --format='value(status.url)' > api_url.txt
