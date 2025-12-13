@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagg
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AdminGuard } from "../auth/admin.guard";
 import { PdfsService } from "./pdfs.service";
+import { ChatMessageDto } from "./dto/chat-message.dto";
 import { GenerateFlashcardsDto } from "./dto/generate-flashcards.dto";
 import { ObjectiveResponseDto } from "./dto/objective-response.dto";
 import { PdfResponseDto, PaginatedPdfResponseDto } from "./dto/pdf-response.dto";
@@ -52,7 +53,7 @@ export class PdfsController {
     @Post("chat")
     @ApiOperation({ summary: "Chat with AI to plan test generation" })
     @ApiResponse({ status: 200, description: "AI response with test plan" })
-    async chatPlan(@Body() body: { message: string; pdfId: string; history?: any[] }, @Request() req: any) {
-        return this.pdfsService.chatPlan(body.message, body.pdfId, req.user.userId, body.history);
+    async chatPlan(@Body() dto: ChatMessageDto, @Request() req: any) {
+        return this.pdfsService.chatPlan(dto.message, dto.pdfId, req.user.userId, dto.conversationHistory);
     }
 }
