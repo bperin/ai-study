@@ -28,13 +28,18 @@ WORKDIR /app
 # ENV PORT 8080
 EXPOSE $PORT
 
-# Copy package.json and install production dependencies fresh
+# Copy package.json and install ALL dependencies (Prisma needs dev deps)
 COPY --from=builder /app/packages/api/package*.json ./
-RUN npm install --production
+RUN npm install
 
-# Copy built application and prisma files
+# Copy built application, prisma files, and generated Prisma client
 COPY --from=builder /app/packages/api/dist ./dist
 COPY --from=builder /app/packages/api/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Generate Prisma client in production stage
+RUN npx prisma generate --schema=prisma/schema.prisma
 
 # Start the application using npm (which knows the correct path)
 CMD ["npm", "run", "start:prod"]
