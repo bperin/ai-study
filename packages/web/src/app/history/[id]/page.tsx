@@ -47,47 +47,71 @@ export default function HistoryDetailsPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-4xl min-h-screen bg-background">
-            <div className="mb-8">
-                <Button variant="ghost" className="mb-4 pl-0 hover:pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground" onClick={() => router.push("/dashboard")}>
+        <div className="container mx-auto p-6 max-w-5xl min-h-screen bg-background">
+            <div className="mb-6">
+                <Button variant="ghost" className="mb-2 pl-0 hover:pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground" onClick={() => router.push("/dashboard")}>
                     ← Back to Dashboard
                 </Button>
-                <div className="flex items-start justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold">{attempt.pdfTitle}</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Completed on {new Date(attempt.completedAt).toLocaleDateString()} at {new Date(attempt.completedAt).toLocaleTimeString()}
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-4xl font-bold text-primary">{Math.round(attempt.percentage)}%</div>
-                        <p className="text-sm text-muted-foreground">
-                            {attempt.score}/{attempt.total} Correct
-                        </p>
-                    </div>
-                </div>
             </div>
 
+            {/* Analysis Section - Top Priority */}
             {attempt.report && (
-                <Card className="mb-8">
-                    <CardHeader>
-                        <CardTitle>Performance Analysis</CardTitle>
+                <Card className="mb-8 border-2 shadow-md">
+                    <CardHeader className="bg-primary/5 pb-4">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-2xl text-primary flex items-center gap-2">
+                                    📊 Performance Analysis
+                                </CardTitle>
+                                <CardDescription className="mt-2 text-base">
+                                    Comprehensive review for: <span className="font-semibold text-foreground">{attempt.pdfTitle}</span>
+                                </CardDescription>
+                            </div>
+                            <div className="text-right bg-background p-3 rounded-lg border shadow-sm">
+                                <div className="text-3xl font-bold text-primary">{Math.round(attempt.percentage)}%</div>
+                                <p className="text-xs text-muted-foreground font-medium">
+                                    {attempt.score}/{attempt.total} Correct
+                                </p>
+                            </div>
+                        </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <div
-                            className="prose prose-slate dark:prose-invert max-w-none"
+                            className="prose prose-slate dark:prose-invert max-w-none prose-headings:text-primary prose-a:text-blue-600 hover:prose-a:text-blue-800 prose-a:underline"
                             dangerouslySetInnerHTML={{
                                 __html: attempt.report
+                                    // Basic markdown parsing (in a real app, use a library like react-markdown)
                                     .replace(/\n/g, "<br>")
                                     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                                    .replace(/^# (.*$)/gm, "<h1>$1</h1>")
-                                    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
-                                    .replace(/^### (.*$)/gm, "<h3>$1</h3>")
-                                    .replace(/^- (.*$)/gm, "<li>$1</li>"),
+                                    .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-bold mt-6 mb-4">$1</h1>')
+                                    .replace(/^## (.*$)/gm, '<h2 class="text-2xl font-bold mt-8 mb-4 border-b pb-2">$1</h2>')
+                                    .replace(/^### (.*$)/gm, '<h3 class="text-xl font-semibold mt-6 mb-3">$1</h3>')
+                                    .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
+                                    // Parse links [text](url) -> <a href="url" target="_blank">text</a>
+                                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'),
                             }}
                         />
                     </CardContent>
                 </Card>
+            )}
+
+            {!attempt.report && (
+                <div className="mb-8 p-6 bg-card rounded-lg border shadow-sm">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold">{attempt.pdfTitle}</h1>
+                            <p className="text-muted-foreground mt-1">
+                                Completed on {new Date(attempt.completedAt).toLocaleDateString()} at {new Date(attempt.completedAt).toLocaleTimeString()}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-4xl font-bold text-primary">{Math.round(attempt.percentage)}%</div>
+                            <p className="text-sm text-muted-foreground">
+                                {attempt.score}/{attempt.total} Correct
+                            </p>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <div className="space-y-6">
