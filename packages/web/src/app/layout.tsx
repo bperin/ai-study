@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "Memorang AI Study",
+    title: "AI Study App",
     description: "AI-powered study assistant",
 };
 
