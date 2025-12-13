@@ -4,7 +4,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { SubmitTestDto } from "./dto/submit-test.dto";
 import { TestsService } from "./tests.service";
 import { LeaderboardService } from "./leaderboard.service";
-import { TestHistoryResponseDto } from "../pdfs/dto/submit-test-results.dto";
+import { TestHistoryResponseDto } from "./dto/test-results.dto";
 
 @ApiTags("tests")
 @Controller("tests")
