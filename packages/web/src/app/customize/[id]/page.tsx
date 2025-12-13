@@ -87,7 +87,7 @@ export default function CustomizePage() {
                 body: JSON.stringify({
                     message: userMessage,
                     pdfId,
-                    history: messages,
+                    conversationHistory: messages,
                 }),
             });
 
