@@ -17,10 +17,7 @@ async function bootstrap() {
 
     app.use(json({ limit: "50mb" }));
     app.use(urlencoded({ extended: true, limit: "50mb" }));
-    app.enableCors({
-        origin: process.env.FRONTEND_URL || "http://localhost:3001",
-        credentials: true,
-    });
+    app.enableCors();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
 
     const config = new DocumentBuilder().setTitle("AI Study API").setDescription("The AI Study API description").setVersion("1.0").addBearerAuth().build();
