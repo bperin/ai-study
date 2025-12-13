@@ -31,7 +31,7 @@ EXPOSE $PORT
 
 # Copy only necessary files from the builder stage
 COPY --from=builder /app/packages/api/package*.json ./
-COPY --from=builder /app/packages/api/node_modules ./node_modules
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/api/dist ./dist
 COPY --from=builder /app/packages/api/prisma ./prisma
 
