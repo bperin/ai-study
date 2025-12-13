@@ -84,6 +84,9 @@ model TestAttempt {
 
   // Detailed feedback (JSON)
   feedback Json? // Stores TestFeedback structure
+  
+  // AI-generated summary report with links (markdown text)
+  summary String? @db.Text // Stores AI summary with web links as markdown
 
   answers UserAnswer[]
 }

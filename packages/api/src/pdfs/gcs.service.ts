@@ -8,37 +8,27 @@ export class GcsService {
     private bucketName: string;
 
     constructor(private readonly configService: ConfigService) {
-        const projectId = this.configService.get<string>("GCP_PROJECT_ID");
-        const clientEmail = this.configService.get<string>("GCP_CLIENT_EMAIL");
-        const privateKey = this.resolvePrivateKey();
-
-        this.storage = new Storage({
-            projectId,
-            credentials:
-                clientEmail && privateKey
-                    ? {
-                          client_email: clientEmail,
-                          private_key: privateKey,
-                      }
-                    : undefined,
-        });
-
-        this.bucketName = this.configService.get<string>("GCP_BUCKET_NAME") ?? "missing-bucket";
-    }
-
-    private resolvePrivateKey(): string | undefined {
-        const rawKey = this.configService.get<string>("GCP_PRIVATE_KEY");
-        if (rawKey) {
-            return rawKey.replace(/\\n/g, "\n");
+        const serviceAccountKey = this.configService.get<string>("GCP_SA_KEY");
+        
+        if (serviceAccountKey) {
+            // Parse the service account JSON key
+            try {
+                const credentials = JSON.parse(serviceAccountKey);
+                this.storage = new Storage({
+                    projectId: credentials.project_id,
+                    credentials: credentials,
+                });
+                this.bucketName = this.configService.get<string>("GCP_BUCKET_NAME") ?? "missing-bucket";
+                return;
+            } catch (error) {
+                console.error("Failed to parse GCP_SA_KEY:", error);
+                throw new Error("Invalid GCP_SA_KEY format. Please provide a valid service account JSON key.");
+            }
         }
 
-        const base64Key = this.configService.get<string>("GCP_PRIVATE_KEY_BASE64");
-        if (base64Key) {
-            return Buffer.from(base64Key, "base64").toString("utf8");
-        }
-
-        return undefined;
+        throw new Error("GCP_SA_KEY is required for Google Cloud Storage authentication.");
     }
+
 
     /**
      * Download a file from Google Cloud Storage

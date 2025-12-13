@@ -158,6 +158,9 @@ export class TestHistoryItemDto {
     @ApiProperty({ required: false })
     report?: string;
 
+    @ApiProperty({ required: false })
+    summary?: string;
+
     @ApiProperty({ type: [TestResultAnswerDto], required: false })
     answers?: TestResultAnswerDto[];
 
@@ -186,6 +189,7 @@ export class TestHistoryItemDto {
             percentage: percentage,
             completedAt: attempt.completedAt,
             report: (attempt.feedback as any)?.report || undefined,
+            summary: attempt.summary || undefined,
             answers,
         };
     }
