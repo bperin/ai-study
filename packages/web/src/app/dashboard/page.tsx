@@ -56,19 +56,19 @@ export default function DashboardPage() {
             const usersApi = getUsersApi();
             const testsApi = getTestsApi();
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            const pdfsApi = getPdfsApi();
 
             Promise.all([
-                fetch(`${baseUrl}/pdfs/all?page=${page}&limit=8`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                })
-                    .then((res) => res.json())
+                pdfsApi.pdfsControllerListAllPdfs({ page, limit: 8 })
+                    // @ts-ignore
                     .then(async (data) => {
-                        setPdfs(data.data);
-                        setTotalPages(data.totalPages);
+                        const pdfList = data.data || [];
+                        setPdfs(pdfList);
+                        setTotalPages(data.totalPages || 1);
                         // Fetch stats for each PDF
                         const stats: Record<string, any> = {};
                         await Promise.all(
-                            data.data.map(async (pdf: any) => {
+                            pdfList.map(async (pdf: any) => {
                                 const res = await fetch(`${baseUrl}/tests/stats/${pdf.id}`, {
                                     headers: { Authorization: `Bearer ${token}` },
                                 });
