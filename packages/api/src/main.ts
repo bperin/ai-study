@@ -17,7 +17,19 @@ async function bootstrap() {
 
     app.use(json({ limit: "50mb" }));
     app.use(urlencoded({ extended: true, limit: "50mb" }));
-    app.enableCors();
+    app.enableCors({
+        origin: [
+            'http://localhost:3001', 
+            'http://localhost:3000', 
+            'https://storage.googleapis.com',
+            /https:\/\/.*\.run\.app$/,  // Allow any Cloud Run domain
+            /https:\/\/.*\.web\.app$/,  // Allow Firebase hosting
+            /https:\/\/.*\.firebaseapp\.com$/  // Allow Firebase hosting
+        ],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
 
     const config = new DocumentBuilder().setTitle("Dash AI API").setDescription("The Dash AI API description").setVersion("1.0").addBearerAuth().build();
