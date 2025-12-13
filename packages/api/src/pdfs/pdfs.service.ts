@@ -65,10 +65,13 @@ export class PdfsService {
         });
     }
 
-    async listPdfs(userId: string) {
+    async listPdfs(userId: string, page: number = 1, limit: number = 10) {
+        const skip = (page - 1) * limit;
         return this.prisma.pdf.findMany({
             where: { userId },
             orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
             select: {
                 id: true,
                 filename: true,
