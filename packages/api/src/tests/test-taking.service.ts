@@ -5,7 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 /**
  * In-memory state for active test sessions
  */
-interface TestSessionState {
+export interface TestSessionState {
     attemptId: string;
     userId: string;
     currentQuestionIndex: number;
@@ -53,75 +53,160 @@ interface TestSessionState {
  */
 @Injectable()
 export class TestTakingService {
-    // In-memory storage for active sessions
-    private activeSessions = new Map<string, TestSessionState>();
-
     constructor(
         private readonly configService: ConfigService,
         private readonly prisma: PrismaService
     ) {
         const apiKey = this.configService.get<string>("GOOGLE_API_KEY");
-        if (!apiKey) {
-            throw new Error("GOOGLE_API_KEY is not set in environment variables");
+        if (apiKey) {
+            process.env.GOOGLE_GENAI_API_KEY = apiKey;
         }
-        process.env.GOOGLE_GENAI_API_KEY = apiKey;
     }
 
     /**
-     * Initialize a new test session
+     * Initialize or Resume a test session
      */
-    async initializeTestSession(attemptId: string, userId: string, pdfId: string): Promise<TestSessionState> {
-        // Load questions from database
-        const questions = await this.prisma.mcq.findMany({
+    async getOrStartSession(userId: string, pdfId: string): Promise<TestSessionState> {
+        // Check for existing incomplete attempt
+        let attempt = await this.prisma.testAttempt.findFirst({
             where: {
-                objective: {
-                    pdfId,
-                },
+                userId,
+                pdfId,
+                completedAt: null,
             },
             include: {
-                objective: true,
+                answers: {
+                    include: { mcq: { include: { objective: true } } },
+                    orderBy: { createdAt: "asc" },
+                },
             },
         });
 
-        // Create initial state
-        const state: TestSessionState = {
-            attemptId,
-            userId,
-            currentQuestionIndex: 0,
-            totalQuestions: questions.length,
-            answers: [],
-            correctCount: 0,
-            incorrectCount: 0,
-            currentStreak: 0,
-            longestStreak: 0,
-            topicScores: new Map(),
-            startTime: new Date(),
-            totalTimeSpent: 0,
-            totalHintsUsed: 0,
-            questionsSkipped: 0,
-        };
+        if (!attempt) {
+            // Create new attempt
+            const totalQuestions = await this.prisma.mcq.count({
+                where: { objective: { pdfId } },
+            });
 
-        // Store in memory
-        this.activeSessions.set(attemptId, state);
+            attempt = await this.prisma.testAttempt.create({
+                data: {
+                    userId,
+                    pdfId,
+                    total: totalQuestions,
+                },
+                include: {
+                    answers: {
+                        include: { mcq: { include: { objective: true } } },
+                    },
+                },
+            });
+        }
 
-        return state;
+        return this.rehydrateState(attempt);
     }
 
     /**
-     * Get current session state
+     * Get current session state (rehydrated)
      */
-    getSessionState(attemptId: string): TestSessionState | undefined {
-        return this.activeSessions.get(attemptId);
+    async getSessionState(attemptId: string): Promise<TestSessionState> {
+        const attempt = await this.prisma.testAttempt.findUnique({
+            where: { id: attemptId },
+            include: {
+                answers: {
+                    include: { mcq: { include: { objective: true } } },
+                    orderBy: { createdAt: "asc" },
+                },
+            },
+        });
+
+        if (!attempt) throw new Error("Attempt not found");
+        return this.rehydrateState(attempt);
+    }
+
+    /**
+     * Rehydrate state from DB attempt
+     */
+    private async rehydrateState(attempt: any): Promise<TestSessionState> {
+        const questions = await this.prisma.mcq.findMany({
+            where: { objective: { pdfId: attempt.pdfId } },
+            include: { objective: true },
+        });
+
+        // Calculate metrics from existing answers
+        let correctCount = 0;
+        let incorrectCount = 0;
+        let currentStreak = 0;
+        let longestStreak = 0;
+        let totalTimeSpent = 0;
+        const topicScores = new Map<string, { correct: number; total: number; objectiveTitle: string }>();
+
+        const processedAnswers = attempt.answers.map((a: any, index: number) => {
+            const isCorrect = a.isCorrect;
+            if (isCorrect) {
+                correctCount++;
+                currentStreak++;
+                longestStreak = Math.max(longestStreak, currentStreak);
+            } else {
+                incorrectCount++;
+                currentStreak = 0;
+            }
+            totalTimeSpent += a.timeSpent;
+
+            // Topic scores
+            const topicId = a.mcq.objectiveId;
+            const currentScore = topicScores.get(topicId) || { correct: 0, total: 0, objectiveTitle: a.mcq.objective.title };
+            currentScore.total++;
+            if (isCorrect) currentScore.correct++;
+            topicScores.set(topicId, currentScore);
+
+            return {
+                questionId: a.mcqId,
+                questionNumber: index + 1,
+                questionText: a.mcq.question,
+                selectedAnswer: a.selectedIdx,
+                correctAnswer: a.mcq.correctIdx,
+                isCorrect,
+                timeSpent: a.timeSpent,
+                hintsUsed: a.hintsUsed,
+            };
+        });
+
+        return {
+            attemptId: attempt.id,
+            userId: attempt.userId,
+            currentQuestionIndex: processedAnswers.length,
+            totalQuestions: questions.length, // Or attempt.total if fixed
+            answers: processedAnswers,
+            correctCount,
+            incorrectCount,
+            currentStreak,
+            longestStreak,
+            topicScores,
+            startTime: attempt.startedAt,
+            totalTimeSpent,
+            totalHintsUsed: 0, // Need to track this in DB if we want to restore it
+            questionsSkipped: 0,
+        };
     }
 
     /**
      * Record an answer and update state
      */
     async recordAnswer(attemptId: string, questionId: string, selectedAnswer: number, timeSpent: number): Promise<any> {
-        const state = this.activeSessions.get(attemptId);
-        if (!state) {
-            throw new Error("Session not found");
-        }
+        // Load attempt from DB
+        const attempt = await this.prisma.testAttempt.findUnique({
+            where: { id: attemptId },
+            include: {
+                answers: {
+                    include: { mcq: { include: { objective: true } } },
+                    orderBy: { createdAt: "asc" },
+                },
+            },
+        });
+
+        if (!attempt) throw new Error("Attempt not found");
+
+        const state = await this.rehydrateState(attempt);
 
         // Get question details
         const question = await this.prisma.mcq.findUnique({
@@ -135,7 +220,8 @@ export class TestTakingService {
 
         const isCorrect = selectedAnswer === question.correctIdx;
 
-        // Update in-memory state
+        // Update in-memory state simulation for immediate feedback
+        // (This part is just to calculate the *next* state for the return value)
         state.answers.push({
             questionId,
             questionNumber: state.currentQuestionIndex + 1,
@@ -150,36 +236,30 @@ export class TestTakingService {
         if (isCorrect) {
             state.correctCount++;
             state.currentStreak++;
-            state.longestStreak = Math.max(state.longestStreak, state.currentStreak);
         } else {
             state.incorrectCount++;
             state.currentStreak = 0;
         }
-
-        // Update topic performance
-        const topicKey = question.objective.id;
-        const topicScore = state.topicScores.get(topicKey) || {
-            correct: 0,
-            total: 0,
-            objectiveTitle: question.objective.title,
-        };
-        topicScore.total++;
-        if (isCorrect) topicScore.correct++;
-        state.topicScores.set(topicKey, topicScore);
-
+        
         state.currentQuestionIndex++;
-        state.totalTimeSpent += timeSpent;
 
         // Persist to database
-        await this.prisma.userAnswer.create({
-            data: {
-                attemptId,
-                mcqId: questionId,
-                selectedIdx: selectedAnswer,
-                isCorrect,
-                timeSpent,
-            },
+        // Check if answer already exists (deduplication)
+        const existingAnswer = await this.prisma.userAnswer.findFirst({
+            where: { attemptId, mcqId: questionId }
         });
+
+        if (!existingAnswer) {
+            await this.prisma.userAnswer.create({
+                data: {
+                    attemptId,
+                    mcqId: questionId,
+                    selectedIdx: selectedAnswer,
+                    isCorrect,
+                    timeSpent,
+                },
+            });
+        }
 
         // Generate encouragement
         const encouragement = this.generateEncouragement(state);
@@ -266,12 +346,23 @@ export class TestTakingService {
      * Complete test and generate feedback
      */
     async completeTest(attemptId: string): Promise<any> {
-        const state = this.activeSessions.get(attemptId);
-        if (!state) {
-            throw new Error("Session not found");
-        }
+        const attempt = await this.prisma.testAttempt.findUnique({
+            where: { id: attemptId },
+            include: {
+                answers: {
+                    include: { mcq: { include: { objective: true } } },
+                    orderBy: { createdAt: "asc" },
+                },
+            },
+        });
+
+        if (!attempt) throw new Error("Attempt not found");
+        const state = await this.rehydrateState(attempt);
 
         const percentage = (state.correctCount / state.totalQuestions) * 100;
+
+        // Generate detailed feedback
+        const feedback = await this.generateDetailedFeedback(state);
 
         // Update test attempt in database
         await this.prisma.testAttempt.update({
@@ -280,14 +371,9 @@ export class TestTakingService {
                 score: state.correctCount,
                 total: state.totalQuestions,
                 completedAt: new Date(),
+                feedback: feedback as any, // Save feedback JSON
             },
         });
-
-        // Generate detailed feedback
-        const feedback = await this.generateDetailedFeedback(state);
-
-        // Clean up session
-        this.activeSessions.delete(attemptId);
 
         return {
             score: {

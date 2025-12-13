@@ -3,6 +3,7 @@
 export * from './AuthApi';
 export * from './DefaultApi';
 export * from './PdfsApi';
+export * from './TestTakingApi';
 export * from './TestsApi';
 export * from './UploadsApi';
 export * from './UsersApi';

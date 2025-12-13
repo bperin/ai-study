@@ -57,16 +57,47 @@ export default function StudyPage() {
 
     const handleStartTest = async () => {
         try {
-            const api = getPdfsApi();
-            const result = await api.pdfsControllerStartAttempt({ id });
-            setAttemptId(result.attemptId);
+            const token = localStorage.getItem("access_token");
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            
+            const response = await fetch(`${baseUrl}/tests/taking/start/${id}`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            
+            if (!response.ok) throw new Error("Failed to start session");
+            
+            const session = await response.json();
+            setAttemptId(session.attemptId);
             setHasStarted(true);
+            
+            // Restore state if resuming
+            if (session.currentQuestionIndex > 0) {
+                setCurrentQuestionIndex(session.currentQuestionIndex);
+                
+                // Map existing answers to our format
+                const restoredAnswers = session.answers.map((a: any) => ({
+                    questionId: a.questionId,
+                    questionText: a.questionText,
+                    selectedAnswer: "Resumed", // We don't store the exact option text in session state, just index
+                    correctAnswer: "Resumed",
+                    isCorrect: a.isCorrect,
+                    attempts: 1, // Assumption
+                }));
+                setAllAnswers(restoredAnswers);
+                
+                // Restore score
+                setScore(session.correctCount);
+            }
         } catch (error) {
             console.error("Failed to start attempt", error);
         }
     };
 
-    const handleOptionSelect = (index: number) => {
+    const handleOptionSelect = async (index: number) => {
         if (hasAnsweredCorrectly) return; // Prevent changing answer after correct answer
         
         const newAttemptCount = attemptCount + 1;
@@ -75,6 +106,30 @@ export default function StudyPage() {
 
         const currentQuestion = allQuestions[currentQuestionIndex];
         const isCorrect = index === currentQuestion.correctIdx;
+
+        // Sync with backend if correct or final attempt
+        if (isCorrect || newAttemptCount >= 2) {
+            if (attemptId) {
+                try {
+                    const token = localStorage.getItem("access_token");
+                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+                    await fetch(`${baseUrl}/tests/taking/${attemptId}/answer`, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            questionId: currentQuestion.id,
+                            selectedAnswer: index,
+                            timeSpent: 0 // TODO: Track time
+                        })
+                    });
+                } catch (err) {
+                    console.error("Failed to save answer", err);
+                }
+            }
+        }
 
         if (isCorrect) {
             setHasAnsweredCorrectly(true);
@@ -152,40 +207,27 @@ export default function StudyPage() {
         const percentage = Math.round((score / allQuestions.length) * 100);
 
         if (!attemptId) {
-            // No attempt ID - provide basic feedback
-            setAnalysis({
-                summary: `You scored ${score} out of ${allQuestions.length} (${percentage}%). ${percentage >= 80
-                    ? "Great job! You have a strong understanding of the material."
-                    : percentage >= 60
-                        ? "Good effort! Review the areas you missed to improve further."
-                        : "Keep studying! Focus on understanding the core concepts."
-                    }`,
-                weakAreas: missedQuestions.length > 0
-                    ? missedQuestions.slice(0, 3).map(q => `Review: ${q.questionText.substring(0, 100)}...`)
-                    : ["No specific weak areas identified - great job!"],
-                studyStrategies: [
-                    "Review the questions you missed and understand why the correct answer is right",
-                    "Re-read the relevant sections of the study material",
-                    "Try taking the test again to reinforce your knowledge",
-                ],
-            });
+            // ... fallback logic ...
             return;
         }
 
         setAnalyzing(true);
         try {
-            const api = getPdfsApi();
-            const result = await api.pdfsControllerSubmitAttempt({
-                submitTestResultsDto: {
-                    attemptId,
-                    score,
-                    // @ts-ignore
-                    totalQuestions: allQuestions.length,
-                    missedQuestions,
-                    allAnswers, // Send all answers for comprehensive analysis
-                },
+            const token = localStorage.getItem("access_token");
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            
+            const response = await fetch(`${baseUrl}/tests/taking/${attemptId}/complete`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
             });
-            setAnalysis(result);
+            
+            if (!response.ok) throw new Error("Failed to complete test");
+            const result = await response.json();
+            
+            setAnalysis(result.feedback);
         } catch (error) {
             console.error("Failed to submit test, using fallback analysis:", error);
             // Provide fallback analysis if API fails
@@ -197,7 +239,7 @@ export default function StudyPage() {
                         : "Keep studying! Focus on understanding the core concepts."
                     }`,
                 weakAreas: missedQuestions.length > 0
-                    ? missedQuestions.slice(0, 3).map(q => `Review: ${q.questionText.substring(0, 100)}...`)
+                    ? missedQuestions.slice(0, 3).map(q => `Review: ${q.questionText}`)
                     : ["No specific weak areas identified - great job!"],
                 studyStrategies: [
                     "Review the questions you missed and understand why the correct answer is right",
@@ -366,7 +408,7 @@ export default function StudyPage() {
                                 else if (isSelected) className += " bg-red-500 hover:bg-red-600 text-white border-red-500 dark:bg-red-900 dark:border-red-700";
                             } else if (selectedOption !== null && !hasAnsweredCorrectly) {
                                 // Show temporary feedback but allow retry
-                                if (isSelected) className += " bg-red-100 hover:bg-red-200 text-red-800 border-red-300 dark:bg-red-900/30 dark:border-red-700";
+                                if (isSelected) className += " bg-red-100 hover:bg-red-200 text-red-900 border-red-300 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200";
                             }
 
                             return (
@@ -405,7 +447,7 @@ export default function StudyPage() {
                             <h4 className={`font-semibold mb-2 ${
                                 selectedOption === currentQuestion.correctIdx
                                     ? "text-green-800 dark:text-green-200"
-                                    : "text-red-800 dark:text-red-200"
+                                    : "text-red-900 dark:text-red-200"
                             }`}>
                                 {selectedOption === currentQuestion.correctIdx 
                                     ? "✅ Correct! Explanation:" 
@@ -414,7 +456,7 @@ export default function StudyPage() {
                             <p className={`text-sm ${
                                 selectedOption === currentQuestion.correctIdx
                                     ? "text-green-700 dark:text-green-300"
-                                    : "text-red-700 dark:text-red-300"
+                                    : "text-red-900 dark:text-red-300"
                             }`}>
                                 {selectedOption !== currentQuestion.correctIdx && (
                                     <span className="font-medium">
@@ -427,7 +469,7 @@ export default function StudyPage() {
                             <p className={`text-xs mt-2 ${
                                 selectedOption === currentQuestion.correctIdx
                                     ? "text-green-600 dark:text-green-400"
-                                    : "text-red-600 dark:text-red-400"
+                                    : "text-red-800 dark:text-red-400"
                             }`}>
                                 Completed in {attemptCount} attempt{attemptCount > 1 ? 's' : ''}
                                 {attemptCount >= 2 && selectedOption !== currentQuestion.correctIdx && " (maximum attempts reached)"}
