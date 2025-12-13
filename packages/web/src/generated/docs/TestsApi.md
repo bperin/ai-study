@@ -7,6 +7,7 @@ All URIs are relative to *http://localhost*
 | [**testsControllerGetGlobalLeaderboard**](TestsApi.md#testscontrollergetgloballeaderboard) | **GET** /tests/leaderboard |  |
 | [**testsControllerGetMyRank**](TestsApi.md#testscontrollergetmyrank) | **GET** /tests/leaderboard/me |  |
 | [**testsControllerGetPdfLeaderboard**](TestsApi.md#testscontrollergetpdfleaderboard) | **GET** /tests/leaderboard/pdf/{pdfId} |  |
+| [**testsControllerGetTestHistory**](TestsApi.md#testscontrollergettesthistory) | **GET** /tests/history |  |
 | [**testsControllerSubmitTest**](TestsApi.md#testscontrollersubmittest) | **POST** /tests/submit |  |
 
 
@@ -190,6 +191,67 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **pdfId** | `string` |  | [Defaults to `undefined`] |
 | **limit** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+`void` (Empty response body)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## testsControllerGetTestHistory
+
+> testsControllerGetTestHistory()
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  TestsApi,
+} from '';
+import type { TestsControllerGetTestHistoryRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new TestsApi(config);
+
+  try {
+    const data = await api.testsControllerGetTestHistory();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
 
 ### Return type
 
