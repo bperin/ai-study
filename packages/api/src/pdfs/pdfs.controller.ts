@@ -6,8 +6,6 @@ import { PdfsService } from "./pdfs.service";
 import { GenerateFlashcardsDto } from "./dto/generate-flashcards.dto";
 import { ObjectiveResponseDto } from "./dto/objective-response.dto";
 import { PdfResponseDto } from "./dto/pdf-response.dto";
-import { SubmitTestResultsDto, TestAnalysisResponseDto, TestHistoryResponseDto } from "./dto/submit-test-results.dto";
-import { StartAttemptResponseDto } from "./dto/start-attempt-response.dto";
 
 @ApiTags("pdfs")
 @ApiBearerAuth()
@@ -34,26 +32,6 @@ export class PdfsController {
     @ApiResponse({ status: 200, type: [PdfResponseDto] })
     listPdfs(@Request() req: any) {
         return this.pdfsService.listPdfs(req.user.userId);
-    }
-
-    @Post(":id/start-attempt")
-    @ApiOperation({ summary: "Start a new test attempt" })
-    @ApiResponse({ status: 201, type: StartAttemptResponseDto })
-    startAttempt(@Param("id") pdfId: string, @Request() req: any) {
-        return this.pdfsService.startAttempt(pdfId, req.user.userId);
-    }
-
-    @Post("submit-attempt")
-    @ApiOperation({ summary: "Submit test attempt and get AI-enhanced analysis with web resources" })
-    @ApiResponse({ status: 200, type: TestAnalysisResponseDto })
-    submitAttempt(@Body() body: SubmitTestResultsDto) {
-        return this.pdfsService.submitTest(
-            body.attemptId,
-            body.score,
-            body.totalQuestions,
-            body.missedQuestions,
-            body.allAnswers
-        );
     }
 
     @Delete(":id")
