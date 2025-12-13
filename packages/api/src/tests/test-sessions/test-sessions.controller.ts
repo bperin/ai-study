@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { PdfSessionsService } from "./pdf-sessions.service";
+import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
+import { TestSessionsService } from "./test-sessions.service";
 import { StartSessionDto } from "./dto/start-session.dto";
 import { StudySessionSummary } from "./interfaces/study-session.interface";
 
-@Controller("study-sessions")
-export class PdfSessionsController {
-    constructor(private readonly pdfSessionsService: PdfSessionsService) {}
+@Controller("test-sessions")
+export class TestSessionsController {
+    constructor(private readonly testSessionsService: TestSessionsService) {}
 
     @UseGuards(JwtAuthGuard)
     @Post()
@@ -15,7 +15,7 @@ export class PdfSessionsController {
         const authorization = request.headers["authorization"] || "";
         const token = authorization.replace("Bearer ", "");
 
-        return this.pdfSessionsService.startSession({
+        return this.testSessionsService.startSession({
             userId: (request as any).user.userId,
             token,
             payload: dto,
@@ -25,6 +25,6 @@ export class PdfSessionsController {
     @UseGuards(JwtAuthGuard)
     @Get(":id")
     getSession(@Param("id") id: string): StudySessionSummary {
-        return this.pdfSessionsService.getSession(id);
+        return this.testSessionsService.getSession(id);
     }
 }

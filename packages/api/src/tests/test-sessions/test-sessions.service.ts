@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { AiStudyPlanService } from "../ai/ai-study-plan.service";
-import { ToolCallingService } from "../ai/tool-calling.service";
-import { PdfIngestService } from "../pdf/pdf-ingest.service";
+import { AiStudyPlanService } from "../../ai/ai-study-plan.service";
+import { ToolCallingService } from "../../ai/tool-calling.service";
+import { PdfIngestService } from "../../pdf/pdf-ingest.service";
 import { InMemorySessionStore } from "./in-memory-session.store";
 import { StudySessionSummary } from "./interfaces/study-session.interface";
 import { StartSessionDto } from "./dto/start-session.dto";
 
 @Injectable()
-export class PdfSessionsService {
+export class TestSessionsService {
     constructor(
         private readonly pdfIngestService: PdfIngestService,
         private readonly aiStudyPlanService: AiStudyPlanService,
