@@ -78,7 +78,7 @@ jobs:
                       "maxAgeSeconds": 3600
                     }
                   ]' > permissive-cors.json
-                  gsutil cors set permissive-cors.json gs://ai-study-pdfs-1765508603
+                  gsutil cors set permissive-cors.json gs://ai-study-public-storage
 
             - name: Deploy Web service
               id: deploy-web
