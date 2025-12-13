@@ -240,13 +240,13 @@ export class TestTakingService {
             state.incorrectCount++;
             state.currentStreak = 0;
         }
-        
+
         state.currentQuestionIndex++;
 
         // Persist to database
         // Check if answer already exists (deduplication)
         const existingAnswer = await this.prisma.userAnswer.findFirst({
-            where: { attemptId, mcqId: questionId }
+            where: { attemptId, mcqId: questionId },
         });
 
         if (!existingAnswer) {

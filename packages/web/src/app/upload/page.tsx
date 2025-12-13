@@ -151,9 +151,9 @@ export default function UploadPage() {
                 {/* Upload Card */}
                 <Card className="border-2 shadow-xl">
                     <CardHeader>
-        <CardTitle>Select PDF File</CardTitle>
-        <CardDescription>Upload a PDF file (max 50MB) to get started</CardDescription>
-    </CardHeader>
+                        <CardTitle>Select PDF File</CardTitle>
+                        <CardDescription>Upload a PDF file (max 50MB) to get started</CardDescription>
+                    </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Dropzone */}
                         <div

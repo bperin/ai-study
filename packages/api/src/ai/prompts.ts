@@ -13,20 +13,20 @@ export const TEST_ANALYSIS_RESPONSE_SCHEMA = {
             properties: {
                 correct: { type: "number" },
                 total: { type: "number" },
-                percentage: { type: "number" }
+                percentage: { type: "number" },
             },
-            required: ["correct", "total", "percentage"]
+            required: ["correct", "total", "percentage"],
         },
         feedback: {
             type: "object",
             properties: {
                 strengths: {
                     type: "array",
-                    items: { type: "string" }
+                    items: { type: "string" },
                 },
                 weaknesses: {
                     type: "array",
-                    items: { type: "string" }
+                    items: { type: "string" },
                 },
                 byObjective: {
                     type: "array",
@@ -36,9 +36,9 @@ export const TEST_ANALYSIS_RESPONSE_SCHEMA = {
                             objectiveTitle: { type: "string" },
                             correct: { type: "number" },
                             total: { type: "number" },
-                            percentage: { type: "number" }
-                        }
-                    }
+                            percentage: { type: "number" },
+                        },
+                    },
                 },
                 wrongAnswers: {
                     type: "array",
@@ -49,19 +49,19 @@ export const TEST_ANALYSIS_RESPONSE_SCHEMA = {
                             yourAnswer: { type: "string" },
                             correctAnswer: { type: "string" },
                             explanation: { type: "string" },
-                            concept: { type: "string" }
+                            concept: { type: "string" },
                         },
-                        required: ["question", "yourAnswer", "correctAnswer", "explanation", "concept"]
-                    }
+                        required: ["question", "yourAnswer", "correctAnswer", "explanation", "concept"],
+                    },
                 },
                 longestStreak: { type: "number" },
                 averageTimePerQuestion: { type: "number" },
-                encouragement: { type: "string" }
+                encouragement: { type: "string" },
             },
-            required: ["strengths", "weaknesses", "byObjective", "wrongAnswers", "longestStreak", "averageTimePerQuestion", "encouragement"]
-        }
+            required: ["strengths", "weaknesses", "byObjective", "wrongAnswers", "longestStreak", "averageTimePerQuestion", "encouragement"],
+        },
     },
-    required: ["score", "feedback"]
+    required: ["score", "feedback"],
 };
 
 /**
@@ -529,7 +529,7 @@ ${pdfContext ? pdfContext.substring(0, 10000) : "No context available."} ... (tr
 
 THE QUESTION: "${question}"
 THE OPTIONS:
-${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}
+${options.map((opt, i) => `${i + 1}. ${opt}`).join("\n")}
 
 YOUR GOAL: Mildly assist the student without giving away the answer.
 - Provide hints, ask guiding questions, or explain related concepts using the study material.

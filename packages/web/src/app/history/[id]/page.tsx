@@ -61,7 +61,9 @@ export default function HistoryDetailsPage() {
                     </div>
                     <div className="text-right">
                         <div className="text-4xl font-bold text-primary">{Math.round(attempt.percentage)}%</div>
-                        <p className="text-sm text-muted-foreground">{attempt.score}/{attempt.total} Correct</p>
+                        <p className="text-sm text-muted-foreground">
+                            {attempt.score}/{attempt.total} Correct
+                        </p>
                     </div>
                 </div>
             </div>
@@ -72,16 +74,16 @@ export default function HistoryDetailsPage() {
                         <CardTitle>Performance Analysis</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div 
+                        <div
                             className="prose prose-slate dark:prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{ 
+                            dangerouslySetInnerHTML={{
                                 __html: attempt.report
-                                    .replace(/\n/g, '<br>')
-                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-                                    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-                                    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-                                    .replace(/^- (.*$)/gm, '<li>$1</li>')
+                                    .replace(/\n/g, "<br>")
+                                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                                    .replace(/^# (.*$)/gm, "<h1>$1</h1>")
+                                    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+                                    .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+                                    .replace(/^- (.*$)/gm, "<li>$1</li>"),
                             }}
                         />
                     </CardContent>
@@ -90,47 +92,34 @@ export default function HistoryDetailsPage() {
 
             <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Question Review</h2>
-                {attempt.answers && attempt.answers.map((answer, index) => (
-                    <Card key={index} className={`border-l-4 ${answer.isCorrect ? "border-l-green-500" : "border-l-red-500"}`}>
-                        <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start gap-4">
-                                <CardTitle className="text-lg font-medium leading-relaxed">
-                                    <span className="mr-2 text-muted-foreground">{index + 1}.</span>
-                                    {answer.questionText}
-                                </CardTitle>
-                                <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    answer.isCorrect 
-                                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" 
-                                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                }`}>
-                                    {answer.isCorrect ? "Correct" : "Incorrect"}
-                                </span>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-2">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Your Answer</p>
-                                    <div className={`p-3 rounded-lg text-sm ${
-                                        answer.isCorrect 
-                                            ? "bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-100" 
-                                            : "bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-100"
-                                    }`}>
-                                        {answer.selectedAnswer}
-                                    </div>
+                {attempt.answers &&
+                    attempt.answers.map((answer, index) => (
+                        <Card key={index} className={`border-l-4 ${answer.isCorrect ? "border-l-green-500" : "border-l-red-500"}`}>
+                            <CardHeader className="pb-2">
+                                <div className="flex justify-between items-start gap-4">
+                                    <CardTitle className="text-lg font-medium leading-relaxed">
+                                        <span className="mr-2 text-muted-foreground">{index + 1}.</span>
+                                        {answer.questionText}
+                                    </CardTitle>
+                                    <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-medium ${answer.isCorrect ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{answer.isCorrect ? "Correct" : "Incorrect"}</span>
                                 </div>
-                                {!answer.isCorrect && (
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                                <div className="grid gap-4 md:grid-cols-2">
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Correct Answer</p>
-                                        <div className="p-3 rounded-lg text-sm bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-100">
-                                            {answer.correctAnswer}
-                                        </div>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Your Answer</p>
+                                        <div className={`p-3 rounded-lg text-sm ${answer.isCorrect ? "bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-100" : "bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-100"}`}>{answer.selectedAnswer}</div>
                                     </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                                    {!answer.isCorrect && (
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Correct Answer</p>
+                                            <div className="p-3 rounded-lg text-sm bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-100">{answer.correctAnswer}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
             </div>
         </div>
     );

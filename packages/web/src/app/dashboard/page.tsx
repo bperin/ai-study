@@ -37,7 +37,7 @@ export default function DashboardPage() {
         try {
             const api = getPdfsApi();
             await api.pdfsControllerDeletePdf({ id: pdfToDelete });
-            setPdfs(pdfs.filter(p => p.id !== pdfToDelete));
+            setPdfs(pdfs.filter((p) => p.id !== pdfToDelete));
             setPdfToDelete(null);
         } catch (error) {
             console.error("Failed to delete PDF:", error);
@@ -56,12 +56,14 @@ export default function DashboardPage() {
 
             Promise.all([
                 fetch(`${baseUrl}/pdfs?page=${page}&limit=8`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                }).then(res => res.json()).then(setPdfs),
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+                    .then((res) => res.json())
+                    .then(setPdfs),
                 usersApi.usersControllerGetMe().then((u) => setUser(u)),
-                testsApi.testsControllerGetTestHistory().then((res) => setHistory(res.attempts))
+                testsApi.testsControllerGetTestHistory().then((res) => setHistory(res.attempts)),
             ])
-                .catch(err => {
+                .catch((err) => {
                     console.error("Failed to fetch data", err);
                 })
                 .finally(() => {
@@ -81,19 +83,13 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                     <div className="text-right">
                         <div className="flex items-center gap-2 justify-end">
-                            <p className="text-sm font-medium">{user?.email?.split('@')[0]}</p>
-                            {user?.isAdmin && (
-                                <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                                    Admin
-                                </span>
-                            )}
+                            <p className="text-sm font-medium">{user?.email?.split("@")[0]}</p>
+                            {user?.isAdmin && <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">Admin</span>}
                         </div>
                         <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </div>
                     <Avatar>
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                            {user?.email?.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary">{user?.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                 </div>
             </header>
@@ -107,16 +103,9 @@ export default function DashboardPage() {
                             Uploads
                         </Button>
                         <div className="pt-4 pb-2">
-                            <h3 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                Your Tests
-                            </h3>
+                            <h3 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your Tests</h3>
                             {pdfs.map((pdf) => (
-                                <Button
-                                    key={pdf.id}
-                                    variant="ghost"
-                                    className="w-full justify-start truncate text-left text-muted-foreground hover:text-foreground"
-                                    onClick={() => router.push(`/study/${pdf.id}`)}
-                                >
+                                <Button key={pdf.id} variant="ghost" className="w-full justify-start truncate text-left text-muted-foreground hover:text-foreground" onClick={() => router.push(`/study/${pdf.id}`)}>
                                     <span className="truncate">{pdf.filename}</span>
                                 </Button>
                             ))}
@@ -151,7 +140,9 @@ export default function DashboardPage() {
                                             <CardHeader>
                                                 <div className="flex justify-between items-start gap-2">
                                                     <div className="flex-1 overflow-hidden">
-                                                        <CardTitle className="line-clamp-1" title={pdf.filename}>{pdf.filename}</CardTitle>
+                                                        <CardTitle className="line-clamp-1" title={pdf.filename}>
+                                                            {pdf.filename}
+                                                        </CardTitle>
                                                         <CardDescription>Generated {new Date(pdf.createdAt).toLocaleDateString()}</CardDescription>
                                                     </div>
                                                     {user?.isAdmin && (
@@ -178,9 +169,7 @@ export default function DashboardPage() {
                                                             • {obj.title || "Objective"}
                                                         </p>
                                                     ))}
-                                                    {objectives.length > 2 && (
-                                                        <p className="text-xs text-muted-foreground">+{objectives.length - 2} more objectives</p>
-                                                    )}
+                                                    {objectives.length > 2 && <p className="text-xs text-muted-foreground">+{objectives.length - 2} more objectives</p>}
                                                 </div>
                                             </CardContent>
                                             <CardFooter className="mt-auto">
@@ -198,18 +187,10 @@ export default function DashboardPage() {
                                 )}
                             </div>
                             <div className="flex justify-center gap-2 mt-4">
-                                <Button
-                                    variant="outline"
-                                    disabled={page === 1}
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                >
+                                <Button variant="outline" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                                     Previous
                                 </Button>
-                                <Button
-                                    variant="outline"
-                                    disabled={pdfs.length < 8}
-                                    onClick={() => setPage(p => p + 1)}
-                                >
+                                <Button variant="outline" disabled={pdfs.length < 8} onClick={() => setPage((p) => p + 1)}>
                                     Next
                                 </Button>
                             </div>
@@ -226,11 +207,7 @@ export default function DashboardPage() {
                                     ) : (
                                         <div className="space-y-4">
                                             {history.map((attempt) => (
-                                                <div
-                                                    key={attempt.id}
-                                                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
-                                                    onClick={() => router.push(`/history/${attempt.id}`)}
-                                                >
+                                                <div key={attempt.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors" onClick={() => router.push(`/history/${attempt.id}`)}>
                                                     <div>
                                                         <p className="font-medium">{attempt.pdfTitle}</p>
                                                         <p className="text-sm text-muted-foreground">
@@ -240,11 +217,11 @@ export default function DashboardPage() {
                                                     <div className="flex items-center gap-4">
                                                         <div className="text-right">
                                                             <p className="font-bold text-lg">{Math.round(attempt.percentage)}%</p>
-                                                            <p className="text-xs text-muted-foreground">{attempt.score}/{attempt.total}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {attempt.score}/{attempt.total}
+                                                            </p>
                                                         </div>
-                                                        <div className="text-muted-foreground">
-                                                            →
-                                                        </div>
+                                                        <div className="text-muted-foreground">→</div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -261,13 +238,15 @@ export default function DashboardPage() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Delete Test</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete this test? This action cannot be undone and will remove all associated data including questions and history.
-                        </DialogDescription>
+                        <DialogDescription>Are you sure you want to delete this test? This action cannot be undone and will remove all associated data including questions and history.</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setPdfToDelete(null)}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleDeletePdf}>Delete</Button>
+                        <Button variant="outline" onClick={() => setPdfToDelete(null)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeletePdf}>
+                            Delete
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -1,14 +1,12 @@
-
 # ConfirmUploadResponseDto
-
 
 ## Properties
 
-Name | Type
------------- | -------------
-`id` | string
-`filename` | string
-`userId` | string
+| Name       | Type   |
+| ---------- | ------ |
+| `id`       | string |
+| `filename` | string |
+| `userId`   | string |
 
 ## Example
 
@@ -34,5 +32,3 @@ console.log(exampleParsed)
 ```
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-

@@ -7,6 +7,7 @@
 This project uses Google Gemini to help students review material. It breaks down PDFs into key concepts and generates multiple-choice questions for self-testing.
 
 The backend uses multiple AI agents to process the content:
+
 1.  **Analyzer**: Reads the PDF to find main topics.
 2.  **Generator**: Creates questions based on those topics.
 3.  **Reviewer**: Checks the questions for quality.
@@ -28,6 +29,7 @@ The backend uses multiple AI agents to process the content:
 ## 🏗 Architecture
 
 ### Backend (`packages/api`)
+
 Built with **NestJS**, following a modular architecture.
 
 - **AI Module (`src/ai`)**: Contains the Gemini service and agent definitions.
@@ -39,6 +41,7 @@ Built with **NestJS**, following a modular architecture.
 - **Database**: **Prisma** ORM with PostgreSQL.
 
 ### Frontend (`packages/web`)
+
 Built with **Next.js** (App Router), focusing on a modern, responsive UI.
 
 - **UI Components**: **Radix UI** primitives styled with **Shadcn UI** and **Tailwind CSS**.
@@ -57,6 +60,7 @@ Built with **Next.js** (App Router), focusing on a modern, responsive UI.
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18+
 - Docker (optional, for containerized deployment)
 - Google Cloud Project with Vertex AI and GCS enabled
@@ -72,12 +76,13 @@ npm install
 ```
 
 The `./run.sh` script automates the entire startup process:
+
 1.  Starts the **Backend** (NestJS).
 2.  Waits for the OpenAPI spec to be generated.
 3.  **Automatically runs codegen** to update the Frontend SDK.
 4.  Starts the **Frontend** (Next.js).
 
-*Note: It may take a few seconds for the SDK types to generate before the frontend starts.*
+_Note: It may take a few seconds for the SDK types to generate before the frontend starts._
 
 - **Backend**: http://localhost:3000
 - **Frontend**: http://localhost:3001
@@ -86,6 +91,7 @@ The `./run.sh` script automates the entire startup process:
 ## 💻 Development Workflow
 
 ### SDK Generation
+
 Our frontend client is auto-generated from the backend controller definitions. This ensures type safety across the stack.
 
 The `./run.sh` script handles this automatically on startup. If you make changes to Backend Controllers while developing:
@@ -106,6 +112,7 @@ const myPdfs = await api.pdfsControllerListPdfs();
 ```
 
 ### Database
+
 ```bash
 cd packages/api
 npx prisma studio  # View data
@@ -121,4 +128,5 @@ The project is configured for **Google Cloud Run**.
 - **Run**: Deploys separate services for API and Web to Cloud Run.
 
 ## 📝 License
+
 MIT

@@ -25,7 +25,7 @@ export class ParallelGenerationService {
         private readonly prisma: PrismaService,
         private readonly gcsService: GcsService,
         private readonly pdfTextService: PdfTextService
-    ) { }
+    ) {}
 
     /**
      * Generate flashcards using parallel agent execution
@@ -37,7 +37,7 @@ export class ParallelGenerationService {
         // Step 1: Generate questions in parallel by difficulty
         // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
         const CHUNK_SIZE = 5;
-        const chunkedTasks = tasks.flatMap(task => {
+        const chunkedTasks = tasks.flatMap((task) => {
             const chunks: QuestionGenerationTask[] = [];
             let remaining = task.count;
             while (remaining > 0) {
@@ -132,11 +132,7 @@ ${difficulty === "hard" ? "Make questions challenging, testing deep understandin
 
 Use the save_objective tool to save the questions you generate.
 `,
-            tools: [
-                createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService),
-                createSaveObjectiveTool(this.prisma, pdfId),
-                createWebSearchTool(),
-            ],
+            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
         });
 
         const runner = new InMemoryRunner({
@@ -290,7 +286,6 @@ ${pdfContext}
         const pdfFilename = pdf.filename;
         const gcsPath = pdf.gcsPath || pdf.content || "";
 
-
         // Create analyzer agent with web search capability
         const agent = new LlmAgent({
             name: "test_analyzer",
@@ -334,7 +329,7 @@ ${pdfContext}
         }
 
         let analysisResult = {
-            report: "Analysis failed to generate. Please try again."
+            report: "Analysis failed to generate. Please try again.",
         };
 
         // @ts-ignore
@@ -345,13 +340,17 @@ ${pdfContext}
                 role: "user",
                 parts: [
                     {
-                        text: COMPREHENSIVE_ANALYSIS_PROMPT
-                            .replace('{missedQuestions}', JSON.stringify(missedQuestions, null, 2))
-                            .replace('{allAnswersSection}', allAnswers && allAnswers.length > 0 ? `
+                        text: COMPREHENSIVE_ANALYSIS_PROMPT.replace("{missedQuestions}", JSON.stringify(missedQuestions, null, 2))
+                            .replace(
+                                "{allAnswersSection}",
+                                allAnswers && allAnswers.length > 0
+                                    ? `
 ALL student answers (correct and incorrect):
 ${JSON.stringify(allAnswers, null, 2)}
-` : '')
-                            .replace('{pdfContext}', pdfContext),
+`
+                                    : ""
+                            )
+                            .replace("{pdfContext}", pdfContext),
                     },
                 ],
             },
@@ -359,7 +358,7 @@ ${JSON.stringify(allAnswers, null, 2)}
             if (event.content?.parts?.[0]?.text) {
                 // Store the raw text response as the report
                 analysisResult = {
-                    report: event.content.parts[0].text.trim()
+                    report: event.content.parts[0].text.trim(),
                 };
             }
         }

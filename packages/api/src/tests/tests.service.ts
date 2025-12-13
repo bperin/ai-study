@@ -60,13 +60,13 @@ export class TestsService {
                 pdf: true,
                 answers: {
                     include: {
-                        mcq: true
-                    }
-                }
+                        mcq: true,
+                    },
+                },
             },
             orderBy: {
-                completedAt: 'desc'
-            }
+                completedAt: "desc",
+            },
         });
 
         return TestHistoryResponseDto.fromEntities(attempts);
@@ -79,10 +79,10 @@ export class TestsService {
                 pdf: true,
                 answers: {
                     include: {
-                        mcq: true
-                    }
-                }
-            }
+                        mcq: true,
+                    },
+                },
+            },
         });
 
         if (!attempt || attempt.userId !== userId) {
@@ -99,7 +99,7 @@ export class TestsService {
 
         const mcq = await this.prisma.mcq.findUnique({
             where: { id: questionId },
-            include: { objective: { include: { pdf: true } } }
+            include: { objective: { include: { pdf: true } } },
         });
         if (!mcq) throw new NotFoundException("Question not found");
 
@@ -112,10 +112,10 @@ export class TestsService {
             history: [
                 { role: "user", parts: [{ text: systemPrompt }] },
                 { role: "model", parts: [{ text: "I understand. I will help the student with this question without giving away the answer." }] },
-                ...(history || []).map(msg => ({
+                ...(history || []).map((msg) => ({
                     role: msg.role === "user" ? "user" : "model",
-                    parts: [{ text: msg.content }]
-                }))
+                    parts: [{ text: msg.content }],
+                })),
             ],
         });
 

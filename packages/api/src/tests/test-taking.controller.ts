@@ -29,10 +29,7 @@ export class TestTakingController {
     @Post(":attemptId/answer")
     @ApiOperation({ summary: "Record an answer" })
     @ApiResponse({ status: 201, type: RecordAnswerResponseDto })
-    async recordAnswer(
-        @Param("attemptId") attemptId: string,
-        @Body() body: RecordAnswerDto
-    ) {
+    async recordAnswer(@Param("attemptId") attemptId: string, @Body() body: RecordAnswerDto) {
         return this.testTakingService.recordAnswer(attemptId, body.questionId, body.selectedAnswer, body.timeSpent);
     }
 
