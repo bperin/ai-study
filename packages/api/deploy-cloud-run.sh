@@ -9,7 +9,6 @@ gcloud run deploy ai-study-api \
   --region us-central1 \
   --allow-unauthenticated \
   --port 8080 \
-  --set-env-vars "PORT=8080" \
   --timeout 300 \
   --memory 1Gi \
   --cpu 1 \
