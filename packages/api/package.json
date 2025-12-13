@@ -10,7 +10,7 @@
         "dev": "nest start --watch",
         "start:dev": "nest start --watch",
         "start:debug": "nest start --debug --watch",
-        "start:prod": "node dist/src/main.js",
+        "start:prod": "node dist/src/main",
         "lint": "echo 'Linting skipped'",
         "test": "jest --config jest.config.json --passWithNoTests",
         "test:watch": "jest --config jest.config.json --watch",
