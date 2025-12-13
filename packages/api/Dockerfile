@@ -29,11 +29,9 @@ WORKDIR /app
 # ENV PORT 8080
 EXPOSE $PORT
 
-# Copy package files and install production dependencies
+# Copy only necessary files from the builder stage
 COPY --from=builder /app/packages/api/package*.json ./
-RUN npm ci --omit=dev
-
-# Copy built application and prisma files
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/api/dist ./dist
 COPY --from=builder /app/packages/api/prisma ./prisma
 
