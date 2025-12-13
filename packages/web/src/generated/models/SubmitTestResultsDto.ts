@@ -13,13 +13,6 @@
  */
 
 import { mapValues } from '../runtime';
-import type { AnswerDto } from './AnswerDto';
-import {
-    AnswerDtoFromJSON,
-    AnswerDtoFromJSONTyped,
-    AnswerDtoToJSON,
-    AnswerDtoToJSONTyped,
-} from './AnswerDto';
 import type { MissedQuestionDto } from './MissedQuestionDto';
 import {
     MissedQuestionDtoFromJSON,
@@ -27,6 +20,13 @@ import {
     MissedQuestionDtoToJSON,
     MissedQuestionDtoToJSONTyped,
 } from './MissedQuestionDto';
+import type { TestResultAnswerDto } from './TestResultAnswerDto';
+import {
+    TestResultAnswerDtoFromJSON,
+    TestResultAnswerDtoFromJSONTyped,
+    TestResultAnswerDtoToJSON,
+    TestResultAnswerDtoToJSONTyped,
+} from './TestResultAnswerDto';
 
 /**
  * 
@@ -60,10 +60,10 @@ export interface SubmitTestResultsDto {
     missedQuestions: Array<MissedQuestionDto>;
     /**
      * 
-     * @type {Array<AnswerDto>}
+     * @type {Array<TestResultAnswerDto>}
      * @memberof SubmitTestResultsDto
      */
-    allAnswers?: Array<AnswerDto>;
+    allAnswers?: Array<TestResultAnswerDto>;
 }
 
 /**
@@ -91,7 +91,7 @@ export function SubmitTestResultsDtoFromJSONTyped(json: any, ignoreDiscriminator
         'score': json['score'],
         'totalQuestions': json['totalQuestions'],
         'missedQuestions': ((json['missedQuestions'] as Array<any>).map(MissedQuestionDtoFromJSON)),
-        'allAnswers': json['allAnswers'] == null ? undefined : ((json['allAnswers'] as Array<any>).map(AnswerDtoFromJSON)),
+        'allAnswers': json['allAnswers'] == null ? undefined : ((json['allAnswers'] as Array<any>).map(TestResultAnswerDtoFromJSON)),
     };
 }
 
@@ -110,7 +110,7 @@ export function SubmitTestResultsDtoToJSONTyped(value?: SubmitTestResultsDto | n
         'score': value['score'],
         'totalQuestions': value['totalQuestions'],
         'missedQuestions': ((value['missedQuestions'] as Array<any>).map(MissedQuestionDtoToJSON)),
-        'allAnswers': value['allAnswers'] == null ? undefined : ((value['allAnswers'] as Array<any>).map(AnswerDtoToJSON)),
+        'allAnswers': value['allAnswers'] == null ? undefined : ((value['allAnswers'] as Array<any>).map(TestResultAnswerDtoToJSON)),
     };
 }
 

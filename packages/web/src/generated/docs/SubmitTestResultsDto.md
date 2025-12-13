@@ -10,7 +10,7 @@ Name | Type
 `score` | number
 `totalQuestions` | number
 `missedQuestions` | [Array&lt;MissedQuestionDto&gt;](MissedQuestionDto.md)
-`allAnswers` | [Array&lt;AnswerDto&gt;](AnswerDto.md)
+`allAnswers` | [Array&lt;TestResultAnswerDto&gt;](TestResultAnswerDto.md)
 
 ## Example
 

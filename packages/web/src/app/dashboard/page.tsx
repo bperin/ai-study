@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getPdfsApi, getUsersApi } from "@/api-client";
-import { PdfResponseDto } from "@/generated";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getPdfsApi, getUsersApi, getTestsApi } from "@/api-client";
+import { PdfResponseDto, TestHistoryItemDto, UserResponseDto } from "@/generated";
+import { Info, Trash2 } from "lucide-react";
 
 type PdfObjective = {
     title?: string;
@@ -20,12 +22,27 @@ export default function DashboardPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [pdfs, setPdfs] = useState<PdfResponseDto[]>([]);
-    const [user, setUser] = useState<{ email: string } | null>(null);
+    const [history, setHistory] = useState<TestHistoryItemDto[]>([]);
+    const [user, setUser] = useState<UserResponseDto | null>(null);
+    const [pdfToDelete, setPdfToDelete] = useState<string | null>(null);
 
     const handleLogout = useCallback(() => {
         localStorage.removeItem("access_token");
         router.push("/login");
     }, [router]);
+
+    const handleDeletePdf = async () => {
+        if (!pdfToDelete) return;
+        try {
+            const api = getPdfsApi();
+            await api.pdfsControllerDeletePdf({ id: pdfToDelete });
+            setPdfs(pdfs.filter(p => p.id !== pdfToDelete));
+            setPdfToDelete(null);
+        } catch (error) {
+            console.error("Failed to delete PDF:", error);
+            alert("Failed to delete PDF");
+        }
+    };
 
     useEffect(() => {
         const token = localStorage.getItem("access_token");
@@ -34,10 +51,12 @@ export default function DashboardPage() {
         } else {
             const pdfsApi = getPdfsApi();
             const usersApi = getUsersApi();
+            const testsApi = getTestsApi();
 
             Promise.all([
                 pdfsApi.pdfsControllerListPdfs().then(setPdfs),
-                usersApi.usersControllerGetMe().then((u: any) => setUser(u))
+                usersApi.usersControllerGetMe().then((u) => setUser(u)),
+                testsApi.testsControllerGetTestHistory().then((res) => setHistory(res.attempts))
             ])
                 .catch(err => {
                     console.error("Failed to fetch data", err);
@@ -58,7 +77,14 @@ export default function DashboardPage() {
                 <h1 className="text-2xl font-bold">Memorang</h1>
                 <div className="flex items-center gap-3">
                     <div className="text-right">
-                        <p className="text-sm font-medium">{user?.email?.split('@')[0]}</p>
+                        <div className="flex items-center gap-2 justify-end">
+                            <p className="text-sm font-medium">{user?.email?.split('@')[0]}</p>
+                            {user?.isAdmin && (
+                                <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                                    Admin
+                                </span>
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </div>
                     <Avatar>
@@ -119,10 +145,28 @@ export default function DashboardPage() {
                                     const objectives = (pdf.objectives as PdfObjective[]) || [];
                                     const questionCount = objectives.reduce((sum, obj) => sum + (obj._count?.mcqs || 0), 0);
                                     return (
-                                        <Card key={pdf.id} className="flex flex-col h-full hover:bg-muted/50 transition-all duration-200">
+                                        <Card key={pdf.id} className="flex flex-col h-full hover:bg-muted/50 transition-all duration-200 relative group">
                                             <CardHeader>
-                                                <CardTitle className="line-clamp-1" title={pdf.filename}>{pdf.filename}</CardTitle>
-                                                <CardDescription>Generated {new Date(pdf.createdAt).toLocaleDateString()}</CardDescription>
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <div className="flex-1 overflow-hidden">
+                                                        <CardTitle className="line-clamp-1" title={pdf.filename}>{pdf.filename}</CardTitle>
+                                                        <CardDescription>Generated {new Date(pdf.createdAt).toLocaleDateString()}</CardDescription>
+                                                    </div>
+                                                    {user?.isAdmin && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setPdfToDelete(pdf.id);
+                                                            }}
+                                                        >
+                                                            <Info className="h-4 w-4" />
+                                                            <span className="sr-only">Delete</span>
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </CardHeader>
                                             <CardContent className="flex-1">
                                                 <p className="mb-2 text-sm font-medium">{questionCount} Questions</p>
@@ -200,13 +244,56 @@ export default function DashboardPage() {
                                     <CardDescription>Your past test results.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-muted-foreground">No attempts yet.</p>
+                                    {history.length === 0 ? (
+                                        <p className="text-muted-foreground">No attempts yet.</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {history.map((attempt) => (
+                                                <div
+                                                    key={attempt.id}
+                                                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                                                    onClick={() => router.push(`/history/${attempt.id}`)}
+                                                >
+                                                    <div>
+                                                        <p className="font-medium">{attempt.pdfTitle}</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {new Date(attempt.completedAt).toLocaleDateString()} at {new Date(attempt.completedAt).toLocaleTimeString()}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-right">
+                                                            <p className="font-bold text-lg">{Math.round(attempt.percentage)}%</p>
+                                                            <p className="text-xs text-muted-foreground">{attempt.score}/{attempt.total}</p>
+                                                        </div>
+                                                        <div className="text-muted-foreground">
+                                                            →
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </TabsContent>
                     </Tabs>
                 </main>
             </div>
+
+            <Dialog open={!!pdfToDelete} onOpenChange={(open) => !open && setPdfToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Test</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this test? This action cannot be undone and will remove all associated data including questions and history.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setPdfToDelete(null)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDeletePdf}>Delete</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

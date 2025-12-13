@@ -20,7 +20,7 @@ export class MissedQuestionDto {
     correctAnswer: string;
 }
 
-export class AnswerDto {
+export class TestResultAnswerDto {
     @ApiProperty()
     @IsString()
     questionId: string;
@@ -61,12 +61,12 @@ export class SubmitTestResultsDto {
     @Type(() => MissedQuestionDto)
     missedQuestions: MissedQuestionDto[];
 
-    @ApiProperty({ type: [AnswerDto], required: false })
+    @ApiProperty({ type: [TestResultAnswerDto], required: false })
     @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => AnswerDto)
-    allAnswers?: AnswerDto[];
+    @Type(() => TestResultAnswerDto)
+    allAnswers?: TestResultAnswerDto[];
 }
 
 export class ScoreDto {
@@ -158,16 +158,33 @@ export class TestHistoryItemDto {
     @ApiProperty({ required: false })
     report?: string;
 
+    @ApiProperty({ type: [TestResultAnswerDto], required: false })
+    answers?: TestResultAnswerDto[];
+
     static fromEntity(attempt: any): TestHistoryItemDto {
+        let percentage = attempt.percentage;
+        if (percentage === null || percentage === undefined) {
+            percentage = attempt.total > 0 ? (attempt.score / attempt.total) * 100 : 0;
+        }
+
+        const answers = attempt.answers ? attempt.answers.map((a: any) => ({
+            questionId: a.mcqId,
+            questionText: a.mcq?.question || 'Unknown Question',
+            selectedAnswer: a.mcq?.options[a.selectedIdx] || 'Unknown Answer',
+            correctAnswer: a.mcq?.options[a.mcq.correctIdx] || 'Unknown Correct Answer',
+            isCorrect: a.isCorrect
+        })) : undefined;
+
         return {
             id: attempt.id,
             pdfId: attempt.pdfId,
             pdfTitle: attempt.pdf?.filename || 'Unknown PDF',
             score: attempt.score,
             total: attempt.total,
-            percentage: attempt.percentage,
+            percentage: percentage,
             completedAt: attempt.completedAt,
-            report: (attempt.feedback as any)?.report || undefined
+            report: (attempt.feedback as any)?.report || undefined,
+            answers
         };
     }
 }
