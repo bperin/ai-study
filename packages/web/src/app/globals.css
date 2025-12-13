@@ -27,7 +27,7 @@
         --card-foreground: 0 0% 3.9%;
         --popover: 0 0% 100%;
         --popover-foreground: 0 0% 3.9%;
-        --primary: 0 0% 9%;
+        --primary: 0 84% 60%;
         --primary-foreground: 0 0% 98%;
         --secondary: 0 0% 96.1%;
         --secondary-foreground: 0 0% 9%;
@@ -55,9 +55,9 @@
         --card-foreground: 0 0% 95%;
         --popover: 0 0% 10%;
         --popover-foreground: 0 0% 95%;
-        /* Off-white primary */
-        --primary: 0 0% 95%;
-        --primary-foreground: 0 0% 10%;
+        /* Red primary */
+        --primary: 0 84% 60%;
+        --primary-foreground: 0 0% 98%;
         /* Subtle grays */
         --secondary: 0 0% 15%;
         --secondary-foreground: 0 0% 95%;

@@ -472,7 +472,7 @@ This endpoint does not need any parameter.
 
 ## testsControllerGetTestStats
 
-> testsControllerGetTestStats(pdfId)
+> TestStatsDto testsControllerGetTestStats(pdfId)
 
 Get test stats: attempt count, avg score, top scorer
 
@@ -519,7 +519,7 @@ example().catch(console.error);
 
 ### Return type
 
-`void` (Empty response body)
+[**TestStatsDto**](TestStatsDto.md)
 
 ### Authorization
 
@@ -528,7 +528,7 @@ example().catch(console.error);
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: `application/json`
 
 
 ### HTTP response details

@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * AI Study API
- * The AI Study API description
+ * Dash AI API
+ * The Dash AI API description
  *
  * The version of the OpenAPI document: 1.0
  * 
@@ -36,6 +36,11 @@ export interface PdfsControllerGenerateFlashcardsRequest {
 
 export interface PdfsControllerGetObjectivesRequest {
     id: string;
+}
+
+export interface PdfsControllerListAllPdfsRequest {
+    page: number;
+    limit: number;
 }
 
 export interface PdfsControllerListPdfsRequest {
@@ -224,6 +229,65 @@ export class PdfsApi extends runtime.BaseAPI {
      */
     async pdfsControllerGetObjectives(requestParameters: PdfsControllerGetObjectivesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ObjectiveResponseDto>> {
         const response = await this.pdfsControllerGetObjectivesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * List all PDFs from all users (for taking tests)
+     */
+    async pdfsControllerListAllPdfsRaw(requestParameters: PdfsControllerListAllPdfsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PaginatedPdfResponseDto>> {
+        if (requestParameters['page'] == null) {
+            throw new runtime.RequiredError(
+                'page',
+                'Required parameter "page" was null or undefined when calling pdfsControllerListAllPdfs().'
+            );
+        }
+
+        if (requestParameters['limit'] == null) {
+            throw new runtime.RequiredError(
+                'limit',
+                'Required parameter "limit" was null or undefined when calling pdfsControllerListAllPdfs().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/pdfs/all`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PaginatedPdfResponseDtoFromJSON(jsonValue));
+    }
+
+    /**
+     * List all PDFs from all users (for taking tests)
+     */
+    async pdfsControllerListAllPdfs(requestParameters: PdfsControllerListAllPdfsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PaginatedPdfResponseDto> {
+        const response = await this.pdfsControllerListAllPdfsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

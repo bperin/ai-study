@@ -32,6 +32,7 @@ docs/TestHistoryResponseDto.md
 docs/TestResultAnswerDto.md
 docs/TestSessionAnswerDto.md
 docs/TestSessionStateDto.md
+docs/TestStatsDto.md
 docs/TestTakingApi.md
 docs/TestsApi.md
 docs/UploadUrlResponseDto.md
@@ -60,6 +61,7 @@ models/TestHistoryResponseDto.ts
 models/TestResultAnswerDto.ts
 models/TestSessionAnswerDto.ts
 models/TestSessionStateDto.ts
+models/TestStatsDto.ts
 models/UploadUrlResponseDto.ts
 models/UserResponseDto.ts
 models/index.ts
