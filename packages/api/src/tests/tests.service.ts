@@ -66,7 +66,7 @@ export class TestsService {
                 },
             },
             orderBy: [
-                { completedAt: "desc" },
+                { completedAt: { sort: "desc", nulls: "last" } },
                 { startedAt: "desc" }
             ],
         });

@@ -10,9 +10,9 @@ import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } fr
 
 // Model constants
 // @ts-ignore
-const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-flash";
+const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-pro";
 // @ts-ignore
-const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-flash";
+const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-pro";
 
 interface QuestionGenerationTask {
     difficulty: "easy" | "medium" | "hard";
@@ -130,7 +130,7 @@ ${difficulty === "easy" ? "Make questions straightforward and test basic underst
 ${difficulty === "medium" ? "Make questions moderately challenging, testing application of concepts." : ""}
 ${difficulty === "hard" ? "Make questions challenging, testing deep understanding and critical thinking." : ""}
 
-Use the save_objective tool to save the questions you generate.
+You MUST use the 'save_objective' tool to save the questions. Do not just list them in the text response. If you do not call the tool, the questions will be lost.
 `,
             tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
         });
@@ -151,30 +151,16 @@ Use the save_objective tool to save the questions you generate.
             state: { pdfId, difficulty, count },
         });
 
-        // Extract PDF text directly to ensure the model has it
-        let pdfContext = "";
-        try {
-            const buffer = await this.gcsService.downloadFile(gcsPath);
-            // Use existing PDF service if available, else simple parse
-            if (this.pdfTextService) {
-                const extracted = await this.pdfTextService.extractText(buffer);
-                pdfContext = extracted.structuredText.substring(0, 500000); // 500k chars ~ 125k tokens
-            } else {
-                const data = await pdfParse(buffer);
-                pdfContext = data.text.substring(0, 500000);
-            }
-        } catch (error) {
-            console.error("Error pre-fetching PDF content:", error);
-            // Fallback: Agent will try to use tool if context is missing, though we'd prefer direct injection
-        }
+        // Use direct file access for Gemini (supports scanned PDFs/images)
+        const bucketName = this.gcsService.getBucketName();
+        const fileUri = `gs://${bucketName}/${gcsPath}`;
+        
+        console.log(`[ParallelGeneration] Starting agent for ${difficulty} questions using file: ${fileUri}`);
 
         const prompt = `
 Generate ${count} ${difficulty} difficulty questions.
 
 USER INSTRUCTIONS: "${userPrompt}"
-
-SOURCE MATERIAL:
-${pdfContext}
 `;
 
         // Run agent
@@ -185,7 +171,15 @@ ${pdfContext}
             sessionId,
             newMessage: {
                 role: "user",
-                parts: [{ text: prompt }],
+                parts: [
+                    { text: prompt },
+                    {
+                        fileData: {
+                            mimeType: "application/pdf",
+                            fileUri: fileUri
+                        }
+                    }
+                ],
             },
         })) {
             // Tools are executed automatically by the runner

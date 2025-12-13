@@ -29,6 +29,7 @@ export function createSaveObjectiveTool(prisma: PrismaService, pdfId: string) {
         description: "Saves a learning objective with its multiple choice questions to the database",
         parameters: parametersSchema,
         execute: async (params) => {
+            console.log(`[AI Tool] save_objective called for: ${params.title} with ${params.questions.length} questions`);
             const objective = await prisma.objective.create({
                 data: {
                     title: params.title,
@@ -47,6 +48,7 @@ export function createSaveObjectiveTool(prisma: PrismaService, pdfId: string) {
                 include: { mcqs: true },
             });
 
+            console.log(`[AI Tool] Successfully saved objective ${objective.id} with ${objective.mcqs.length} questions`);
             return {
                 success: true,
                 objectiveId: objective.id,
