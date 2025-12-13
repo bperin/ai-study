@@ -50,16 +50,8 @@ export class UploadsService {
         const filePath = `uploads/${userId}/${randomUUID()}-${sanitizedName}`;
         const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-        const bucket = this.storage.bucket(this.bucketName);
-        const file = bucket.file(filePath);
-
-        // Generate signed URL with minimal constraints to avoid 403 errors
-        const [uploadUrl] = await file.getSignedUrl({
-            version: "v4",
-            action: "write",
-            expires: expiresAt,
-            contentType,
-        });
+        // Since bucket is public, return direct GCS URL for PUT upload
+        const uploadUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
 
         return {
             uploadUrl: uploadUrl,
