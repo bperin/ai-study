@@ -18,7 +18,7 @@ export class GcsService {
                     projectId: credentials.project_id,
                     credentials: credentials,
                 });
-                this.bucketName = this.configService.get<string>("GCP_BUCKET_NAME") ?? "missing-bucket";
+                this.bucketName = "ai-study-public-storage";
                 return;
             } catch (error) {
                 console.error("Failed to parse GCP_SA_KEY:", error);
