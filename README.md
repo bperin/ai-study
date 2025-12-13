@@ -377,7 +377,19 @@ Set these in Cloud Run service configuration:
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## � TODOs & Future Enhancements
+
+### Planned Features
+- **Enhanced Leaderboard & Gamification**: Full competitive features with badges, achievements, and ranking systems
+- **Real-time Question Delivery**: Pub/Sub service for creating and answering questions with always-available delivery
+- **Multimedia Questions**: Support for image and video-based questions to enhance learning experience
+- **Advanced Analytics**: Deeper performance tracking and personalized learning paths
+
+### Weekend Goals
+- Image and video question support implementation
+- Pub/Sub service architecture for real-time features
+
+## �🙏 Acknowledgments
 
 - **Google Vertex AI** for powerful language models
 - **NestJS** for robust backend architecture
