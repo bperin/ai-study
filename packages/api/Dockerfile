@@ -35,5 +35,5 @@ COPY --from=builder /app/packages/api/node_modules ./node_modules
 COPY --from=builder /app/packages/api/dist ./dist
 COPY --from=builder /app/packages/api/prisma ./prisma
 
-# Start the application directly with node
-CMD [ "node", "dist/main.js" ]
+# Start the application using npm (which knows the correct path)
+CMD ["npm", "run", "start:prod"]
