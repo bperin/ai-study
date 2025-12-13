@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { getPdfsApi } from "@/api-client";
+import { ChatMessageDtoRoleEnum } from "@/generated";
 
 interface TestPlan {
     objectives: Array<{
@@ -43,12 +45,9 @@ export default function CustomizePage() {
     useEffect(() => {
         const fetchPdfInfo = async () => {
             try {
-                const token = localStorage.getItem("access_token");
-                const response = await fetch(`http://localhost:3000/pdfs`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const pdfs = await response.json();
-                const pdf = pdfs.find((p: any) => p.id === pdfId);
+                const api = getPdfsApi();
+                const pdfs = await api.getPdfs();
+                const pdf = pdfs.find((p) => p.id === pdfId);
                 setPdfInfo(pdf || { id: pdfId, filename: "Study Guide.pdf" });
             } catch (error) {
                 console.error("Failed to fetch PDF info:", error);
@@ -74,29 +73,26 @@ export default function CustomizePage() {
         setChatting(true);
 
         try {
-            const token = localStorage.getItem("access_token");
-            const response = await fetch(`http://localhost:3000/pdfs/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
+            const api = getPdfsApi();
+            const response = await api.chatWithPdf({
+                chatMessageDto: {
                     message: userMessage,
                     pdfId,
-                    history: messages,
-                }),
+                    history: messages.map(m => ({
+                        role: m.role === "user" ? ChatMessageDtoRoleEnum.User : ChatMessageDtoRoleEnum.Assistant,
+                        content: m.content
+                    })),
+                }
             });
 
-            const data = await response.json();
+            setMessages((prev) => [...prev, { role: "assistant", content: response.message }]);
 
-            setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
-
-            if (data.testPlan) {
-                setTestPlan(data.testPlan);
+            if (response.testPlan) {
+                // @ts-ignore
+                setTestPlan(response.testPlan);
             }
 
-            if (data.shouldGenerate) {
+            if (response.shouldGenerate) {
                 setShouldGenerate(true);
                 // Auto-generate after a moment
                 setTimeout(() => handleGenerate(), 1000);
@@ -115,25 +111,15 @@ export default function CustomizePage() {
         setGenerating(true);
 
         try {
-            const token = localStorage.getItem("access_token");
-
             // Build prompt from test plan
             const prompt = `Generate ${testPlan.totalQuestions} questions with the following objectives:\n${testPlan.objectives.map((obj) => `- ${obj.title} (${obj.difficulty}, ${obj.questionCount} questions)`).join("\n")}`;
 
-            const response = await fetch(`http://localhost:3000/pdfs/${pdfId}/generate`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ prompt }),
+            const api = getPdfsApi();
+            await api.generateFlashcards({
+                id: pdfId,
+                generateFlashcardsDto: { prompt }
             });
-
-            if (!response.ok) {
-                throw new Error("Failed to generate flashcards");
-            }
-
-            await response.json();
+            
             router.push(`/study/${pdfId}`);
         } catch (error: any) {
             console.error("Failed to generate flashcards:", error);
