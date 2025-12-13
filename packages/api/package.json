@@ -16,8 +16,7 @@
         "test:watch": "jest --config jest.config.json --watch",
         "test:cov": "jest --config jest.config.json --coverage",
         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-        "test:e2e": "jest --config ./test/jest-e2e.json",
-        "codegen": "openapi-generator-cli generate -i ../../openapi.json -g typescript-fetch -o src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec"
+        "test:e2e": "jest --config ./test/jest-e2e.json"
     },
     "dependencies": {
         "@genkit-ai/ai": "^1.25.0",

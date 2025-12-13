@@ -16,11 +16,21 @@
 import * as runtime from '../runtime';
 import type {
   SubmitTestDto,
+  TestHistoryItemDto,
+  TestHistoryResponseDto,
 } from '../models/index';
 import {
     SubmitTestDtoFromJSON,
     SubmitTestDtoToJSON,
+    TestHistoryItemDtoFromJSON,
+    TestHistoryItemDtoToJSON,
+    TestHistoryResponseDtoFromJSON,
+    TestHistoryResponseDtoToJSON,
 } from '../models/index';
+
+export interface TestsControllerGetAttemptDetailsRequest {
+    id: string;
+}
 
 export interface TestsControllerGetGlobalLeaderboardRequest {
     limit: string;
@@ -39,6 +49,51 @@ export interface TestsControllerSubmitTestRequest {
  * 
  */
 export class TestsApi extends runtime.BaseAPI {
+
+    /**
+     * Get detailed results for a specific test attempt
+     */
+    async testsControllerGetAttemptDetailsRaw(requestParameters: TestsControllerGetAttemptDetailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestHistoryItemDto>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling testsControllerGetAttemptDetails().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/attempt/{id}`;
+        urlPath = urlPath.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TestHistoryItemDtoFromJSON(jsonValue));
+    }
+
+    /**
+     * Get detailed results for a specific test attempt
+     */
+    async testsControllerGetAttemptDetails(requestParameters: TestsControllerGetAttemptDetailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestHistoryItemDto> {
+        const response = await this.testsControllerGetAttemptDetailsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      */
@@ -173,8 +228,9 @@ export class TestsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get user\'s test history with scores and reports
      */
-    async testsControllerGetTestHistoryRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async testsControllerGetTestHistoryRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestHistoryResponseDto>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -197,13 +253,15 @@ export class TestsApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => TestHistoryResponseDtoFromJSON(jsonValue));
     }
 
     /**
+     * Get user\'s test history with scores and reports
      */
-    async testsControllerGetTestHistory(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.testsControllerGetTestHistoryRaw(initOverrides);
+    async testsControllerGetTestHistory(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestHistoryResponseDto> {
+        const response = await this.testsControllerGetTestHistoryRaw(initOverrides);
+        return await response.value();
     }
 
     /**

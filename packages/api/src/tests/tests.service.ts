@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { Mcq } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SubmitTestDto } from "./dto/submit-test.dto";
-import { TestHistoryResponseDto } from "./dto/test-results.dto";
+import { TestHistoryResponseDto, TestHistoryItemDto } from "./dto/test-results.dto";
 
 @Injectable()
 export class TestsService {
@@ -33,12 +33,16 @@ export class TestsService {
         });
 
         // 3. Create Attempt
+        const total = dto.answers.length;
+        const percentage = total > 0 ? (score / total) * 100 : 0;
+
         return this.prisma.testAttempt.create({
             data: {
                 userId,
                 pdfId: dto.pdfId,
                 score,
-                total: dto.answers.length,
+                total,
+                percentage,
                 answers: {
                     create: answerData,
                 },
@@ -53,7 +57,12 @@ export class TestsService {
         const attempts = await this.prisma.testAttempt.findMany({
             where: { userId },
             include: {
-                pdf: true
+                pdf: true,
+                answers: {
+                    include: {
+                        mcq: true
+                    }
+                }
             },
             orderBy: {
                 completedAt: 'desc'
@@ -61,5 +70,60 @@ export class TestsService {
         });
 
         return TestHistoryResponseDto.fromEntities(attempts);
+    }
+
+    async getAttemptDetails(userId: string, attemptId: string): Promise<TestHistoryItemDto> {
+        const attempt = await this.prisma.testAttempt.findUnique({
+            where: { id: attemptId },
+            include: {
+                pdf: true,
+                answers: {
+                    include: {
+                        mcq: true
+                    }
+                }
+            }
+        });
+
+        if (!attempt || attempt.userId !== userId) {
+            throw new NotFoundException("Attempt not found");
+        }
+
+        return TestHistoryItemDto.fromEntity(attempt);
+    }
+
+    async chatAssist(message: string, questionId: string, history?: any[]) {
+        const { GoogleGenerativeAI } = require("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        const mcq = await this.prisma.mcq.findUnique({
+            where: { id: questionId },
+            include: { objective: { include: { pdf: true } } }
+        });
+        if (!mcq) throw new NotFoundException("Question not found");
+
+        const pdfContent = mcq.objective.pdf.content || ""; // Or handle GCS path if needed (simplified for now as content usually has text)
+
+        const { TEST_ASSISTANCE_CHAT_PROMPT } = require("../ai/prompts");
+        const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, pdfContent);
+
+        const chat = model.startChat({
+            history: [
+                { role: "user", parts: [{ text: systemPrompt }] },
+                { role: "model", parts: [{ text: "I understand. I will help the student with this question without giving away the answer." }] },
+                ...(history || []).map(msg => ({
+                    role: msg.role === "user" ? "user" : "model",
+                    parts: [{ text: msg.content }]
+                }))
+            ],
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = result.response.text();
+
+        return {
+            message: response,
+        };
     }
 }

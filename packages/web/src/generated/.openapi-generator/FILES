@@ -1,6 +1,7 @@
 apis/AuthApi.ts
 apis/DefaultApi.ts
 apis/PdfsApi.ts
+apis/TestAttemptsApi.ts
 apis/TestTakingApi.ts
 apis/TestsApi.ts
 apis/UploadsApi.ts
@@ -24,6 +25,10 @@ docs/StartAttemptResponseDto.md
 docs/SubmitTestDto.md
 docs/SubmitTestResultsDto.md
 docs/TestAnalysisResponseDto.md
+docs/TestAttemptsApi.md
+docs/TestHistoryItemDto.md
+docs/TestHistoryResponseDto.md
+docs/TestResultAnswerDto.md
 docs/TestSessionAnswerDto.md
 docs/TestSessionStateDto.md
 docs/TestTakingApi.md
@@ -48,6 +53,9 @@ models/StartAttemptResponseDto.ts
 models/SubmitTestDto.ts
 models/SubmitTestResultsDto.ts
 models/TestAnalysisResponseDto.ts
+models/TestHistoryItemDto.ts
+models/TestHistoryResponseDto.ts
+models/TestResultAnswerDto.ts
 models/TestSessionAnswerDto.ts
 models/TestSessionStateDto.ts
 models/UploadUrlResponseDto.ts
