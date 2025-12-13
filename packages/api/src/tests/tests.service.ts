@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Mcq } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SubmitTestDto } from "./dto/submit-test.dto";
+import { TestHistoryResponseDto } from "../pdfs/dto/submit-test-results.dto";
 
 @Injectable()
 export class TestsService {
@@ -46,5 +47,19 @@ export class TestsService {
                 answers: true,
             },
         });
+    }
+
+    async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {
+        const attempts = await this.prisma.testAttempt.findMany({
+            where: { userId },
+            include: {
+                pdf: true
+            },
+            orderBy: {
+                completedAt: 'desc'
+            }
+        });
+
+        return TestHistoryResponseDto.fromEntities(attempts);
     }
 }

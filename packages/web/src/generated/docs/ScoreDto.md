@@ -1,22 +1,26 @@
 
-# TestAnalysisResponseDto
+# ScoreDto
 
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`report` | string
+`correct` | number
+`total` | number
+`percentage` | number
 
 ## Example
 
 ```typescript
-import type { TestAnalysisResponseDto } from ''
+import type { ScoreDto } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "report": null,
-} satisfies TestAnalysisResponseDto
+  "correct": null,
+  "total": null,
+  "percentage": null,
+} satisfies ScoreDto
 
 console.log(example)
 
@@ -25,7 +29,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as TestAnalysisResponseDto
+const exampleParsed = JSON.parse(exampleJSON) as ScoreDto
 console.log(exampleParsed)
 ```
 

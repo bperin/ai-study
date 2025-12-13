@@ -24,34 +24,14 @@ export interface TestAnalysisResponseDto {
      * @type {string}
      * @memberof TestAnalysisResponseDto
      */
-    summary: string;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof TestAnalysisResponseDto
-     */
-    weakAreas: Array<string>;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof TestAnalysisResponseDto
-     */
-    studyStrategies: Array<string>;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof TestAnalysisResponseDto
-     */
-    strengths?: Array<string>;
+    report: string;
 }
 
 /**
  * Check if a given object implements the TestAnalysisResponseDto interface.
  */
 export function instanceOfTestAnalysisResponseDto(value: object): value is TestAnalysisResponseDto {
-    if (!('summary' in value) || value['summary'] === undefined) return false;
-    if (!('weakAreas' in value) || value['weakAreas'] === undefined) return false;
-    if (!('studyStrategies' in value) || value['studyStrategies'] === undefined) return false;
+    if (!('report' in value) || value['report'] === undefined) return false;
     return true;
 }
 
@@ -65,10 +45,7 @@ export function TestAnalysisResponseDtoFromJSONTyped(json: any, ignoreDiscrimina
     }
     return {
         
-        'summary': json['summary'],
-        'weakAreas': json['weakAreas'],
-        'studyStrategies': json['studyStrategies'],
-        'strengths': json['strengths'] == null ? undefined : json['strengths'],
+        'report': json['report'],
     };
 }
 
@@ -83,10 +60,7 @@ export function TestAnalysisResponseDtoToJSONTyped(value?: TestAnalysisResponseD
 
     return {
         
-        'summary': value['summary'],
-        'weakAreas': value['weakAreas'],
-        'studyStrategies': value['studyStrategies'],
-        'strengths': value['strengths'],
+        'report': value['report'],
     };
 }
 

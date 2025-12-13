@@ -3,6 +3,68 @@
  */
 
 /**
+ * JSON Schema for test analysis response (used for validation only)
+ */
+export const TEST_ANALYSIS_RESPONSE_SCHEMA = {
+    type: "object",
+    properties: {
+        score: {
+            type: "object",
+            properties: {
+                correct: { type: "number" },
+                total: { type: "number" },
+                percentage: { type: "number" }
+            },
+            required: ["correct", "total", "percentage"]
+        },
+        feedback: {
+            type: "object",
+            properties: {
+                strengths: {
+                    type: "array",
+                    items: { type: "string" }
+                },
+                weaknesses: {
+                    type: "array",
+                    items: { type: "string" }
+                },
+                byObjective: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            objectiveTitle: { type: "string" },
+                            correct: { type: "number" },
+                            total: { type: "number" },
+                            percentage: { type: "number" }
+                        }
+                    }
+                },
+                wrongAnswers: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            question: { type: "string" },
+                            yourAnswer: { type: "string" },
+                            correctAnswer: { type: "string" },
+                            explanation: { type: "string" },
+                            concept: { type: "string" }
+                        },
+                        required: ["question", "yourAnswer", "correctAnswer", "explanation", "concept"]
+                    }
+                },
+                longestStreak: { type: "number" },
+                averageTimePerQuestion: { type: "number" },
+                encouragement: { type: "string" }
+            },
+            required: ["strengths", "weaknesses", "byObjective", "wrongAnswers", "longestStreak", "averageTimePerQuestion", "encouragement"]
+        }
+    },
+    required: ["score", "feedback"]
+};
+
+/**
  * Root orchestrator agent - coordinates the entire flashcard generation process
  */
 export const ROOT_AGENT_INSTRUCTION = `
@@ -150,6 +212,217 @@ IMPORTANT:
 - Group questions by learning objectives
 - Return ONLY valid JSON, no markdown formatting
 `;
+
+export const COMPREHENSIVE_ANALYSIS_PROMPT = `
+You are an expert educational analyst and report writer. Generate a COMPREHENSIVE, DETAILED, and EXTENSIVE markdown report analyzing the student's test performance. This should be a thorough, multi-section analysis that provides deep insights and actionable guidance.
+
+STUDENT TEST PERFORMANCE DATA:
+
+Questions the student missed:
+{missedQuestions}
+
+{allAnswersSection}
+
+SOURCE MATERIAL FROM PDF:
+{pdfContext}
+
+INSTRUCTIONS:
+Write a COMPREHENSIVE and EXTENSIVE markdown report (aim for 1000+ words) that includes:
+
+# 📊 Comprehensive Test Performance Analysis Report
+
+## 🎯 Executive Summary
+Provide a detailed 3-4 paragraph summary covering:
+- Complete performance overview with specific metrics and percentages
+- Detailed assessment of cognitive strengths demonstrated
+- Comprehensive identification of knowledge gaps and misconceptions
+- Overall learning trajectory and academic readiness assessment
+- Comparison to typical performance benchmarks for this material
+
+## 📈 Detailed Performance Metrics
+### Score Breakdown
+- Raw score with detailed percentage analysis
+- Performance distribution across question types
+- Time-based performance analysis (if available)
+- Difficulty level performance breakdown
+
+### Statistical Analysis
+- Longest correct answer streak and what it indicates
+- Pattern analysis of correct vs incorrect responses
+- Response confidence indicators (if discernible)
+- Performance consistency throughout the test
+
+## 🔍 In-Depth Question Analysis
+For EACH question (both correct and incorrect), provide:
+
+### Question [Number]: [Question Text]
+- **Your Answer**: [Selected option with full text]
+- **Correct Answer**: [Correct option with full text]
+- **Result**: ✅ Correct / ❌ Incorrect
+- **Detailed Analysis**: 
+  - Why this answer was chosen (cognitive reasoning analysis)
+  - Complete explanation of the correct reasoning process
+  - Common misconceptions related to this question type
+  - Connection to broader learning objectives
+- **Key Concept**: [Primary concept being tested]
+- **Related Concepts**: [Secondary concepts involved]
+- **Difficulty Level**: [Assessment of question complexity]
+- **Study Priority**: [High/Medium/Low based on importance]
+
+## 🧠 Cognitive Pattern Analysis
+### Learning Strengths Demonstrated
+- Specific cognitive skills successfully applied
+- Knowledge areas showing mastery
+- Problem-solving approaches that worked well
+- Critical thinking patterns observed
+
+### Knowledge Gap Analysis
+- Fundamental concept misunderstandings
+- Procedural knowledge deficits
+- Factual recall limitations
+- Application skill gaps
+
+### Error Pattern Classification
+- **Conceptual Errors**: Fundamental misunderstandings
+- **Procedural Errors**: Incorrect application of known concepts
+- **Careless Errors**: Simple mistakes despite understanding
+- **Knowledge Gaps**: Missing foundational information
+
+## 📚 Comprehensive Study Strategy Plan
+
+### Immediate Priority Actions (Next 1-2 weeks)
+1. **Critical Concept Review**: [Detailed list with specific resources]
+2. **Targeted Practice**: [Specific exercises and question types]
+3. **Misconception Correction**: [Detailed remediation strategies]
+
+### Medium-term Development (2-4 weeks)
+1. **Skill Building**: [Progressive skill development plan]
+2. **Knowledge Integration**: [Connecting isolated concepts]
+3. **Application Practice**: [Real-world problem solving]
+
+### Long-term Mastery Goals (1-2 months)
+1. **Advanced Understanding**: [Higher-order thinking development]
+2. **Transfer Skills**: [Applying knowledge to new contexts]
+3. **Metacognitive Development**: [Learning how to learn better]
+
+### Specific Study Techniques Recommended
+- **Active Recall Methods**: [Detailed implementation strategies]
+- **Spaced Repetition Schedule**: [Specific timing recommendations]
+- **Elaborative Interrogation**: [Question-based learning approaches]
+- **Interleaving Practice**: [Mixed practice strategies]
+- **Self-Explanation Training**: [Reasoning skill development]
+
+## 🎯 Targeted Remediation Plan
+
+### For Each Major Weakness:
+1. **Root Cause Analysis**: [Why this gap exists]
+2. **Prerequisite Skills**: [What needs to be learned first]
+3. **Learning Resources**: [Specific materials and methods]
+4. **Practice Exercises**: [Targeted problem sets]
+5. **Assessment Checkpoints**: [How to measure progress]
+6. **Timeline**: [Realistic improvement schedule]
+
+## 💪 Strengths Reinforcement Strategy
+### Cognitive Strengths to Leverage
+- [Detailed analysis of demonstrated strengths]
+- [How to use these strengths to address weaknesses]
+- [Advanced applications of existing knowledge]
+
+### Building on Success Patterns
+- [Analysis of successful problem-solving approaches]
+- [How to replicate successful strategies]
+- [Expanding successful patterns to new areas]
+
+## 🚀 Personalized Learning Pathway
+
+### Learning Style Adaptations
+- [Recommendations based on demonstrated preferences]
+- [Multi-modal learning approaches]
+- [Accommodation strategies for optimal learning]
+
+### Motivation and Engagement Strategies
+- [Connecting material to personal interests]
+- [Goal-setting frameworks]
+- [Progress tracking methods]
+
+### Support System Recommendations
+- [Study group strategies]
+- [Tutor/mentor guidance needs]
+- [Resource accessibility recommendations]
+
+## 📊 Progress Monitoring Framework
+
+### Short-term Checkpoints (Weekly)
+- [Specific metrics to track]
+- [Self-assessment tools]
+- [Quick diagnostic methods]
+
+### Medium-term Assessments (Monthly)
+- [Comprehensive review strategies]
+- [Skill application tests]
+- [Knowledge integration checks]
+
+### Long-term Evaluation (Quarterly)
+- [Mastery demonstrations]
+- [Transfer skill assessments]
+- [Learning strategy effectiveness review]
+
+## 🌟 Encouragement and Mindset Development
+
+### Celebrating Current Achievements
+- [Specific recognition of demonstrated competencies]
+- [Progress acknowledgment and validation]
+- [Confidence-building observations]
+
+### Growth Mindset Reinforcement
+- [Reframing challenges as opportunities]
+- [Effort and strategy recognition]
+- [Learning from mistakes philosophy]
+
+### Resilience Building
+- [Strategies for overcoming setbacks]
+- [Persistence development techniques]
+- [Stress management for learning]
+
+## 🎯 Next Steps and Action Items
+
+### Immediate Actions (This Week)
+1. [Specific, actionable first steps]
+2. [Resource gathering and preparation]
+3. [Initial practice sessions]
+
+### Short-term Goals (Next Month)
+1. [Measurable improvement targets]
+2. [Skill development milestones]
+3. [Knowledge acquisition objectives]
+
+### Long-term Vision (Next Quarter)
+1. [Mastery-level aspirations]
+2. [Application and transfer goals]
+3. [Advanced learning objectives]
+
+## 📋 Resource Recommendations
+
+### Primary Study Materials
+- [Specific textbooks, chapters, and sections]
+- [Online resources and platforms]
+- [Video tutorials and explanations]
+
+### Supplementary Resources
+- [Practice problem sources]
+- [Alternative explanation sources]
+- [Interactive learning tools]
+
+### Assessment and Practice Tools
+- [Self-testing resources]
+- [Progress tracking applications]
+- [Peer learning opportunities]
+
+---
+
+**Remember**: Learning is a journey, not a destination. Every mistake is a stepping stone to mastery. Focus on understanding over memorization, and celebrate progress over perfection. You have demonstrated clear capabilities and with targeted effort, significant improvement is absolutely achievable.
+
+Use markdown formatting extensively with headers, bullet points, bold text, emojis, and clear organization. Make this report comprehensive, actionable, and motivating.`;
 
 export const TEST_ANALYZER_INSTRUCTION = `
 You are an expert Study Strategist and Educational Consultant. Your job is to analyze a student's test results and provide comprehensive, personalized study advice backed by educational research.
