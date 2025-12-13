@@ -47,13 +47,19 @@ jobs:
             - name: Deploy API service
               id: deploy-api
               run: |
+                  # Create env vars file to handle JSON content safely
+                  cat > env_vars.yaml << EOF
+                  DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+                  GCP_BUCKET_NAME: "${{ secrets.GCP_BUCKET_NAME }}"
+                  GCP_SA_KEY: |
+                    ${{ secrets.GCP_SA_KEY }}
+                  EOF
+                  
                   gcloud run deploy ${{ env.API_SERVICE_NAME }} \
                     --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
                     --project ${{ env.GCP_PROJECT_ID }} \
                     --region ${{ env.GCP_REGION }} \
-                    --update-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-                    --update-env-vars GCP_BUCKET_NAME="${{ secrets.GCP_BUCKET_NAME }}" \
-                    --update-env-vars GCP_SA_KEY="${{ secrets.GCP_SA_KEY }}" \
+                    --env-vars-file env_vars.yaml \
                     --allow-unauthenticated \
                     --quiet \
                     --format='value(status.url)' > api_url.txt
