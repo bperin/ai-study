@@ -23,7 +23,7 @@ async function bootstrap() {
     });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
 
-    const config = new DocumentBuilder().setTitle("Memorang AI Study API").setDescription("The Memorang AI Study API description").setVersion("1.0").addBearerAuth().build();
+    const config = new DocumentBuilder().setTitle("AI Study API").setDescription("The AI Study API description").setVersion("1.0").addBearerAuth().build();
     const document = SwaggerModule.createDocument(app, config);
 
     fs.writeFileSync("./openapi.json", JSON.stringify(document));
