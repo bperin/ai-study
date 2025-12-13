@@ -53,7 +53,6 @@ jobs:
                     --port 8080 \
                     --timeout 600 \
                     --allow-unauthenticated \
-                    --clear-env-vars \
                     --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest \
                     --set-secrets=GCP_SA_KEY=ai_study_GCP_SA_KEY:latest \
                     --set-env-vars=GCP_BUCKET_NAME=ai-study-public-storage \
