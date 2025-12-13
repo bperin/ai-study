@@ -9,8 +9,8 @@ COPY package*.json ./
 COPY packages/api/package*.json ./packages/api/
 COPY packages/web/package*.json ./packages/web/
 
-# Install dependencies
-RUN npm ci
+# Install dependencies fresh
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -29,9 +29,11 @@ WORKDIR /app
 # ENV PORT 8080
 EXPOSE $PORT
 
-# Copy only necessary files from the builder stage
+# Copy package.json and install production dependencies fresh
 COPY --from=builder /app/packages/api/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+RUN npm install --production
+
+# Copy built application and prisma files
 COPY --from=builder /app/packages/api/dist ./dist
 COPY --from=builder /app/packages/api/prisma ./prisma
 
