@@ -51,8 +51,7 @@ jobs:
                   cat > env_vars.yaml << EOF
                   DATABASE_URL: "${{ secrets.DATABASE_URL }}"
                   GCP_BUCKET_NAME: "${{ secrets.GCP_BUCKET_NAME }}"
-                  GCP_SA_KEY: |
-                    ${{ secrets.GCP_SA_KEY }}
+                  GCP_SA_KEY: "${{ secrets.GCP_SA_KEY }}"
                   EOF
                   
                   gcloud run deploy ${{ env.API_SERVICE_NAME }} \
