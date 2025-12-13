@@ -11,6 +11,6 @@ import { PrismaModule } from "../prisma/prisma.module";
     imports: [PrismaModule],
     controllers: [PdfsController],
     providers: [PdfsService, GeminiService, ParallelGenerationService, PdfTextService, GcsService],
-    exports: [PdfsService, GcsService, PdfTextService],
+    exports: [PdfsService, GcsService, PdfTextService, ParallelGenerationService],
 })
 export class PdfsModule { }

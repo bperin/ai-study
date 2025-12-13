@@ -26,7 +26,7 @@ describe('Application Smoke Tests', () => {
 
     describe('DTOs', () => {
         it('should have valid SubmitTestResultsDto', async () => {
-            const { SubmitTestResultsDto } = await import('../src/pdfs/dto/submit-test-results.dto');
+            const { SubmitTestResultsDto } = await import('./tests/dto/test-results.dto');
             expect(SubmitTestResultsDto).toBeDefined();
         });
 
