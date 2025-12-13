@@ -43,6 +43,7 @@ export class TestsService {
                 score,
                 total,
                 percentage,
+                completedAt: new Date(),
                 answers: {
                     create: answerData,
                 },
@@ -64,9 +65,10 @@ export class TestsService {
                     },
                 },
             },
-            orderBy: {
-                completedAt: "desc",
-            },
+            orderBy: [
+                { completedAt: "desc" },
+                { startedAt: "desc" }
+            ],
         });
 
         return TestHistoryResponseDto.fromEntities(attempts);
