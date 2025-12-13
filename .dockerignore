@@ -14,3 +14,7 @@ packages/web/.next
 packages/web/dist
 packages/web/.turbo
 packages/web/.vercel
+
+# Documentation and Assets
+docs/
+**/*.png
