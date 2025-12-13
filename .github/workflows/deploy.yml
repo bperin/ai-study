@@ -55,9 +55,9 @@ jobs:
                     --timeout 600 \
                     --allow-unauthenticated \
                     --clear-env-vars \
-                    --set-secrets=DATABASE_URL=DATABASE_URL:latest \
-                    --set-secrets=GCP_SA_KEY=GCP_SA_KEY:latest \
-                    --set-secrets=GCP_BUCKET_NAME=GCP_BUCKET_NAME:latest \
+                    --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest \
+                    --set-secrets=GCP_SA_KEY=ai_study_GCP_SA_KEY:latest \
+                    --set-secrets=GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
                     --quiet \
                     --format='value(status.url)' > api_url.txt
                   echo "API_URL=$(cat api_url.txt)" >> $GITHUB_ENV
