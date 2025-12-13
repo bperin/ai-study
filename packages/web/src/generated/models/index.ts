@@ -2,6 +2,7 @@
 /* eslint-disable */
 export * from './AnswerDto';
 export * from './AuthResponseDto';
+export * from './ChatMessageDto';
 export * from './ConfirmUploadResponseDto';
 export * from './CreateUserDto';
 export * from './LoginDto';

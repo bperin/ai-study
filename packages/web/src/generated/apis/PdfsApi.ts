@@ -15,15 +15,22 @@
 
 import * as runtime from '../runtime';
 import type {
+  ChatMessageDto,
   ObjectiveResponseDto,
   PaginatedPdfResponseDto,
 } from '../models/index';
 import {
+    ChatMessageDtoFromJSON,
+    ChatMessageDtoToJSON,
     ObjectiveResponseDtoFromJSON,
     ObjectiveResponseDtoToJSON,
     PaginatedPdfResponseDtoFromJSON,
     PaginatedPdfResponseDtoToJSON,
 } from '../models/index';
+
+export interface PdfsControllerChatPlanRequest {
+    chatMessageDto: ChatMessageDto;
+}
 
 export interface PdfsControllerDeletePdfRequest {
     id: string;
@@ -56,10 +63,19 @@ export class PdfsApi extends runtime.BaseAPI {
     /**
      * Chat with AI to plan test generation
      */
-    async pdfsControllerChatPlanRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async pdfsControllerChatPlanRaw(requestParameters: PdfsControllerChatPlanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['chatMessageDto'] == null) {
+            throw new runtime.RequiredError(
+                'chatMessageDto',
+                'Required parameter "chatMessageDto" was null or undefined when calling pdfsControllerChatPlan().'
+            );
+        }
+
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
 
         if (this.configuration && this.configuration.accessToken) {
             const token = this.configuration.accessToken;
@@ -77,6 +93,7 @@ export class PdfsApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
+            body: ChatMessageDtoToJSON(requestParameters['chatMessageDto']),
         }, initOverrides);
 
         return new runtime.VoidApiResponse(response);
@@ -85,8 +102,8 @@ export class PdfsApi extends runtime.BaseAPI {
     /**
      * Chat with AI to plan test generation
      */
-    async pdfsControllerChatPlan(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.pdfsControllerChatPlanRaw(initOverrides);
+    async pdfsControllerChatPlan(requestParameters: PdfsControllerChatPlanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.pdfsControllerChatPlanRaw(requestParameters, initOverrides);
     }
 
     /**

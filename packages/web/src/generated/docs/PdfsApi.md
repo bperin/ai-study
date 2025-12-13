@@ -15,7 +15,7 @@ All URIs are relative to *http://localhost*
 
 ## pdfsControllerChatPlan
 
-> pdfsControllerChatPlan()
+> pdfsControllerChatPlan(chatMessageDto)
 
 Chat with AI to plan test generation
 
@@ -36,8 +36,13 @@ async function example() {
   });
   const api = new PdfsApi(config);
 
+  const body = {
+    // ChatMessageDto
+    chatMessageDto: ...,
+  } satisfies PdfsControllerChatPlanRequest;
+
   try {
-    const data = await api.pdfsControllerChatPlan();
+    const data = await api.pdfsControllerChatPlan(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -50,7 +55,10 @@ example().catch(console.error);
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **chatMessageDto** | [ChatMessageDto](ChatMessageDto.md) |  | |
 
 ### Return type
 
@@ -62,7 +70,7 @@ This endpoint does not need any parameter.
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: `application/json`
 - **Accept**: Not defined
 
 
