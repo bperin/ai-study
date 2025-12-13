@@ -16,3 +16,20 @@ export class PdfResponseDto {
     })
     objectives: { title: string; difficulty: string; _count: { mcqs: number } }[];
 }
+
+export class PaginatedPdfResponseDto {
+    @ApiProperty({ type: [PdfResponseDto] })
+    data: PdfResponseDto[];
+
+    @ApiProperty()
+    total: number;
+
+    @ApiProperty()
+    page: number;
+
+    @ApiProperty()
+    limit: number;
+
+    @ApiProperty()
+    totalPages: number;
+}
