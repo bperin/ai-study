@@ -77,18 +77,18 @@ export default function HistoryDetailsPage() {
                     </CardHeader>
                     <CardContent className="pt-6">
                         <div
-                            className="prose prose-slate dark:prose-invert max-w-none prose-headings:text-primary prose-a:text-blue-600 hover:prose-a:text-blue-800 prose-a:underline"
+                            className="prose prose-slate dark:prose-invert max-w-none prose-sm prose-headings:text-primary prose-a:text-blue-600 hover:prose-a:text-blue-800 prose-a:underline break-words"
                             dangerouslySetInnerHTML={{
                                 __html: (attempt.report || attempt.summary || "")
                                     // Basic markdown parsing (in a real app, use a library like react-markdown)
                                     .replace(/\n/g, "<br>")
                                     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                                    .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-bold mt-6 mb-4">$1</h1>')
-                                    .replace(/^## (.*$)/gm, '<h2 class="text-2xl font-bold mt-8 mb-4 border-b pb-2">$1</h2>')
-                                    .replace(/^### (.*$)/gm, '<h3 class="text-xl font-semibold mt-6 mb-3">$1</h3>')
-                                    .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
+                                    .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-5 mb-3">$1</h1>')
+                                    .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-6 mb-3 border-b pb-1">$1</h2>')
+                                    .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
+                                    .replace(/^- (.*$)/gm, '<li class="ml-4 list-disc">$1</li>')
                                     // Parse links [text](url) -> <a href="url" target="_blank">text</a>
-                                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'),
+                                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800">$1</a>'),
                             }}
                         />
                     </CardContent>
