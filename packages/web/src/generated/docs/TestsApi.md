@@ -5,11 +5,13 @@ All URIs are relative to *http://localhost*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**testsControllerChatAssist**](TestsApi.md#testscontrollerchatassist) | **POST** /tests/chat | Chat with AI for help on a question |
+| [**testsControllerGetAllTestHistory**](TestsApi.md#testscontrollergetalltesthistory) | **GET** /tests/history/all | Get all users test history |
 | [**testsControllerGetAttemptDetails**](TestsApi.md#testscontrollergetattemptdetails) | **GET** /tests/attempt/{id} | Get detailed results for a specific test attempt |
 | [**testsControllerGetGlobalLeaderboard**](TestsApi.md#testscontrollergetgloballeaderboard) | **GET** /tests/leaderboard |  |
 | [**testsControllerGetMyRank**](TestsApi.md#testscontrollergetmyrank) | **GET** /tests/leaderboard/me |  |
 | [**testsControllerGetPdfLeaderboard**](TestsApi.md#testscontrollergetpdfleaderboard) | **GET** /tests/leaderboard/pdf/{pdfId} |  |
 | [**testsControllerGetTestHistory**](TestsApi.md#testscontrollergettesthistory) | **GET** /tests/history | Get user\&#39;s test history with scores and reports |
+| [**testsControllerGetTestStats**](TestsApi.md#testscontrollergetteststats) | **GET** /tests/stats/{pdfId} | Get test stats: attempt count, avg score, top scorer |
 | [**testsControllerSubmitTest**](TestsApi.md#testscontrollersubmittest) | **POST** /tests/submit |  |
 
 
@@ -71,6 +73,67 @@ This endpoint does not need any parameter.
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | AI assistance response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## testsControllerGetAllTestHistory
+
+> TestHistoryResponseDto testsControllerGetAllTestHistory()
+
+Get all users test history
+
+### Example
+
+```ts
+import {
+  Configuration,
+  TestsApi,
+} from '';
+import type { TestsControllerGetAllTestHistoryRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new TestsApi(config);
+
+  try {
+    const data = await api.testsControllerGetAllTestHistory();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**TestHistoryResponseDto**](TestHistoryResponseDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -397,6 +460,75 @@ This endpoint does not need any parameter.
 
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## testsControllerGetTestStats
+
+> testsControllerGetTestStats(pdfId)
+
+Get test stats: attempt count, avg score, top scorer
+
+### Example
+
+```ts
+import {
+  Configuration,
+  TestsApi,
+} from '';
+import type { TestsControllerGetTestStatsRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new TestsApi(config);
+
+  const body = {
+    // string
+    pdfId: pdfId_example,
+  } satisfies TestsControllerGetTestStatsRequest;
+
+  try {
+    const data = await api.testsControllerGetTestStats(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **pdfId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+`void` (Empty response body)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
 
 
 ### HTTP response details

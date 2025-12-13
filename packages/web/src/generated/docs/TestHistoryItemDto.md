@@ -15,6 +15,8 @@ Name | Type
 `completedAt` | Date
 `report` | string
 `summary` | string
+`userId` | string
+`userEmail` | string
 `answers` | [Array&lt;TestResultAnswerDto&gt;](TestResultAnswerDto.md)
 
 ## Example
@@ -33,6 +35,8 @@ const example = {
   "completedAt": null,
   "report": null,
   "summary": null,
+  "userId": null,
+  "userEmail": null,
   "answers": null,
 } satisfies TestHistoryItemDto
 

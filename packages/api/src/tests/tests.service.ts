@@ -74,6 +74,65 @@ export class TestsService {
         return TestHistoryResponseDto.fromEntities(attempts);
     }
 
+    async getAllTestHistory(): Promise<TestHistoryResponseDto> {
+        const attempts = await this.prisma.testAttempt.findMany({
+            include: {
+                pdf: true,
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                    },
+                },
+                answers: {
+                    include: {
+                        mcq: true,
+                    },
+                },
+            },
+            orderBy: [
+                { completedAt: { sort: "desc", nulls: "last" } },
+                { startedAt: "desc" }
+            ],
+        });
+
+        return TestHistoryResponseDto.fromEntities(attempts);
+    }
+
+    async getTestStats(pdfId: string) {
+        const attempts = await this.prisma.testAttempt.findMany({
+            where: { 
+                pdfId,
+                completedAt: { not: null }
+            },
+            include: {
+                user: { select: { email: true } }
+            },
+            orderBy: { percentage: "desc" }
+        });
+
+        if (attempts.length === 0) {
+            return {
+                attemptCount: 0,
+                avgScore: 0,
+                topScorer: null,
+                topScore: null
+            };
+        }
+
+        const avgScore = Math.round(
+            attempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / attempts.length
+        );
+        const topAttempt = attempts[0];
+
+        return {
+            attemptCount: attempts.length,
+            avgScore,
+            topScorer: topAttempt.user.email.split("@")[0],
+            topScore: Math.round(topAttempt.percentage || 0)
+        };
+    }
+
     async getAttemptDetails(userId: string, attemptId: string): Promise<TestHistoryItemDto> {
         const attempt = await this.prisma.testAttempt.findUnique({
             where: { id: attemptId },
