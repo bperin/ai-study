@@ -56,3 +56,4 @@ resources
 *.js
 packages/api/test-pdf-cards.js
 packages/api/test-pdf-generation.js
+gcp-sa-key.json
