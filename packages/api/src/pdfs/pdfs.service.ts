@@ -4,6 +4,7 @@ import { ParallelGenerationService } from "../ai/parallel-generation.service";
 import { GcsService } from "./gcs.service";
 import { PdfTextService } from "./pdf-text.service";
 import { GEMINI_MODEL } from "../constants/models";
+import { TEST_PLAN_CHAT_PROMPT } from "../ai/prompts";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs");
 const path = require("path");
@@ -315,30 +316,7 @@ export class PdfsService {
                 conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
         }
 
-        const prompt = `You are helping a student create a test plan from their PDF "${pdf.filename}".
-            
-${pdfContent ? `PDF CONTENT:\n${pdfContent.substring(0, 10000)}` : "No PDF content available."}
-
-${conversationContext}
-
-Student's message: ${message}
-
-Please help them create a comprehensive test plan. If they want to generate questions, respond with ONLY a JSON object in this exact format:
-
-{
-  "message": "Your response message to the student",
-  "testPlan": [
-    {
-      "title": "Learning objective title",
-      "difficulty": "easy|medium|hard",
-      "questionCount": 3,
-      "topics": ["topic1", "topic2", "topic3"]
-    }
-  ],
-  "shouldGenerate": false
-}
-
-Return ONLY the JSON object, no other text or markdown formatting.`;
+        const prompt = TEST_PLAN_CHAT_PROMPT(pdf.filename, pdfContent, conversationContext, message);
 
         const result = await model.generateContent(prompt);
         const response = result.response.text();
