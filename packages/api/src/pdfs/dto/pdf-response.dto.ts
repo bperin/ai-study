@@ -15,6 +15,14 @@ export class PdfResponseDto {
         example: [{ title: "Objective Title", difficulty: "easy", _count: { mcqs: 5 } }],
     })
     objectives: { title: string; difficulty: string; _count: { mcqs: number } }[];
+
+    @ApiProperty({ required: false })
+    stats?: {
+        attemptCount: number;
+        avgScore: number;
+        topScorer: string | null;
+        topScore: number | null;
+    };
 }
 
 export class PaginatedPdfResponseDto {
