@@ -192,58 +192,72 @@ export class TestsService {
     }
 
     async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
-        // Get the question and PDF info
-        const question = await this.prisma.mcq.findUnique({
-            where: { id: questionId },
-            include: { objective: true }
-        });
+        try {
+            console.log('[AI Tutor] Starting chat assistance:', { message, questionId, pdfId, userId });
+            
+            // Get the question and PDF info
+            const question = await this.prisma.mcq.findUnique({
+                where: { id: questionId },
+                include: { objective: true }
+            });
 
-        if (!question) {
-            throw new NotFoundException("Question not found");
-        }
-
-        const pdf = await this.prisma.pdf.findUnique({
-            where: { id: pdfId }
-        });
-
-        if (!pdf) {
-            throw new NotFoundException("PDF not found");
-        }
-
-        // Extract PDF content for context
-        let pdfContent = "";
-        if (pdf.gcsPath) {
-            try {
-                const { GcsService } = require("../pdfs/gcs.service");
-                const { PdfTextService } = require("../pdfs/pdf-text.service");
-                const gcsService = new GcsService();
-                const pdfTextService = new PdfTextService();
-                
-                const buffer = await gcsService.downloadFile(pdf.gcsPath);
-                const extracted = await pdfTextService.extractText(buffer);
-                pdfContent = extracted.structuredText.substring(0, 10000); // Limit for context
-            } catch (error) {
-                console.error("Failed to extract PDF content for chat assistance:", error);
+            if (!question) {
+                console.log('[AI Tutor] Question not found:', questionId);
+                throw new NotFoundException("Question not found");
             }
+
+            console.log('[AI Tutor] Found question:', { id: question.id, question: question.question });
+
+            const pdf = await this.prisma.pdf.findUnique({
+                where: { id: pdfId }
+            });
+
+            if (!pdf) {
+                console.log('[AI Tutor] PDF not found:', pdfId);
+                throw new NotFoundException("PDF not found");
+            }
+
+            console.log('[AI Tutor] Found PDF:', { id: pdf.id, filename: pdf.filename });
+
+            // Extract PDF content for context
+            let pdfContent = "";
+            if (pdf.gcsPath) {
+                try {
+                    const { GcsService } = require("../pdfs/gcs.service");
+                    const { PdfTextService } = require("../pdfs/pdf-text.service");
+                    const gcsService = new GcsService();
+                    const pdfTextService = new PdfTextService();
+                    
+                    const buffer = await gcsService.downloadFile(pdf.gcsPath);
+                    const extracted = await pdfTextService.extractText(buffer);
+                    pdfContent = extracted.structuredText.substring(0, 10000); // Limit for context
+                    console.log('[AI Tutor] Extracted PDF content length:', pdfContent.length);
+                } catch (error) {
+                    console.error("[AI Tutor] Failed to extract PDF content for chat assistance:", error);
+                }
+            } else if (pdf.content) {
+                pdfContent = pdf.content.substring(0, 10000);
+                console.log('[AI Tutor] Using PDF content from database, length:', pdfContent.length);
+            }
+
+            // Use ADK agent as requested
+            const { createTestAssistanceAgent } = require("../ai/agents");
+            const { InMemoryRunner } = require("@google/adk");
+            
+            const agent = createTestAssistanceAgent(question.question, question.options, pdfContent);
+            const runner = new InMemoryRunner();
+            
+            const result = await runner.run(agent, message);
+            const response = result.text;
+            
+            return {
+                message: response,
+                questionContext: question.question,
+                helpful: true
+            } as ChatAssistanceResponseDto;
+        } catch (error) {
+            console.error('[AI Tutor] Error in getChatAssistance:', error);
+            throw error;
         }
-
-        // Create test assistance agent
-        const { createTestAssistanceAgent } = require("../ai/agents");
-        const { InMemoryRunner } = require("@google/adk");
-        
-        const agent = createTestAssistanceAgent(
-            question.question,
-            question.options,
-            pdfContent
-        );
-        const runner = new InMemoryRunner();
-
-        const result = await runner.run(agent, message);
-        
-        return {
-            message: result.text,
-            questionContext: question.question,
-            helpful: true
-        } as ChatAssistanceResponseDto;
     }
 }
