@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getPdfsApi } from "@/api-client";
 import { McqDto, ObjectiveResponseDto, TestAnalysisResponseDto } from "@/generated";
 import { getTestTakingApi, getTestsApi, refreshApiConfig, testsControllerGetChatAssistance } from "@/api-client";
-import { Send, X } from "lucide-react";
+import { Send, X, Minus } from "lucide-react";
 
 interface ChatMessage {
     role: "user" | "assistant";
@@ -233,6 +233,29 @@ export default function StudyPage() {
         }
     };
 
+    const handleRemoveQuestion = () => {
+        const updatedQuestions = allQuestions.filter((_, index) => index !== currentQuestionIndex);
+        setAllQuestions(updatedQuestions);
+        
+        if (updatedQuestions.length === 0) {
+            // No questions left, go back to dashboard
+            router.push("/dashboard");
+            return;
+        }
+        
+        // Adjust current index if we removed the last question
+        if (currentQuestionIndex >= updatedQuestions.length) {
+            setCurrentQuestionIndex(updatedQuestions.length - 1);
+        }
+        
+        // Reset question state
+        setSelectedOption(null);
+        setShowExplanation(false);
+        setShowHint(false);
+        setHasAnsweredCorrectly(false);
+        setAttemptCount(0);
+    };
+
     const handleNextQuestion = () => {
         if (currentQuestionIndex < allQuestions.length - 1) {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -423,9 +446,18 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                         <Progress value={progress} className="h-2" />
                     </div>
 
-                    <Card className="h-auto">
+                    <Card className="h-auto relative">
                         <CardHeader>
-                            <CardTitle className="text-xl leading-relaxed">{currentQuestion.question}</CardTitle>
+                            <CardTitle className="text-xl leading-relaxed pr-12">{currentQuestion.question}</CardTitle>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="absolute top-4 right-4 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={handleRemoveQuestion}
+                                title="Remove this question"
+                            >
+                                <Minus className="h-4 w-4" />
+                            </Button>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-3">
