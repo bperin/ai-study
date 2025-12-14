@@ -9,6 +9,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     super(
       (() => {
         const url = process.env.DATABASE_URL;
+        console.log(`PrismaService: DATABASE_URL=${url ? 'Set' : 'Not Set'}`);
+        if (!url) {
+          console.error('PrismaService: DATABASE_URL is not set. This will likely cause a crash.');
+        }
         const isAccelerate = url && (url.startsWith('prisma://') || url.startsWith('prisma+postgres://'));
 
         const logLevels: any[] = process.env.NODE_ENV === 'production' ? ['info', 'warn', 'error'] : ['query', 'info', 'warn', 'error'];
