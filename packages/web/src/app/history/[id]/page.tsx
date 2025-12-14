@@ -55,7 +55,7 @@ export default function HistoryDetailsPage() {
             </div>
 
             {/* Analysis Section - Top Priority */}
-            {attempt.report && (
+            {(attempt.report || attempt.summary) && (
                 <Card className="mb-8 border-2 shadow-md">
                     <CardHeader className="bg-primary/5 pb-4">
                         <div className="flex justify-between items-start">
@@ -79,7 +79,7 @@ export default function HistoryDetailsPage() {
                         <div
                             className="prose prose-slate dark:prose-invert max-w-none prose-headings:text-primary prose-a:text-blue-600 hover:prose-a:text-blue-800 prose-a:underline"
                             dangerouslySetInnerHTML={{
-                                __html: attempt.report
+                                __html: (attempt.report || attempt.summary || "")
                                     // Basic markdown parsing (in a real app, use a library like react-markdown)
                                     .replace(/\n/g, "<br>")
                                     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -95,7 +95,7 @@ export default function HistoryDetailsPage() {
                 </Card>
             )}
 
-            {!attempt.report && (
+            {!attempt.report && !attempt.summary && (
                 <div className="mb-8 p-6 bg-card rounded-lg border shadow-sm">
                     <div className="flex items-start justify-between">
                         <div>
