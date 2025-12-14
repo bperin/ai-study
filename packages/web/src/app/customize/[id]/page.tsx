@@ -90,7 +90,8 @@ export default function CustomizePage() {
                 }
             });
 
-            setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+            const assistantMessage = data.message || (data.testPlan ? "I've created a test plan for you based on your request." : "I'm not sure how to respond to that.");
+            setMessages((prev) => [...prev, { role: "assistant", content: assistantMessage }]);
 
             // Automatically show test plan in UI when AI creates one
             if (data.testPlan) {
@@ -122,7 +123,7 @@ export default function CustomizePage() {
                 setTestPlan(data.testPlan);
                 setMessages([...messages,
                     { role: "user", content: "Auto-generate a test plan" },
-                    { role: "assistant", content: data.message }
+                    { role: "assistant", content: data.message || "I've generated a test plan based on the PDF content." }
                 ]);
             }
         } catch (error) {

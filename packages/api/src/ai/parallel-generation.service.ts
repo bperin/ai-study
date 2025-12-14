@@ -141,7 +141,7 @@ export class ParallelGenerationService {
             name: `question_generator_${difficulty}`,
             description: `Generates ${difficulty} difficulty questions`,
             model: GEMINI_QUESTION_GENERATOR_MODEL,
-            instruction: QUESTION_GENERATOR_INSTRUCTION(pdfContent, userPrompt, difficulty, count),
+            instruction: QUESTION_GENERATOR_INSTRUCTION,
             tools: [createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
         });
 

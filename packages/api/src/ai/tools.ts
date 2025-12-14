@@ -67,17 +67,26 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
         name: "get_pdf_info",
         description: "Gets information about the PDF file to generate flashcards from. This returns the cleaned and structured text content of the PDF.",
         execute: async () => {
+            console.log(`[AI Tool] get_pdf_info called for: ${pdfFilename}`);
+            console.log(`[AI Tool] GCS path: ${gcsPath}`);
+            console.log(`[AI Tool] Has pdfTextService: ${!!pdfTextService}`);
+            
             try {
+                console.log(`[AI Tool] Downloading file from GCS...`);
                 // Download file from GCS
                 const buffer = await gcsService.downloadFile(gcsPath);
+                console.log(`[AI Tool] Downloaded buffer size: ${buffer.length} bytes`);
 
                 // If we have the new PDF text service, use it for better extraction
                 if (pdfTextService) {
+                    console.log(`[AI Tool] Using new PDF text service for extraction...`);
                     const extracted = await pdfTextService.extractText(buffer);
+                    console.log(`[AI Tool] Extracted text length: ${extracted.structuredText.length} chars, pages: ${extracted.pageCount}`);
 
                     // Limit content length if too large
                     // Use structured text which is cleaner than raw text
                     const content = extracted.structuredText.substring(0, 2000000);
+                    console.log(`[AI Tool] Returning content with ${content.length} characters`);
 
                     return {
                         filename: pdfFilename,
@@ -88,9 +97,11 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
                         note: "This is cleaned and structured text from the PDF, optimized for AI processing.",
                     };
                 } else {
+                    console.log(`[AI Tool] Using fallback PDF parsing method...`);
                     // Fallback to old method
                     const data = await pdfParse(buffer);
                     const content = data.text.substring(0, 2000000);
+                    console.log(`[AI Tool] Fallback extracted text length: ${content.length} chars, pages: ${data.numpages}`);
 
                     return {
                         filename: pdfFilename,
@@ -101,7 +112,7 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
                     };
                 }
             } catch (error) {
-                console.error("Error processing PDF:", error);
+                console.error(`[AI Tool] Error processing PDF ${pdfFilename}:`, error);
                 return {
                     filename: pdfFilename,
                     error: "Failed to extract PDF content. Please use the filename to infer the topic.",

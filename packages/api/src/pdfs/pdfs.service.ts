@@ -323,22 +323,56 @@ export class PdfsService {
             const fullMessage = message + conversationContext;
             const result = await runner.run(agent, fullMessage);
             const response = result.text;
+            
+            console.log('[Chat Service] Raw LLM response from ADK agent:', {
+                responseLength: response.length,
+                responsePreview: response.substring(0, 500),
+                fullResponse: response
+            });
 
             // Try to parse JSON from response
             try {
                 const jsonMatch = response.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                    return JSON.parse(jsonMatch[0]);
+                    console.log('[Chat Service] Found JSON in response, parsing:', jsonMatch[0]);
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    console.log('[Chat Service] Parsed JSON result:', parsed);
+                    
+                    // Ensure uniform response structure
+                    let normalizedTestPlan = null;
+                    if (parsed.testPlan) {
+                        if (Array.isArray(parsed.testPlan)) {
+                            normalizedTestPlan = {
+                                objectives: parsed.testPlan,
+                                totalQuestions: parsed.testPlan.reduce((sum: number, obj: any) => sum + (obj.questionCount || 0), 0),
+                                estimatedTime: "15-20 mins",
+                                summary: "Here is a test plan covering the key topics."
+                            };
+                        } else {
+                            normalizedTestPlan = parsed.testPlan;
+                        }
+                    } else if (parsed.objectives) {
+                        normalizedTestPlan = parsed;
+                    }
+
+                    return {
+                        message: parsed.message || response.replace(jsonMatch[0], "").trim() || "Here is the test plan based on your request.",
+                        testPlan: normalizedTestPlan,
+                        shouldGenerate: parsed.shouldGenerate || false
+                    };
                 }
             } catch (e) {
+                console.log('[Chat Service] Failed to parse JSON from response:', e);
                 // If not JSON, return as plain message
             }
 
-            return {
+            const finalResult = {
                 message: response,
                 testPlan: null,
                 shouldGenerate: false,
             };
+            console.log('[Chat Service] Returning plain message result:', finalResult);
+            return finalResult;
         } catch (adkError) {
             console.error("ADK agent failed, falling back to simple Gemini chat:", adkError);
             
@@ -365,22 +399,56 @@ Please help them create a comprehensive test plan. If they want to generate ques
 
             const result = await model.generateContent(prompt);
             const response = result.response.text();
+            
+            console.log('[Chat Service] Raw LLM response from fallback Gemini:', {
+                responseLength: response.length,
+                responsePreview: response.substring(0, 500),
+                fullResponse: response
+            });
 
             // Try to parse JSON from response
             try {
                 const jsonMatch = response.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                    return JSON.parse(jsonMatch[0]);
+                    console.log('[Chat Service] Found JSON in fallback response, parsing:', jsonMatch[0]);
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    console.log('[Chat Service] Parsed JSON result from fallback:', parsed);
+                    
+                    // Ensure uniform response structure
+                    let normalizedTestPlan = null;
+                    if (parsed.testPlan) {
+                        if (Array.isArray(parsed.testPlan)) {
+                            normalizedTestPlan = {
+                                objectives: parsed.testPlan,
+                                totalQuestions: parsed.testPlan.reduce((sum: number, obj: any) => sum + (obj.questionCount || 0), 0),
+                                estimatedTime: "15-20 mins",
+                                summary: "Here is a test plan covering the key topics."
+                            };
+                        } else {
+                            normalizedTestPlan = parsed.testPlan;
+                        }
+                    } else if (parsed.objectives) {
+                        normalizedTestPlan = parsed;
+                    }
+
+                    return {
+                        message: parsed.message || response.replace(jsonMatch[0], "").trim() || "Here is the test plan based on your request.",
+                        testPlan: normalizedTestPlan,
+                        shouldGenerate: parsed.shouldGenerate || false
+                    };
                 }
             } catch (e) {
+                console.log('[Chat Service] Failed to parse JSON from fallback response:', e);
                 // If not JSON, return as plain message
             }
 
-            return {
+            const fallbackResult = {
                 message: response,
                 testPlan: null,
                 shouldGenerate: false,
             };
+            console.log('[Chat Service] Returning fallback plain message result:', fallbackResult);
+            return fallbackResult;
         }
     }
 
