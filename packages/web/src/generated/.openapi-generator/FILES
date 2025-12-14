@@ -10,6 +10,7 @@ apis/index.ts
 docs/AnswerDto.md
 docs/AuthApi.md
 docs/AuthResponseDto.md
+docs/ChatMessageDto.md
 docs/ConfirmUploadResponseDto.md
 docs/CreateUserDto.md
 docs/DefaultApi.md
@@ -42,6 +43,7 @@ docs/UsersApi.md
 index.ts
 models/AnswerDto.ts
 models/AuthResponseDto.ts
+models/ChatMessageDto.ts
 models/ConfirmUploadResponseDto.ts
 models/CreateUserDto.ts
 models/LoginDto.ts

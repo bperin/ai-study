@@ -56,25 +56,36 @@ export default function DashboardPage() {
             const usersApi = getUsersApi();
             const testsApi = getTestsApi();
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            const pdfsApi = getPdfsApi();
 
             Promise.all([
-                pdfsApi.pdfsControllerListAllPdfs({ page, limit: 8 })
-                    // @ts-ignore
+                fetch(`${baseUrl}/pdfs/all?page=${page}&limit=8`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+                    .then((res) => res.json())
                     .then(async (data) => {
-                        const pdfList = data.data || [];
+                        // Handle potential error responses or missing data safely
+                        const pdfList = Array.isArray(data?.data) ? data.data : [];
                         setPdfs(pdfList);
-                        setTotalPages(data.totalPages || 1);
-                        // Fetch stats for each PDF
+                        setTotalPages(data?.totalPages || 1);
+                        
+                        // Fetch stats for each PDF only if we have PDFs
                         const stats: Record<string, any> = {};
-                        await Promise.all(
-                            pdfList.map(async (pdf: any) => {
-                                const res = await fetch(`${baseUrl}/tests/stats/${pdf.id}`, {
-                                    headers: { Authorization: `Bearer ${token}` },
-                                });
-                                stats[pdf.id] = await res.json();
-                            })
-                        );
+                        if (pdfList.length > 0) {
+                            await Promise.all(
+                                pdfList.map(async (pdf: any) => {
+                                    try {
+                                        const res = await fetch(`${baseUrl}/tests/stats/${pdf.id}`, {
+                                            headers: { Authorization: `Bearer ${token}` },
+                                        });
+                                        if (res.ok) {
+                                            stats[pdf.id] = await res.json();
+                                        }
+                                    } catch (e) {
+                                        console.error(`Failed to fetch stats for PDF ${pdf.id}`, e);
+                                    }
+                                })
+                            );
+                        }
                         setTestStats(stats);
                     }),
                 usersApi.usersControllerGetMe().then((u) => setUser(u)),
