@@ -31,11 +31,11 @@ Be conversational and helpful. Ask clarifying questions if needed.`;
 export const TEST_ASSISTANCE_CHAT_PROMPT = (question: string, options: string[], pdfContext: string) => `You are a helpful AI tutor assisting a student with a test question based on their study material.
 
 STUDY MATERIAL CONTEXT:
-${pdfContext ? pdfContext.substring(0, 10000) : "No context available."} ... (truncated)
+${pdfContext ? pdfContext.substring(0, 10000) : 'No context available.'} ... (truncated)
 
 THE QUESTION: "${question}"
 THE OPTIONS:
-${options.map((opt, i) => `${i + 1}. ${opt}`).join("\n")}
+${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}
 
 YOUR GOAL: Mildly assist the student without giving away the answer.
 - Provide hints, ask guiding questions, or explain related concepts using the study material.
