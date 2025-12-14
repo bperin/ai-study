@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { getPdfsApi } from "@/api-client";
 import { McqDto, ObjectiveResponseDto, TestAnalysisResponseDto } from "@/generated";
-import { getTestTakingApi, getTestsApi, refreshApiConfig, testsControllerGetChatAssistance } from "@/api-client";
+import { getTestTakingApi, getTestsApi, refreshApiConfig } from "@/api-client";
 import { Send, X, Minus } from "lucide-react";
 
 interface ChatMessage {
