@@ -304,90 +304,18 @@ export class PdfsService {
             }
         }
 
-        try {
-            // Create ADK-based test plan agent
-            const { createTestPlanChatAgent } = require("../ai/agents");
-            const { InMemoryRunner } = require("@google/adk");
-            
-            const agent = createTestPlanChatAgent(pdfContent);
-            const runner = new InMemoryRunner();
+        // Use direct Gemini chat (ADK agent was causing issues)
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-            // Build conversation context for ADK
-            const conversationHistory = history || [];
-            let conversationContext = "";
-            if (conversationHistory.length > 0) {
-                conversationContext = "\n\nPrevious conversation:\n" + 
-                    conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
-            }
+        const conversationHistory = history || [];
+        let conversationContext = "";
+        if (conversationHistory.length > 0) {
+            conversationContext = "\n\nPrevious conversation:\n" + 
+                conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
+        }
 
-            const fullMessage = message + conversationContext;
-            const result = await runner.run(agent, fullMessage);
-            const response = result.text;
-            
-            console.log('[Chat Service] Raw LLM response from ADK agent:', {
-                responseLength: response.length,
-                responsePreview: response.substring(0, 500),
-                fullResponse: response
-            });
-
-            // Try to parse JSON from response
-            try {
-                const jsonMatch = response.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    console.log('[Chat Service] Found JSON in response, parsing:', jsonMatch[0]);
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    console.log('[Chat Service] Parsed JSON result:', parsed);
-                    
-                    // Ensure uniform response structure
-                    let normalizedTestPlan = null;
-                    if (parsed.testPlan) {
-                        if (Array.isArray(parsed.testPlan)) {
-                            normalizedTestPlan = {
-                                objectives: parsed.testPlan,
-                                totalQuestions: parsed.testPlan.reduce((sum: number, obj: any) => sum + (obj.questionCount || 0), 0),
-                                estimatedTime: "15-20 mins",
-                                summary: "Here is a test plan covering the key topics."
-                            };
-                        } else {
-                            normalizedTestPlan = parsed.testPlan;
-                        }
-                    } else if (parsed.objectives) {
-                        normalizedTestPlan = parsed;
-                    }
-
-                    return {
-                        message: parsed.message || response.replace(jsonMatch[0], "").trim() || "Here is the test plan based on your request.",
-                        testPlan: normalizedTestPlan,
-                        shouldGenerate: parsed.shouldGenerate || false
-                    };
-                }
-            } catch (e) {
-                console.log('[Chat Service] Failed to parse JSON from response:', e);
-                // If not JSON, return as plain message
-            }
-
-            const finalResult = {
-                message: response,
-                testPlan: null,
-                shouldGenerate: false,
-            };
-            console.log('[Chat Service] Returning plain message result:', finalResult);
-            return finalResult;
-        } catch (adkError) {
-            console.error("ADK agent failed, falling back to simple Gemini chat:", adkError);
-            
-            // Fallback to simple Gemini chat
-            const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-            const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-
-            const conversationHistory = history || [];
-            let conversationContext = "";
-            if (conversationHistory.length > 0) {
-                conversationContext = "\n\nPrevious conversation:\n" + 
-                    conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
-            }
-
-            const prompt = `You are helping a student create a test plan from their PDF "${pdf.filename}".
+        const prompt = `You are helping a student create a test plan from their PDF "${pdf.filename}".
             
 ${pdfContent ? `PDF CONTENT:\n${pdfContent.substring(0, 10000)}` : "No PDF content available."}
 
@@ -395,61 +323,75 @@ ${conversationContext}
 
 Student's message: ${message}
 
-Please help them create a comprehensive test plan. If they want to generate questions, respond with a JSON object containing a testPlan with objectives, each having title, difficulty, questionCount, and topics.`;
+Please help them create a comprehensive test plan. If they want to generate questions, respond with ONLY a JSON object in this exact format:
 
-            const result = await model.generateContent(prompt);
-            const response = result.response.text();
-            
-            console.log('[Chat Service] Raw LLM response from fallback Gemini:', {
-                responseLength: response.length,
-                responsePreview: response.substring(0, 500),
-                fullResponse: response
-            });
+{
+  "message": "Your response message to the student",
+  "testPlan": [
+    {
+      "title": "Learning objective title",
+      "difficulty": "easy|medium|hard",
+      "questionCount": 3,
+      "topics": ["topic1", "topic2", "topic3"]
+    }
+  ],
+  "shouldGenerate": false
+}
 
-            // Try to parse JSON from response
-            try {
-                const jsonMatch = response.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    console.log('[Chat Service] Found JSON in fallback response, parsing:', jsonMatch[0]);
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    console.log('[Chat Service] Parsed JSON result from fallback:', parsed);
+Return ONLY the JSON object, no other text or markdown formatting.`;
+
+        const result = await model.generateContent(prompt);
+        const response = result.response.text();
+        
+        console.log('[Chat Service] Raw LLM response from Gemini:', {
+            responseLength: response.length,
+            responsePreview: response.substring(0, 500),
+            fullResponse: response
+        });
+
+        // Try to parse JSON from response
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                console.log('[Chat Service] Found JSON in response, parsing:', jsonMatch[0]);
+                const parsed = JSON.parse(jsonMatch[0]);
+                console.log('[Chat Service] Parsed JSON result:', parsed);
                     
-                    // Ensure uniform response structure
-                    let normalizedTestPlan = null;
-                    if (parsed.testPlan) {
-                        if (Array.isArray(parsed.testPlan)) {
-                            normalizedTestPlan = {
-                                objectives: parsed.testPlan,
-                                totalQuestions: parsed.testPlan.reduce((sum: number, obj: any) => sum + (obj.questionCount || 0), 0),
-                                estimatedTime: "15-20 mins",
-                                summary: "Here is a test plan covering the key topics."
-                            };
-                        } else {
-                            normalizedTestPlan = parsed.testPlan;
-                        }
-                    } else if (parsed.objectives) {
-                        normalizedTestPlan = parsed;
+                // Ensure uniform response structure
+                let normalizedTestPlan = null;
+                if (parsed.testPlan) {
+                    if (Array.isArray(parsed.testPlan)) {
+                        normalizedTestPlan = {
+                            objectives: parsed.testPlan,
+                            totalQuestions: parsed.testPlan.reduce((sum: number, obj: any) => sum + (obj.questionCount || 0), 0),
+                            estimatedTime: "15-20 mins",
+                            summary: "Here is a test plan covering the key topics."
+                        };
+                    } else {
+                        normalizedTestPlan = parsed.testPlan;
                     }
-
-                    return {
-                        message: parsed.message || response.replace(jsonMatch[0], "").trim() || "Here is the test plan based on your request.",
-                        testPlan: normalizedTestPlan,
-                        shouldGenerate: parsed.shouldGenerate || false
-                    };
+                } else if (parsed.objectives) {
+                    normalizedTestPlan = parsed;
                 }
-            } catch (e) {
-                console.log('[Chat Service] Failed to parse JSON from fallback response:', e);
-                // If not JSON, return as plain message
-            }
 
-            const fallbackResult = {
-                message: response,
-                testPlan: null,
-                shouldGenerate: false,
-            };
-            console.log('[Chat Service] Returning fallback plain message result:', fallbackResult);
-            return fallbackResult;
+                return {
+                    message: parsed.message || response.replace(jsonMatch[0], "").trim() || "Here is the test plan based on your request.",
+                    testPlan: normalizedTestPlan,
+                    shouldGenerate: parsed.shouldGenerate || false
+                };
+            }
+        } catch (e) {
+            console.log('[Chat Service] Failed to parse JSON from response:', e);
+            // If not JSON, return as plain message
         }
+
+        const finalResult = {
+            message: response,
+            testPlan: null,
+            shouldGenerate: false,
+        };
+        console.log('[Chat Service] Returning plain message result:', finalResult);
+        return finalResult;
     }
 
     async autoGenerateTestPlan(pdfId: string, userId: string) {
