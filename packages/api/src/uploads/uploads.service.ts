@@ -23,7 +23,9 @@ export class UploadsService {
                     projectId: credentials.project_id,
                     credentials: credentials,
                 });
-                this.bucketName = this.configService.get<string>("GCP_BUCKET_NAME") ?? "missing-bucket";
+                const bucketName = this.configService.get<string>("GCP_BUCKET_NAME") ?? "missing-bucket";
+                // Clean up bucket name in case of copy-paste errors (e.g. " -n bucket-name")
+                this.bucketName = bucketName.replace(/^-n\s+/, "").trim();
                 return;
             } catch (error) {
                 console.error("Failed to parse GCP_SA_KEY:", error);
@@ -48,16 +50,26 @@ export class UploadsService {
         // Sanitize filename and add user isolation
         const sanitizedName = fileName.trim().replace(/[^a-zA-Z0-9.-]/g, "-");
         const filePath = `uploads/${userId}/${randomUUID()}-${sanitizedName}`;
-        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-        // Since bucket is public, return direct GCS URL for PUT upload
-        const uploadUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
+        const options = {
+            version: "v4" as const,
+            action: "write" as const,
+            expires: expiresAt,
+            contentType: contentType,
+        };
+
+        // Get a v4 signed URL for uploading file
+        const [uploadUrl] = await this.storage
+            .bucket(this.bucketName)
+            .file(filePath)
+            .getSignedUrl(options);
 
         return {
-            uploadUrl: uploadUrl,
+            uploadUrl,
             filePath,
             expiresAt: new Date(expiresAt).toISOString(),
-            maxSizeBytes: 10485760, // 10MB in bytes (enforce client-side)
+            maxSizeBytes: 50 * 1024 * 1024, // 50MB
         };
     }
 

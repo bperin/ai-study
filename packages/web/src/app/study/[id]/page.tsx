@@ -10,6 +10,8 @@ import { getPdfsApi } from "@/api-client";
 import { McqDto, ObjectiveResponseDto, TestAnalysisResponseDto } from "@/generated";
 import { getTestTakingApi } from "@/api-client";
 import { Send, X } from "lucide-react";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { TEST_ASSISTANCE_CHAT_PROMPT } from "@/lib/prompts";
 
 interface ChatMessage {
     role: "user" | "assistant";
@@ -65,26 +67,47 @@ export default function StudyPage() {
         setIsChatLoading(true);
 
         try {
-            const token = localStorage.getItem("access_token");
+            // Fetch API key securely
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            const token = localStorage.getItem("access_token");
+            let apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
 
-            const response = await fetch(`${baseUrl}/tests/chat`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    message: userMsg,
-                    questionId: currentQuestion.id,
-                    history: chatHistory,
-                }),
+            try {
+                const keyResponse = await fetch(`${baseUrl}/auth/api-key`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (keyResponse.ok) {
+                    const keyData = await keyResponse.json();
+                    if (keyData.apiKey) apiKey = keyData.apiKey;
+                }
+            } catch (e) {
+                console.error("Failed to fetch API key, falling back to env var", e);
+            }
+
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(
+                currentQuestion.question,
+                currentQuestion.options,
+                "" // PDF context not available in client-side mode
+            );
+
+            const chat = model.startChat({
+                history: [
+                    { role: "user", parts: [{ text: systemPrompt }] },
+                    { role: "model", parts: [{ text: "I understand. I will help the student with this question without giving away the answer." }] },
+                    ...chatHistory.map((msg) => ({
+                        role: msg.role === "user" ? "user" : "model",
+                        parts: [{ text: msg.content }],
+                    })),
+                ],
             });
 
-            if (!response.ok) throw new Error("Failed to get response");
+            const result = await chat.sendMessage(userMsg);
+            const responseText = result.response.text();
 
-            const data = await response.json();
-            setChatHistory((prev) => [...prev, { role: "assistant", content: data.message }]);
+            setChatHistory((prev) => [...prev, { role: "assistant", content: responseText }]);
         } catch (error) {
             console.error("Chat error:", error);
             setChatHistory((prev) => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
