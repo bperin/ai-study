@@ -425,13 +425,13 @@ For EACH question (both correct and incorrect), provide:
 
 ### Primary Study Materials
 - [Specific textbooks, chapters, and sections]
-- [Online resources and platforms]
-- [Video tutorials and explanations]
+- [Online resources and platforms - include clickable links]
+- [Video tutorials and explanations - include clickable links]
 
 ### Supplementary Resources
-- [Practice problem sources]
-- [Alternative explanation sources]
-- [Interactive learning tools]
+- [Practice problem sources - include clickable links]
+- [Alternative explanation sources - include clickable links]
+- [Interactive learning tools - include clickable links]
 
 ### Assessment and Practice Tools
 - [Self-testing resources]
@@ -505,9 +505,9 @@ Output JSON format:
 
 CRITICAL INSTRUCTIONS:
 - ALWAYS use get_pdf_info to access the source material
-- USE fetch_url_content to find at least 2-3 helpful online resources for weak areas
+- If you know valid URLs for resources (e.g. Khan Academy, Wikipedia, YouTube), include them as markdown links.
 - Be specific - reference actual content from the PDF
-- Provide URLs to helpful resources when available
+- Provide URLs to helpful resources
 - Make strategies actionable with clear next steps
 - Balance constructive criticism with encouragement
 `;
