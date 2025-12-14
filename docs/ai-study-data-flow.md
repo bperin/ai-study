@@ -1,59 +1,63 @@
-```mermaid
 flowchart TD
     %% Input Sources
     PDF[PDF Document] --> GCS[Google Cloud Storage]
-    UserReq[User Request<br/>• Difficulty level<br/>• Question count<br/>• Focus areas] --> API[NestJS API]
+    UserReq[User Request<br/>• Difficulty focus<br/>• Question count<br/>• Topic guidance] --> API[NestJS API]
     
-    %% PDF Processing Pipeline
+    %% PDF Processing
     GCS --> PDFTool[get_pdf_info Tool]
-    PDFTool --> TextExtract[Text Extraction<br/>• Clean structured text<br/>• Metadata parsing<br/>• Page count analysis]
+    PDFTool --> TextExtract[Text Extraction<br/>• Structured text service<br/>• PDF Parse fallback<br/>• Character limiting]
     
-    %% AI Processing Chain
-    TextExtract --> ContentAnalysis[Content Analysis<br/>• Learning objectives<br/>• Concept mapping<br/>• Difficulty assessment]
+    %% Parallel Generation Engine
+    API --> ParallelSvc[ParallelGenerationService]
+    TextExtract --> ParallelSvc
     
-    ContentAnalysis --> QuestionGen[Question Generation<br/>• MCQ creation<br/>• Answer validation<br/>• Explanation writing]
+    %% Task Distribution
+    ParallelSvc --> TaskParsing[Task Parser<br/>• Determine difficulty split<br/>• Chunk large requests]
     
-    QuestionGen --> SaveTool[save_objective Tool]
-    SaveTool --> Database[(PostgreSQL<br/>• Objectives table<br/>• MCQs table<br/>• Test attempts)]
+    TaskParsing -->|Easy Batch| AgentEasy[Question Generator (Easy)]
+    TaskParsing -->|Medium Batch| AgentMedium[Question Generator (Medium)]
+    TaskParsing -->|Hard Batch| AgentHard[Question Generator (Hard)]
     
-    %% Quality & Enhancement
-    QuestionGen --> QualityCheck[Quality Analysis<br/>• Content validation<br/>• Educational value<br/>• Technical review]
+    %% Agent Execution & Data Creation
+    AgentEasy & AgentMedium & AgentHard --> SaveTool[save_objective Tool]
     
-    QuestionGen --> ImageGen[Image Generation<br/>• Visual flashcards<br/>• Educational diagrams<br/>• Imagen 3 model]
+    SaveTool --> Database[(PostgreSQL<br/>• Objectives table<br/>• MCQs table)]
     
     %% Web Enhancement
-    QuestionGen --> WebSearch[Web Search Tool<br/>• Additional context<br/>• Reference materials<br/>• Practice resources]
-    WebSearch --> ExternalData[External Resources<br/>• Educational content<br/>• Practice materials<br/>• Reference links]
+    AgentEasy & AgentMedium & AgentHard --> WebSearch[Web Search Tool]
+    WebSearch --> ExternalData[External Resources]
     
-    %% Study Session Data Flow
-    Database --> StudySession[Study Session<br/>• Question presentation<br/>• Answer collection<br/>• Progress tracking]
+    %% Quality Loop
+    Database --> QualityCheck[Quality Analyzer]
+    QualityCheck --> QualityReport[Quality Summary]
+    QualityReport --> ParallelSvc
     
-    StudySession --> TestAttempt[Test Attempt Record<br/>• User answers<br/>• Response times<br/>• Score calculation]
-    
+    %% Study Session & Analytics
+    Database --> StudySession[Study Session]
+    StudySession --> TestAttempt[Test Attempt Record]
     TestAttempt --> Database
     
-    %% Analytics Pipeline
-    TestAttempt --> Analytics[Performance Analysis<br/>• Pattern recognition<br/>• Gap identification<br/>• Resource matching]
+    TestAttempt --> TestAnalyzer[Test Analyzer Agent]
+    TestAnalyzer --> WebSearch
+    TestAnalyzer --> PDFTool
+    TestAnalyzer --> StudyPlan[Personalized Study Plan]
     
-    Analytics --> WebSearch
-    Analytics --> PDFTool
-    Analytics --> StudyPlan[Personalized Study Plan<br/>• Targeted recommendations<br/>• Resource links<br/>• Practice strategies]
+    %% Interactive Chat
+    StudySession --> TestChat[Test Assistant Chat]
+    StudyPlan --> PlanChat[Study Plan Chat]
     
-    %% Output Delivery
-    StudyPlan --> Frontend[Next.js Frontend<br/>• Interactive UI<br/>• Progress visualization<br/>• Study tracking]
-    
+    %% Output
+    StudyPlan --> Frontend[Next.js Frontend]
+    QualityReport --> Frontend
     Database --> Frontend
-    ImageGen --> Frontend
-    ExternalData --> Frontend
     
     %% Data Types Legend
     subgraph "📊 Data Types"
         direction TB
         RawData[Raw PDF Text]
-        StructData[Structured Learning Data]
-        QuestData[Question/Answer Pairs]
-        UserData[User Performance Data]
-        AnalyticsData[Learning Analytics]
+        StructData[Structured Objectives]
+        QuestData[MCQ Questions]
+        ReportData[Analysis Reports]
     end
     
     %% Clean Black & White Styling
@@ -64,8 +68,7 @@ flowchart TD
     classDef enhancement fill:#f8f8f8,stroke:#666666,stroke-width:1px,color:#000000
     
     class PDF,UserReq,GCS input
-    class PDFTool,TextExtract,ContentAnalysis,QuestionGen,QualityCheck,Analytics processing
+    class PDFTool,TextExtract,ParallelSvc,TaskParsing,AgentEasy,AgentMedium,AgentHard,QualityCheck,TestAnalyzer,TestChat,PlanChat processing
     class Database,TestAttempt storage
-    class Frontend,StudySession,StudyPlan output
-    class ImageGen,WebSearch,ExternalData enhancement
-```
+    class Frontend,StudySession,StudyPlan,QualityReport output
+    class WebSearch,ExternalData enhancement
