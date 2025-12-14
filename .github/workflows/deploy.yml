@@ -40,9 +40,11 @@ jobs:
 
             - name: Build and Push API Image
               run: |
-                  docker build -f packages/api/Dockerfile \
-                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest .
-                  docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest
+                  docker buildx build \
+                    --platform linux/amd64 \
+                    -f packages/api/Dockerfile \
+                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest . \
+                    --push
             
             - name: Make GCS Bucket Public (Workaround for GCP_SA_KEY issue)
               run: |
@@ -64,10 +66,12 @@ jobs:
                   echo "API_URL=$(cat api_url.txt)" >> $GITHUB_ENV
             - name: Build and Push Web Image
               run: |
-                  docker build -f packages/web/Dockerfile \
+                  docker buildx build \
+                    --platform linux/amd64 \
+                    -f packages/web/Dockerfile \
                     --build-arg NEXT_PUBLIC_API_URL="${{ env.API_URL }}" \
-                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest .
-                  docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest
+                    -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest . \
+                    --push
             - name: Set Permissive GCS CORS Policy
               run: |
                   echo '[
