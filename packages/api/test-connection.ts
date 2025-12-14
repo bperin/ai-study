@@ -3,9 +3,7 @@ import { PrismaClient } from '@prisma/client';
 
 async function main() {
   console.log('Initializing PrismaClient...');
-  const prisma = new PrismaClient({
-    datasourceUrl: process.env.DATABASE_URL,
-  });
+  const prisma = new PrismaClient();
   const start = Date.now();
   try {
     console.log('Connecting...');

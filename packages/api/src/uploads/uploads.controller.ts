@@ -24,4 +24,15 @@ export class UploadsController {
     confirmUpload(@Body() body: ConfirmUploadDto, @Request() req: any): Promise<ConfirmUploadResponseDto> {
         return this.uploadsService.confirmUpload(body.filePath, body.fileName, req.user.userId);
     }
+
+    @Post("test-sign")
+    @ApiResponse({ status: 201, description: "Test signing without auth" })
+    async testSign(@Body() body: CreateUploadUrlDto) {
+        try {
+            const result = await this.uploadsService.generateUploadUrl(body.fileName, body.contentType, "test-user-id");
+            return { success: true, result };
+        } catch (error: any) {
+            return { success: false, error: error?.message || 'Unknown error', stack: error?.stack };
+        }
+    }
 }
