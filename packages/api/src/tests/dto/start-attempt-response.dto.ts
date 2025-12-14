@@ -1,12 +1,12 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class StartAttemptResponseDto {
-    @ApiProperty()
-    attemptId: string;
+  @ApiProperty()
+  attemptId: string;
 
-    @ApiProperty()
-    pdfId: string;
+  @ApiProperty()
+  pdfId: string;
 
-    @ApiProperty()
-    startedAt: Date;
+  @ApiProperty()
+  startedAt: Date;
 }

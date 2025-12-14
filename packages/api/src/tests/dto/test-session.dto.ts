@@ -1,62 +1,62 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class TestSessionAnswerDto {
-    @ApiProperty()
-    questionId: string;
+  @ApiProperty()
+  questionId: string;
 
-    @ApiProperty()
-    questionNumber: number;
+  @ApiProperty()
+  questionNumber: number;
 
-    @ApiProperty()
-    questionText: string;
+  @ApiProperty()
+  questionText: string;
 
-    @ApiProperty()
-    selectedAnswer: number;
+  @ApiProperty()
+  selectedAnswer: number;
 
-    @ApiProperty()
-    correctAnswer: number;
+  @ApiProperty()
+  correctAnswer: number;
 
-    @ApiProperty()
-    isCorrect: boolean;
+  @ApiProperty()
+  isCorrect: boolean;
 
-    @ApiProperty()
-    timeSpent: number;
+  @ApiProperty()
+  timeSpent: number;
 
-    @ApiProperty()
-    hintsUsed: number;
+  @ApiProperty()
+  hintsUsed: number;
 }
 
 export class TestSessionStateDto {
-    @ApiProperty()
-    attemptId: string;
+  @ApiProperty()
+  attemptId: string;
 
-    @ApiProperty()
-    userId: string;
+  @ApiProperty()
+  userId: string;
 
-    @ApiProperty()
-    currentQuestionIndex: number;
+  @ApiProperty()
+  currentQuestionIndex: number;
 
-    @ApiProperty()
-    totalQuestions: number;
+  @ApiProperty()
+  totalQuestions: number;
 
-    @ApiProperty({ type: [TestSessionAnswerDto] })
-    answers: TestSessionAnswerDto[];
+  @ApiProperty({ type: [TestSessionAnswerDto] })
+  answers: TestSessionAnswerDto[];
 
-    @ApiProperty()
-    correctCount: number;
+  @ApiProperty()
+  correctCount: number;
 
-    @ApiProperty()
-    incorrectCount: number;
+  @ApiProperty()
+  incorrectCount: number;
 
-    @ApiProperty()
-    currentStreak: number;
+  @ApiProperty()
+  currentStreak: number;
 
-    @ApiProperty()
-    longestStreak: number;
+  @ApiProperty()
+  longestStreak: number;
 
-    @ApiProperty()
-    startTime: Date;
+  @ApiProperty()
+  startTime: Date;
 
-    @ApiProperty()
-    totalTimeSpent: number;
+  @ApiProperty()
+  totalTimeSpent: number;
 }

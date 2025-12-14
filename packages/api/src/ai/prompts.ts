@@ -6,62 +6,62 @@
  * JSON Schema for test analysis response (used for validation only)
  */
 export const TEST_ANALYSIS_RESPONSE_SCHEMA = {
-    type: "object",
-    properties: {
-        score: {
-            type: "object",
-            properties: {
-                correct: { type: "number" },
-                total: { type: "number" },
-                percentage: { type: "number" },
-            },
-            required: ["correct", "total", "percentage"],
-        },
-        feedback: {
-            type: "object",
-            properties: {
-                strengths: {
-                    type: "array",
-                    items: { type: "string" },
-                },
-                weaknesses: {
-                    type: "array",
-                    items: { type: "string" },
-                },
-                byObjective: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            objectiveTitle: { type: "string" },
-                            correct: { type: "number" },
-                            total: { type: "number" },
-                            percentage: { type: "number" },
-                        },
-                    },
-                },
-                wrongAnswers: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            question: { type: "string" },
-                            yourAnswer: { type: "string" },
-                            correctAnswer: { type: "string" },
-                            explanation: { type: "string" },
-                            concept: { type: "string" },
-                        },
-                        required: ["question", "yourAnswer", "correctAnswer", "explanation", "concept"],
-                    },
-                },
-                longestStreak: { type: "number" },
-                averageTimePerQuestion: { type: "number" },
-                encouragement: { type: "string" },
-            },
-            required: ["strengths", "weaknesses", "byObjective", "wrongAnswers", "longestStreak", "averageTimePerQuestion", "encouragement"],
-        },
+  type: 'object',
+  properties: {
+    score: {
+      type: 'object',
+      properties: {
+        correct: { type: 'number' },
+        total: { type: 'number' },
+        percentage: { type: 'number' },
+      },
+      required: ['correct', 'total', 'percentage'],
     },
-    required: ["score", "feedback"],
+    feedback: {
+      type: 'object',
+      properties: {
+        strengths: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        weaknesses: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        byObjective: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              objectiveTitle: { type: 'string' },
+              correct: { type: 'number' },
+              total: { type: 'number' },
+              percentage: { type: 'number' },
+            },
+          },
+        },
+        wrongAnswers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              question: { type: 'string' },
+              yourAnswer: { type: 'string' },
+              correctAnswer: { type: 'string' },
+              explanation: { type: 'string' },
+              concept: { type: 'string' },
+            },
+            required: ['question', 'yourAnswer', 'correctAnswer', 'explanation', 'concept'],
+          },
+        },
+        longestStreak: { type: 'number' },
+        averageTimePerQuestion: { type: 'number' },
+        encouragement: { type: 'string' },
+      },
+      required: ['strengths', 'weaknesses', 'byObjective', 'wrongAnswers', 'longestStreak', 'averageTimePerQuestion', 'encouragement'],
+    },
+  },
+  required: ['score', 'feedback'],
 };
 
 /**
@@ -500,10 +500,14 @@ CRITICAL INSTRUCTIONS:
 - Balance constructive criticism with encouragement
 `;
 
-export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string, pdfContent: string = "", conversationContext: string = "", message: string = "") => `You are helping a student create a test plan from their PDF "${pdfFilename}".
+export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string, pdfContent: string = '', conversationContext: string = '', message: string = '') => `You are helping a student create a test plan from their PDF "${pdfFilename}".
 
-${pdfContent ? `PDF CONTENT:
-${pdfContent.substring(0, 10000)}` : "No PDF content available."}
+${
+  pdfContent
+    ? `PDF CONTENT:
+${pdfContent.substring(0, 10000)}`
+    : 'No PDF content available.'
+}
 
 ${conversationContext}
 
@@ -543,11 +547,11 @@ Return ONLY the JSON object, no other text or markdown formatting.`;
 export const TEST_ASSISTANCE_CHAT_PROMPT = (question: string, options: string[], pdfContext: string) => `You are a helpful AI tutor assisting a student with a test question based on their study material.
 
 STUDY MATERIAL CONTEXT:
-${pdfContext ? pdfContext.substring(0, 10000) : "No context available."} ... (truncated)
+${pdfContext ? pdfContext.substring(0, 10000) : 'No context available.'} ... (truncated)
 
 THE QUESTION: "${question}"
 THE OPTIONS:
-${options.map((opt, i) => `${i + 1}. ${opt}`).join("\n")}
+${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}
 
 YOUR GOAL: Mildly assist the student without giving away the answer.
 - Provide hints, ask guiding questions, or explain related concepts using the study material.

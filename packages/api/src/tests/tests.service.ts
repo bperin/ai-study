@@ -1,304 +1,298 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { Mcq } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
-import { SubmitTestDto } from "./dto/submit-test.dto";
-import { TestHistoryResponseDto, TestHistoryItemDto } from "./dto/test-results.dto";
-import { TestStatsDto } from "./dto/test-stats.dto";
-import { ChatAssistanceResponseDto } from "./dto/chat-assistance.dto";
-import { GEMINI_MODEL } from "../constants/models";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Mcq } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { SubmitTestDto } from './dto/submit-test.dto';
+import { TestHistoryResponseDto, TestHistoryItemDto } from './dto/test-results.dto';
+import { TestStatsDto } from './dto/test-stats.dto';
+import { ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
+import { GEMINI_MODEL } from '../constants/models';
 
 @Injectable()
 export class TestsService {
-    constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-    async submitTest(userId: string, dto: SubmitTestDto) {
-        // 1. Fetch MCQs to check answers
-        const mcqIds = dto.answers.map((a) => a.mcqId);
-        const mcqs = await this.prisma.mcq.findMany({
-            where: { id: { in: mcqIds } },
-        });
-        const mcqMap = new Map<string, Mcq>(mcqs.map((m) => [m.id, m]));
+  async submitTest(userId: string, dto: SubmitTestDto) {
+    // 1. Fetch MCQs to check answers
+    const mcqIds = dto.answers.map((a) => a.mcqId);
+    const mcqs = await this.prisma.mcq.findMany({
+      where: { id: { in: mcqIds } },
+    });
+    const mcqMap = new Map<string, Mcq>(mcqs.map((m) => [m.id, m]));
 
-        // 2. Calculate score and prepare answers
-        let score = 0;
-        const answerData = dto.answers.map((answer) => {
-            const mcq = mcqMap.get(answer.mcqId);
-            if (!mcq) throw new Error(`MCQ not found: ${answer.mcqId}`);
+    // 2. Calculate score and prepare answers
+    let score = 0;
+    const answerData = dto.answers.map((answer) => {
+      const mcq = mcqMap.get(answer.mcqId);
+      if (!mcq) throw new Error(`MCQ not found: ${answer.mcqId}`);
 
-            const isCorrect = mcq.correctIdx === answer.selectedIdx;
-            if (isCorrect) score++;
+      const isCorrect = mcq.correctIdx === answer.selectedIdx;
+      if (isCorrect) score++;
 
-            return {
-                mcqId: answer.mcqId,
-                selectedIdx: answer.selectedIdx,
-                isCorrect,
-            };
-        });
+      return {
+        mcqId: answer.mcqId,
+        selectedIdx: answer.selectedIdx,
+        isCorrect,
+      };
+    });
 
-        // 3. Create Attempt
-        const total = dto.answers.length;
-        const percentage = total > 0 ? (score / total) * 100 : 0;
+    // 3. Create Attempt
+    const total = dto.answers.length;
+    const percentage = total > 0 ? (score / total) * 100 : 0;
 
-        return this.prisma.testAttempt.create({
-            data: {
-                userId,
-                pdfId: dto.pdfId,
-                score,
-                total,
-                percentage,
-                completedAt: new Date(),
-                answers: {
-                    create: answerData,
-                },
-            },
-            include: {
-                answers: true,
-            },
-        });
+    return this.prisma.testAttempt.create({
+      data: {
+        userId,
+        pdfId: dto.pdfId,
+        score,
+        total,
+        percentage,
+        completedAt: new Date(),
+        answers: {
+          create: answerData,
+        },
+      },
+      include: {
+        answers: true,
+      },
+    });
+  }
+
+  async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {
+    const attempts = await this.prisma.testAttempt.findMany({
+      where: { userId },
+      include: {
+        pdf: true,
+        answers: {
+          include: {
+            mcq: true,
+          },
+        },
+      },
+      orderBy: [{ completedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }],
+    });
+
+    return TestHistoryResponseDto.fromEntities(attempts);
+  }
+
+  async getAllTestHistory(): Promise<TestHistoryResponseDto> {
+    const attempts = await this.prisma.testAttempt.findMany({
+      include: {
+        pdf: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+        answers: {
+          include: {
+            mcq: true,
+          },
+        },
+      },
+      orderBy: [{ completedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }],
+    });
+
+    return TestHistoryResponseDto.fromEntities(attempts);
+  }
+
+  async getTestStats(pdfId: string) {
+    const attempts = await this.prisma.testAttempt.findMany({
+      where: {
+        pdfId,
+        completedAt: { not: null },
+      },
+      include: {
+        user: { select: { email: true } },
+      },
+      orderBy: { percentage: 'desc' },
+    });
+
+    if (attempts.length === 0) {
+      return {
+        attemptCount: 0,
+        avgScore: 0,
+        topScorer: null,
+        topScore: null,
+      };
     }
 
-    async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {
-        const attempts = await this.prisma.testAttempt.findMany({
-            where: { userId },
-            include: {
-                pdf: true,
-                answers: {
-                    include: {
-                        mcq: true,
-                    },
-                },
-            },
-            orderBy: [
-                { completedAt: { sort: "desc", nulls: "last" } },
-                { startedAt: "desc" }
-            ],
-        });
+    const avgScore = Math.round(attempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / attempts.length);
+    const topAttempt = attempts[0];
 
-        return TestHistoryResponseDto.fromEntities(attempts);
+    return {
+      attemptCount: attempts.length,
+      avgScore,
+      topScorer: topAttempt.user.email.split('@')[0],
+      topScore: Math.round(topAttempt.percentage || 0),
+    };
+  }
+
+  async getAttemptDetails(userId: string, attemptId: string): Promise<TestHistoryItemDto> {
+    const attempt = await this.prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        pdf: true,
+        answers: {
+          include: {
+            mcq: true,
+          },
+        },
+      },
+    });
+
+    if (!attempt || attempt.userId !== userId) {
+      throw new NotFoundException('Attempt not found');
     }
 
-    async getAllTestHistory(): Promise<TestHistoryResponseDto> {
-        const attempts = await this.prisma.testAttempt.findMany({
-            include: {
-                pdf: true,
-                user: {
-                    select: {
-                        id: true,
-                        email: true,
-                    },
-                },
-                answers: {
-                    include: {
-                        mcq: true,
-                    },
-                },
-            },
-            orderBy: [
-                { completedAt: { sort: "desc", nulls: "last" } },
-                { startedAt: "desc" }
-            ],
-        });
+    return TestHistoryItemDto.fromEntity(attempt);
+  }
 
-        return TestHistoryResponseDto.fromEntities(attempts);
-    }
+  async chatAssist(message: string, questionId: string, history?: any[]) {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-    async getTestStats(pdfId: string) {
-        const attempts = await this.prisma.testAttempt.findMany({
-            where: { 
-                pdfId,
-                completedAt: { not: null }
-            },
-            include: {
-                user: { select: { email: true } }
-            },
-            orderBy: { percentage: "desc" }
-        });
+    const mcq = await this.prisma.mcq.findUnique({
+      where: { id: questionId },
+      include: { objective: { include: { pdf: true } } },
+    });
+    if (!mcq) throw new NotFoundException('Question not found');
 
-        if (attempts.length === 0) {
-            return {
-                attemptCount: 0,
-                avgScore: 0,
-                topScorer: null,
-                topScore: null
-            };
-        }
+    const pdfContent = mcq.objective.pdf.content || ''; // Or handle GCS path if needed (simplified for now as content usually has text)
 
-        const avgScore = Math.round(
-            attempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / attempts.length
-        );
-        const topAttempt = attempts[0];
+    const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
+    const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, pdfContent);
 
-        return {
-            attemptCount: attempts.length,
-            avgScore,
-            topScorer: topAttempt.user.email.split("@")[0],
-            topScore: Math.round(topAttempt.percentage || 0)
-        };
-    }
+    const chat = model.startChat({
+      history: [
+        { role: 'user', parts: [{ text: systemPrompt }] },
+        { role: 'model', parts: [{ text: 'I understand. I will help the student with this question without giving away the answer.' }] },
+        ...(history || []).map((msg) => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }],
+        })),
+      ],
+    });
 
-    async getAttemptDetails(userId: string, attemptId: string): Promise<TestHistoryItemDto> {
-        const attempt = await this.prisma.testAttempt.findUnique({
-            where: { id: attemptId },
-            include: {
-                pdf: true,
-                answers: {
-                    include: {
-                        mcq: true,
-                    },
-                },
-            },
-        });
+    const result = await chat.sendMessage(message);
+    const response = result.response.text();
 
-        if (!attempt || attempt.userId !== userId) {
-            throw new NotFoundException("Attempt not found");
-        }
+    return {
+      message: response,
+    };
+  }
 
-        return TestHistoryItemDto.fromEntity(attempt);
-    }
+  async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
+    try {
+      console.log('[AI Tutor] Starting chat assistance:', { message, questionId, pdfId, userId });
 
-    async chatAssist(message: string, questionId: string, history?: any[]) {
-        const { GoogleGenerativeAI } = require("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+      // Get the question and PDF info
+      const question = await this.prisma.mcq.findUnique({
+        where: { id: questionId },
+        include: { objective: true },
+      });
 
-        const mcq = await this.prisma.mcq.findUnique({
-            where: { id: questionId },
-            include: { objective: { include: { pdf: true } } },
-        });
-        if (!mcq) throw new NotFoundException("Question not found");
+      if (!question) {
+        console.log('[AI Tutor] Question not found:', questionId);
+        throw new NotFoundException('Question not found');
+      }
 
-        const pdfContent = mcq.objective.pdf.content || ""; // Or handle GCS path if needed (simplified for now as content usually has text)
+      console.log('[AI Tutor] Found question:', { id: question.id, question: question.question });
 
-        const { TEST_ASSISTANCE_CHAT_PROMPT } = require("../ai/prompts");
-        const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, pdfContent);
+      const pdf = await this.prisma.pdf.findUnique({
+        where: { id: pdfId },
+      });
 
-        const chat = model.startChat({
-            history: [
-                { role: "user", parts: [{ text: systemPrompt }] },
-                { role: "model", parts: [{ text: "I understand. I will help the student with this question without giving away the answer." }] },
-                ...(history || []).map((msg) => ({
-                    role: msg.role === "user" ? "user" : "model",
-                    parts: [{ text: msg.content }],
-                })),
-            ],
-        });
+      if (!pdf) {
+        console.log('[AI Tutor] PDF not found:', pdfId);
+        throw new NotFoundException('PDF not found');
+      }
 
-        const result = await chat.sendMessage(message);
-        const response = result.response.text();
+      console.log('[AI Tutor] Found PDF:', { id: pdf.id, filename: pdf.filename });
 
-        return {
-            message: response,
-        };
-    }
-
-    async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
+      // Extract PDF content for context
+      let pdfContent = '';
+      if (pdf.gcsPath) {
         try {
-            console.log('[AI Tutor] Starting chat assistance:', { message, questionId, pdfId, userId });
-            
-            // Get the question and PDF info
-            const question = await this.prisma.mcq.findUnique({
-                where: { id: questionId },
-                include: { objective: true }
-            });
+          const { GcsService } = require('../pdfs/gcs.service');
+          const { PdfTextService } = require('../pdfs/pdf-text.service');
+          const gcsService = new GcsService();
+          const pdfTextService = new PdfTextService();
 
-            if (!question) {
-                console.log('[AI Tutor] Question not found:', questionId);
-                throw new NotFoundException("Question not found");
-            }
-
-            console.log('[AI Tutor] Found question:', { id: question.id, question: question.question });
-
-            const pdf = await this.prisma.pdf.findUnique({
-                where: { id: pdfId }
-            });
-
-            if (!pdf) {
-                console.log('[AI Tutor] PDF not found:', pdfId);
-                throw new NotFoundException("PDF not found");
-            }
-
-            console.log('[AI Tutor] Found PDF:', { id: pdf.id, filename: pdf.filename });
-
-            // Extract PDF content for context
-            let pdfContent = "";
-            if (pdf.gcsPath) {
-                try {
-                    const { GcsService } = require("../pdfs/gcs.service");
-                    const { PdfTextService } = require("../pdfs/pdf-text.service");
-                    const gcsService = new GcsService();
-                    const pdfTextService = new PdfTextService();
-                    
-                    const buffer = await gcsService.downloadFile(pdf.gcsPath);
-                    const extracted = await pdfTextService.extractText(buffer);
-                    pdfContent = extracted.structuredText.substring(0, 10000); // Limit for context
-                    console.log('[AI Tutor] Extracted PDF content length:', pdfContent.length);
-                } catch (error) {
-                    console.error("[AI Tutor] Failed to extract PDF content for chat assistance:", error);
-                }
-            } else if (pdf.content) {
-                pdfContent = pdf.content.substring(0, 10000);
-                console.log('[AI Tutor] Using PDF content from database, length:', pdfContent.length);
-            }
-
-            // Check if ADK is available, otherwise use direct Gemini
-            let useADK = false;
-            try {
-                const { InMemoryRunner } = require("@google/adk");
-                const runner = new InMemoryRunner();
-                useADK = true;
-            } catch (adkImportError) {
-                console.log('[AI Tutor] ADK not available, using direct Gemini');
-                useADK = false;
-            }
-
-            if (useADK) {
-                try {
-                    const { createTestAssistanceAgent } = require("../ai/agents");
-                    const { InMemoryRunner } = require("@google/adk");
-                    
-                    const agent = createTestAssistanceAgent(question.question, question.options, pdfContent);
-                    const runner = new InMemoryRunner();
-                    
-                    const result = await runner.run(agent, message);
-                    const response = result.text;
-                    
-                    return {
-                        message: response,
-                        questionContext: question.question,
-                        helpful: true
-                    } as ChatAssistanceResponseDto;
-                } catch (adkError) {
-                    console.error('[AI Tutor] ADK agent failed, falling back to direct Gemini:', adkError);
-                }
-            }
-            
-            // Direct Gemini fallback
-            const { GoogleGenerativeAI } = require("@google/generative-ai");
-            const { TEST_ASSISTANCE_CHAT_PROMPT } = require("../ai/prompts");
-            
-            const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-            const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-            
-            const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, pdfContent);
-            
-            const chat = model.startChat({
-                history: [
-                    { role: "user", parts: [{ text: systemPrompt }] },
-                    { role: "model", parts: [{ text: "I understand. I'll help with this question without giving away the answer." }] }
-                ]
-            });
-            
-            const result = await chat.sendMessage(message);
-            const response = result.response.text();
-            
-            return {
-                message: response,
-                questionContext: question.question,
-                helpful: true
-            } as ChatAssistanceResponseDto;
+          const buffer = await gcsService.downloadFile(pdf.gcsPath);
+          const extracted = await pdfTextService.extractText(buffer);
+          pdfContent = extracted.structuredText.substring(0, 10000); // Limit for context
+          console.log('[AI Tutor] Extracted PDF content length:', pdfContent.length);
         } catch (error) {
-            console.error('[AI Tutor] Error in getChatAssistance:', error);
-            throw error;
+          console.error('[AI Tutor] Failed to extract PDF content for chat assistance:', error);
         }
+      } else if (pdf.content) {
+        pdfContent = pdf.content.substring(0, 10000);
+        console.log('[AI Tutor] Using PDF content from database, length:', pdfContent.length);
+      }
+
+      // Check if ADK is available, otherwise use direct Gemini
+      let useADK = false;
+      try {
+        const { InMemoryRunner } = require('@google/adk');
+        const runner = new InMemoryRunner();
+        useADK = true;
+        console.log('[AI Tutor] ✅ ADK available - using ADK agent');
+      } catch (adkImportError) {
+        console.log('[AI Tutor] ❌ ADK not available - using direct Gemini fallback');
+        useADK = false;
+      }
+
+      if (useADK) {
+        try {
+          const { createTestAssistanceAgent } = require('../ai/agents');
+          const { InMemoryRunner } = require('@google/adk');
+
+          const agent = createTestAssistanceAgent(question.question, question.options, pdfContent);
+          const runner = new InMemoryRunner();
+
+          const result = await runner.run(agent, message);
+          const response = result.text;
+
+          return {
+            message: response,
+            questionContext: question.question,
+            helpful: true,
+          } as ChatAssistanceResponseDto;
+        } catch (adkError) {
+          console.error('[AI Tutor] ❌ ADK agent failed, falling back to direct Gemini:', adkError);
+        }
+      }
+
+      // Direct Gemini fallback
+      console.log('[AI Tutor] 🔄 Using direct Gemini fallback');
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
+
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+      const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
+      const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, pdfContent);
+
+      const chat = model.startChat({
+        history: [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: "I understand. I'll help with this question without giving away the answer." }] },
+        ],
+      });
+
+      const result = await chat.sendMessage(message);
+      const response = result.response.text();
+
+      return {
+        message: response,
+        questionContext: question.question,
+        helpful: true,
+      } as ChatAssistanceResponseDto;
+    } catch (error) {
+      console.error('[AI Tutor] Error in getChatAssistance:', error);
+      throw error;
     }
+  }
 }
