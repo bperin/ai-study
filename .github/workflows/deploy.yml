@@ -60,7 +60,11 @@ jobs:
                     --port 8080 \
                     --timeout 600 \
                     --allow-unauthenticated \
-                    --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest,GCP_SA_KEY=ai_study_GCP_SA_KEY:latest,GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest,JWT_SECRET=ai_study_JWT_SECRET:latest,GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
+                    --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest \
+                    --set-secrets=GCP_SA_KEY=ai_study_GCP_SA_KEY:latest \
+                    --set-secrets=GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest \
+                    --set-secrets=JWT_SECRET=ai_study_JWT_SECRET:latest \
+                    --set-secrets=GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
                     --quiet \
                     --format='value(status.url)' > api_url.txt
                   echo "API_URL=$(cat api_url.txt)" >> $GITHUB_ENV
@@ -69,7 +73,7 @@ jobs:
                   docker buildx build \
                     --platform linux/amd64 \
                     -f packages/web/Dockerfile \
-                    --build-arg NEXT_PUBLIC_API_URL="${{ env.API_URL }}" \
+                    --build-arg NEXT_PUBLIC_API_URL="$API_URL" \
                     -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest . \
                     --push
             - name: Set Permissive GCS CORS Policy
@@ -91,7 +95,7 @@ jobs:
                     --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/web:latest \
                     --project ${{ env.GCP_PROJECT_ID }} \
                     --region ${{ env.GCP_REGION }} \
-                    --set-env-vars NEXT_PUBLIC_API_URL=${{ env.API_URL }} \
+                    --set-env-vars NEXT_PUBLIC_API_URL="$API_URL" \
                     --allow-unauthenticated \
                     --quiet \
                     --format='value(status.url)' > web_url.txt
