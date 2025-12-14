@@ -52,7 +52,17 @@ Built with **Next.js** (App Router), focusing on a modern, responsive UI.
 
 AI Study leverages **Google's ADK (Agent Development Kit)** with multiple specialized AI agents powered by **Gemini 2.5 Flash** models. Each agent has specific responsibilities and tools to create a comprehensive learning experience.
 
-![AI Study Architecture](docs/ai-study-architecture-1.png)
+<details open>
+<summary><b>System Architecture Diagrams</b></summary>
+
+| Diagram Type | Visualization |
+|---|---|
+| **System Architecture** | ![System Architecture](docs/ai-study-architecture.svg) |
+| **Agent Details** | ![Agent Details](docs/ai-study-agent-details.svg) |
+| **Data Flow** | ![Data Flow](docs/ai-study-data-flow.svg) |
+| **Workflow Sequence** | ![Workflow Sequence](docs/ai-study-workflow.svg) |
+
+</details>
 
 #### 🎭 Agent Ecosystem
 
@@ -97,8 +107,6 @@ Each agent has access to specialized tools:
 
 #### 📊 Multi-Agent Workflow
 
-![AI Study Workflow](docs/ai-study-workflow-1.png)
-
 1.  **PDF Upload & Processing**: Secure storage and text extraction
 2.  **Content Analysis**: AI identifies learning objectives and key concepts
 3.  **Question Generation**: Creates targeted MCQ questions with explanations
@@ -106,14 +114,6 @@ Each agent has access to specialized tools:
 5.  **Visual Enhancement**: Generates images for picture-based questions
 6.  **Study Session**: Interactive testing with real-time feedback
 7.  **Performance Analysis**: AI analyzes results and creates study plans
-
-#### 🧠 Agent Interaction Details
-
-![AI Agent Details](docs/ai-study-agent-details-1.png)
-
-#### 🔄 Data Flow Architecture
-
-![AI Data Flow](docs/ai-study-data-flow-1.png)
 
 The system processes data through multiple stages:
 - **Input Processing**: PDF parsing and user request analysis

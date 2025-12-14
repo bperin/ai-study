@@ -8,7 +8,7 @@
         "start": "next start",
         "lint": "next lint",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-        "codegen": "openapi-generator-cli generate -i ../../packages/api/openapi.json -g typescript-fetch -o src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec"
+        "codegen": "openapi-generator-cli generate -i ../../packages/api/openapi.json -g typescript-fetch -o src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec && npm run format"
     },
     "dependencies": {
         "@google/generative-ai": "^0.1.0",

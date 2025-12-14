@@ -3,13 +3,17 @@ import { Mcq } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitTestDto } from './dto/submit-test.dto';
 import { TestHistoryResponseDto, TestHistoryItemDto } from './dto/test-results.dto';
+import { AdkRunnerService } from '../ai/adk-runner.service';
 import { TestStatsDto } from './dto/test-stats.dto';
 import { ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
 import { GEMINI_MODEL } from '../constants/models';
 
 @Injectable()
 export class TestsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private adkRunner: AdkRunnerService
+  ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
     // 1. Fetch MCQs to check answers
@@ -184,114 +188,98 @@ export class TestsService {
   }
 
   async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
+    console.log(`[AI Tutor] Starting chat assistance for user ${userId}, question ${questionId}, PDF ${pdfId}`);
+    console.log(`[AI Tutor] User message: "${message}"`);
+    
     try {
-      console.log('[AI Tutor] Starting chat assistance:', { message, questionId, pdfId, userId });
-
       // Get the question and PDF info
       const question = await this.prisma.mcq.findUnique({
         where: { id: questionId },
-        include: { objective: true },
+        include: { objective: true }
       });
 
       if (!question) {
-        console.log('[AI Tutor] Question not found:', questionId);
-        throw new NotFoundException('Question not found');
+        throw new NotFoundException("Question not found");
       }
 
-      console.log('[AI Tutor] Found question:', { id: question.id, question: question.question });
-
       const pdf = await this.prisma.pdf.findUnique({
-        where: { id: pdfId },
+        where: { id: pdfId }
       });
 
       if (!pdf) {
-        console.log('[AI Tutor] PDF not found:', pdfId);
-        throw new NotFoundException('PDF not found');
+        throw new NotFoundException("PDF not found");
       }
 
-      console.log('[AI Tutor] Found PDF:', { id: pdf.id, filename: pdf.filename });
-
       // Extract PDF content for context
-      let pdfContent = '';
+      let pdfContent = "";
       if (pdf.gcsPath) {
         try {
-          const { GcsService } = require('../pdfs/gcs.service');
-          const { PdfTextService } = require('../pdfs/pdf-text.service');
+          const { GcsService } = require("../pdfs/gcs.service");
+          const { PdfTextService } = require("../pdfs/pdf-text.service");
           const gcsService = new GcsService();
           const pdfTextService = new PdfTextService();
-
+          
           const buffer = await gcsService.downloadFile(pdf.gcsPath);
           const extracted = await pdfTextService.extractText(buffer);
           pdfContent = extracted.structuredText.substring(0, 10000); // Limit for context
-          console.log('[AI Tutor] Extracted PDF content length:', pdfContent.length);
         } catch (error) {
-          console.error('[AI Tutor] Failed to extract PDF content for chat assistance:', error);
+          console.error("Failed to extract PDF content for chat assistance:", error);
         }
-      } else if (pdf.content) {
-        pdfContent = pdf.content.substring(0, 10000);
-        console.log('[AI Tutor] Using PDF content from database, length:', pdfContent.length);
       }
 
-      // Check if ADK is available, otherwise use direct Gemini
-      let useADK = false;
-      try {
-        const { InMemoryRunner } = require('@google/adk');
-        const runner = new InMemoryRunner();
-        useADK = true;
-        console.log('[AI Tutor] ✅ ADK available - using ADK agent');
-      } catch (adkImportError) {
-        console.log('[AI Tutor] ❌ ADK not available - using direct Gemini fallback');
-        useADK = false;
-      }
-
-      if (useADK) {
+      // Try using centralized ADK runner first
+      if (this.adkRunner.isAvailable()) {
         try {
-          const { createTestAssistanceAgent } = require('../ai/agents');
-          const { InMemoryRunner } = require('@google/adk');
+          console.log('[AI Tutor] ✅ Using centralized ADK runner');
+          
+          const { createTestAssistanceAgent } = require("../ai/agents");
+          const agent = createTestAssistanceAgent(
+            question.question,
+            question.options,
+            pdfContent
+          );
 
-          const agent = createTestAssistanceAgent(question.question, question.options, pdfContent);
-          const runner = new InMemoryRunner();
-
-          const result = await runner.run(agent, message);
-          const response = result.text;
-
+          const responseText = await this.adkRunner.runAgent(
+            agent,
+            userId,
+            message,
+            'ai-tutor'
+          );
+          
           return {
-            message: response,
+            message: responseText,
             questionContext: question.question,
-            helpful: true,
+            helpful: true
           } as ChatAssistanceResponseDto;
+
         } catch (adkError) {
-          console.error('[AI Tutor] ❌ ADK agent failed, falling back to direct Gemini:', adkError);
+          console.error('[AI Tutor] ❌ Centralized ADK runner failed, falling back to direct Gemini:', adkError);
         }
+      } else {
+        console.log('[AI Tutor] ❌ ADK not available - using direct Gemini fallback');
       }
 
-      // Direct Gemini fallback
+      // Direct Gemini fallback for AI tutor
       console.log('[AI Tutor] 🔄 Using direct Gemini fallback');
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
-
+      const { GoogleGenerativeAI } = require("@google/generative-ai");
+      const { TEST_ASSISTANCE_CHAT_PROMPT } = require("../ai/prompts");
+      
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-      const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, pdfContent);
-
-      const chat = model.startChat({
-        history: [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: "I understand. I'll help with this question without giving away the answer." }] },
-        ],
-      });
-
-      const result = await chat.sendMessage(message);
+      const prompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, pdfContent) + `\n\nUser: ${message}`;
+      
+      const result = await model.generateContent(prompt);
       const response = result.response.text();
 
       return {
         message: response,
         questionContext: question.question,
-        helpful: true,
+        helpful: true
       } as ChatAssistanceResponseDto;
+
     } catch (error) {
-      console.error('[AI Tutor] Error in getChatAssistance:', error);
+      console.error("[AI Tutor] Error in getChatAssistance:", error);
       throw error;
     }
   }
