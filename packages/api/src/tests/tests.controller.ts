@@ -51,7 +51,7 @@ export class TestsController {
   @Post(':pdfId/chat-assistance')
   @ApiOperation({ summary: 'Get AI assistance during test taking' })
   @ApiResponse({ status: 200, type: ChatAssistanceResponseDto, description: 'AI assistance response' })
-  async getChatAssistance(@Param('pdfId') pdfId: string, @Body() dto: ChatAssistanceDto, @Request() req: any): Promise<ChatAssistanceResponseDto> {
+  async getChatAssistance(@Param('pdfId') pdfId: string, @Body() dto: ChatAssistanceDto, @Request() req: { user: { userId: string } }): Promise<ChatAssistanceResponseDto> {
     return this.testsService.getChatAssistance(dto.message, dto.questionId, pdfId, req.user.userId);
   }
 
