@@ -10,6 +10,7 @@ Name | Type
 `filename` | string
 `createdAt` | Date
 `objectives` | Array&lt;object&gt;
+`stats` | object
 
 ## Example
 
@@ -22,6 +23,7 @@ const example = {
   "filename": null,
   "createdAt": null,
   "objectives": [{"title":"Objective Title","difficulty":"easy","_count":{"mcqs":5}}],
+  "stats": null,
 } satisfies PdfResponseDto
 
 console.log(example)
