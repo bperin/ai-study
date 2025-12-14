@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { FileText, Send, Sparkles, Loader2, BookOpen } from "lucide-react";
+import { FileText, Send, Sparkles, Loader2, BookOpen, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +48,7 @@ export default function CustomizePage() {
             try {
                 const api = getPdfsApi();
                 // @ts-ignore - The generated client types might be slightly off
-                const response = await api.pdfsControllerListPdfs({});
+                const response = await api.pdfsControllerListPdfs({ page: 1, limit: 100 });
                 // Handle paginated response
                 const pdfs = response.data || [];
                 const pdf = pdfs.find((p: any) => p.id === pdfId);
@@ -78,30 +78,21 @@ export default function CustomizePage() {
 
         try {
             // Use backend chat endpoint with PDF context
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            const token = localStorage.getItem("access_token");
+            const api = getPdfsApi();
             
-            const response = await fetch(`${baseUrl}/pdfs/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
+            // @ts-ignore - The generated client types might be slightly off for the response type
+            const data: any = await api.pdfsControllerChatPlan({
+                chatMessageDto: {
                     message: userMessage,
                     pdfId: pdfId,
+                    // @ts-ignore - mismatch in expected structure
                     conversationHistory: messages
-                })
+                }
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
 
             setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
 
+            // Automatically show test plan in UI when AI creates one
             if (data.testPlan) {
                 setTestPlan(data.testPlan);
             }
@@ -119,8 +110,31 @@ export default function CustomizePage() {
         }
     };
 
+    const handleAutoGenerate = async () => {
+        try {
+            setChatting(true);
+            const api = getPdfsApi();
+            
+            // @ts-ignore - The generated client types might be slightly off for the response type
+            const data: any = await api.pdfsControllerAutoGenerateTestPlan({ id: pdfId });
+            
+            if (data && data.testPlan) {
+                setTestPlan(data.testPlan);
+                setMessages([...messages,
+                    { role: "user", content: "Auto-generate a test plan" },
+                    { role: "assistant", content: data.message }
+                ]);
+            }
+        } catch (error) {
+            console.error("Auto-generate error:", error);
+            alert("Failed to auto-generate test plan. Please try again.");
+        } finally {
+            setChatting(false);
+        }
+    };
+
     const handleGenerate = async () => {
-        if (!testPlan) return;
+        if (!testPlan || !testPlan.objectives) return;
 
         setGenerating(true);
 
@@ -166,7 +180,7 @@ export default function CustomizePage() {
                             ← Back to Dashboard
                         </Button>
 
-                        <Card className="border-2 shadow-xl">
+                        <Card className="border-2 border-primary shadow-xl">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Sparkles className="w-5 h-5" />
@@ -239,7 +253,7 @@ export default function CustomizePage() {
                                     {/* Objectives */}
                                     <div className="space-y-3">
                                         <h4 className="font-semibold text-sm text-muted-foreground uppercase">Objectives</h4>
-                                        {testPlan.objectives.map((obj, index) => (
+                                        {(testPlan.objectives || []).map((obj, index) => (
                                             <div key={index} className={`p-4 rounded-lg border-2 ${difficultyColors[obj.difficulty]}`}>
                                                 <div className="flex items-start justify-between mb-2">
                                                     <div className="flex-1">

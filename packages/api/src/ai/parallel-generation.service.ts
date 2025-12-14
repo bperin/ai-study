@@ -5,14 +5,15 @@ import { PdfTextService } from "../pdfs/pdf-text.service";
 import { LlmAgent, InMemoryRunner } from "@google/adk";
 import * as pdfParse from "pdf-parse";
 import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHENSIVE_ANALYSIS_PROMPT } from "./prompts";
+import { GEMINI_MODEL } from "../constants/models";
 // @ts-ignore
 import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from "./tools";
 
 // Model constants
 // @ts-ignore
-const GEMINI_QUESTION_GENERATOR_MODEL = "gemini-2.5-pro";
+const GEMINI_QUESTION_GENERATOR_MODEL = GEMINI_MODEL;
 // @ts-ignore
-const GEMINI_QUALITY_ANALYZER_MODEL = "gemini-2.5-pro";
+const GEMINI_QUALITY_ANALYZER_MODEL = GEMINI_MODEL;
 
 interface QuestionGenerationTask {
     difficulty: "easy" | "medium" | "hard";
@@ -118,21 +119,30 @@ export class ParallelGenerationService {
      * Generate questions for a specific difficulty level
      */
     private async generateQuestionsForDifficulty(difficulty: "easy" | "medium" | "hard", count: number, pdfId: string, pdfFilename: string, gcsPath: string, userPrompt: string): Promise<{ objectivesCreated: number; questionsCreated: number }> {
-        // Create specialized agent for this difficulty
+        // Extract PDF content first
+        let pdfContent = "";
+        try {
+            const buffer = await this.gcsService.downloadFile(gcsPath);
+            if (this.pdfTextService) {
+                const extracted = await this.pdfTextService.extractText(buffer);
+                pdfContent = extracted.structuredText.substring(0, 500000); // 500k chars ~ 125k tokens
+            } else {
+                const data = await pdfParse(buffer);
+                pdfContent = data.text.substring(0, 500000);
+            }
+            console.log(`PDF content extracted for question generation (${pdfContent.length} chars):`, pdfContent.substring(0, 200) + "...");
+        } catch (error) {
+            console.error("Error extracting PDF content for question generation:", error);
+            console.log("PDF content is empty - agents will have no context");
+        }
+
+        // Create specialized agent for this difficulty with PDF content
         const agent = new LlmAgent({
             name: `question_generator_${difficulty}`,
             description: `Generates ${difficulty} difficulty questions`,
             model: GEMINI_QUESTION_GENERATOR_MODEL,
-            instruction: `${QUESTION_GENERATOR_INSTRUCTION}
-
-Focus on generating ${count} ${difficulty} difficulty questions.
-${difficulty === "easy" ? "Make questions straightforward and test basic understanding." : ""}
-${difficulty === "medium" ? "Make questions moderately challenging, testing application of concepts." : ""}
-${difficulty === "hard" ? "Make questions challenging, testing deep understanding and critical thinking." : ""}
-
-You MUST use the 'save_objective' tool to save the questions. Do not just list them in the text response. If you do not call the tool, the questions will be lost.
-`,
-            tools: [createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
+            instruction: QUESTION_GENERATOR_INSTRUCTION(pdfContent, userPrompt, difficulty, count),
+            tools: [createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
         });
 
         const runner = new InMemoryRunner({

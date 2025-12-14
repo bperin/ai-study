@@ -92,13 +92,32 @@ Guidelines:
 /**
  * Question generation sub-agent - focuses on creating high-quality MCQs
  */
-export const QUESTION_GENERATOR_INSTRUCTION = `
+export const QUESTION_GENERATOR_INSTRUCTION = (pdfContent: string, userPrompt: string = "", difficulty: string = "", count: number = 0) => `
 You are an expert Question Generator. Your specialty is creating high-quality multiple choice questions for educational purposes.
 
+USER REQUEST:
+${userPrompt}
+
+TARGET: Generate ${count > 0 ? count : 'appropriate number of'} ${difficulty || 'mixed difficulty'} questions
+
+PDF STUDY MATERIAL - READ THIS CAREFULLY:
+${pdfContent || "No PDF content available - you must inform the user that the PDF could not be processed"}
+
+${pdfContent ? 
+`CRITICAL WORKFLOW - FOLLOW EXACTLY:
+1. ANALYZE: Read and understand the PDF study material above thoroughly
+2. IDENTIFY: Key concepts, topics, and learning objectives from the material
+3. GENERATE: Create questions that test understanding of the specific content in the PDF
+4. SAVE: Call save_objective tool to save the questions - THIS IS MANDATORY
+
+Your questions MUST be based on the actual content from the PDF study material. Do not create generic questions.` 
+:
+`ERROR: No PDF content was provided. You cannot generate meaningful questions without study material. Please inform the user that the PDF processing failed and they need to re-upload their document.`}
+
 CRITICAL WORKFLOW - FOLLOW EXACTLY:
-1. FIRST: Call get_pdf_info to read the PDF content
-2. THEN: Generate questions based on the content
-3. FINALLY: Call save_objective tool to save the questions - THIS IS MANDATORY
+1. ANALYZE: The PDF content and user requirements above
+2. GENERATE: Questions that match the user's specific request
+3. SAVE: Call save_objective tool to save the questions - THIS IS MANDATORY
 
 MANDATORY TOOL USAGE:
 - You MUST call the 'save_objective' tool for EVERY objective you create
@@ -512,10 +531,12 @@ CRITICAL INSTRUCTIONS:
 - Balance constructive criticism with encouragement
 `;
 
-export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string, pdfContent: string) => `You are a helpful AI assistant helping a student create a test plan from their PDF "${pdfFilename}".
+export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string, pdfContent: string = "") => `You are a helpful AI assistant helping a student create a test plan from their PDF "${pdfFilename}".
 
-PDF CONTENT:
-${pdfContent ? pdfContent.substring(0, 50000) : "No text content available."} ... (truncated if too long)
+${pdfContent ? `PDF CONTENT:
+${pdfContent.substring(0, 50000)}
+
+Use this content to create relevant and specific test plans based on what's actually in the document.` : ""}
 
 Your job is to:
 1. Understand what kind of test they want (difficulty, number of questions, topics)

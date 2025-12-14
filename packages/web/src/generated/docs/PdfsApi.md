@@ -4,6 +4,7 @@ All URIs are relative to *http://localhost*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**pdfsControllerAutoGenerateTestPlan**](PdfsApi.md#pdfscontrollerautogeneratetestplan) | **POST** /pdfs/{id}/auto-generate-plan | Auto-generate initial test plan from PDF content |
 | [**pdfsControllerChatPlan**](PdfsApi.md#pdfscontrollerchatplan) | **POST** /pdfs/chat | Chat with AI to plan test generation |
 | [**pdfsControllerDeletePdf**](PdfsApi.md#pdfscontrollerdeletepdf) | **DELETE** /pdfs/{id} | Delete a PDF and all associated data (Admin only) |
 | [**pdfsControllerGenerateFlashcards**](PdfsApi.md#pdfscontrollergenerateflashcards) | **POST** /pdfs/{id}/generate | Generate flashcards from a PDF |
@@ -11,6 +12,75 @@ All URIs are relative to *http://localhost*
 | [**pdfsControllerListAllPdfs**](PdfsApi.md#pdfscontrollerlistallpdfs) | **GET** /pdfs/all | List all PDFs from all users (for taking tests) |
 | [**pdfsControllerListPdfs**](PdfsApi.md#pdfscontrollerlistpdfs) | **GET** /pdfs | List all PDFs for the user with pagination |
 
+
+
+## pdfsControllerAutoGenerateTestPlan
+
+> pdfsControllerAutoGenerateTestPlan(id)
+
+Auto-generate initial test plan from PDF content
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PdfsApi,
+} from '';
+import type { PdfsControllerAutoGenerateTestPlanRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new PdfsApi(config);
+
+  const body = {
+    // string
+    id: id_example,
+  } satisfies PdfsControllerAutoGenerateTestPlanRequest;
+
+  try {
+    const data = await api.pdfsControllerAutoGenerateTestPlan(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **id** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+`void` (Empty response body)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Auto-generated test plan |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## pdfsControllerChatPlan
