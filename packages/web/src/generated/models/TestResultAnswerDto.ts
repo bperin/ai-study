@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -54,13 +54,15 @@ export interface TestResultAnswerDto {
 /**
  * Check if a given object implements the TestResultAnswerDto interface.
  */
-export function instanceOfTestResultAnswerDto(value: object): value is TestResultAnswerDto {
-  if (!('questionId' in value) || value['questionId'] === undefined) return false;
-  if (!('questionText' in value) || value['questionText'] === undefined) return false;
-  if (!('selectedAnswer' in value) || value['selectedAnswer'] === undefined) return false;
-  if (!('correctAnswer' in value) || value['correctAnswer'] === undefined) return false;
-  if (!('isCorrect' in value) || value['isCorrect'] === undefined) return false;
-  return true;
+export function instanceOfTestResultAnswerDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'questionId' in value;
+  isInstance = isInstance && 'questionText' in value;
+  isInstance = isInstance && 'selectedAnswer' in value;
+  isInstance = isInstance && 'correctAnswer' in value;
+  isInstance = isInstance && 'isCorrect' in value;
+
+  return isInstance;
 }
 
 export function TestResultAnswerDtoFromJSON(json: any): TestResultAnswerDto {
@@ -68,7 +70,7 @@ export function TestResultAnswerDtoFromJSON(json: any): TestResultAnswerDto {
 }
 
 export function TestResultAnswerDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): TestResultAnswerDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -80,20 +82,18 @@ export function TestResultAnswerDtoFromJSONTyped(json: any, ignoreDiscriminator:
   };
 }
 
-export function TestResultAnswerDtoToJSON(json: any): TestResultAnswerDto {
-  return TestResultAnswerDtoToJSONTyped(json, false);
-}
-
-export function TestResultAnswerDtoToJSONTyped(value?: TestResultAnswerDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function TestResultAnswerDtoToJSON(value?: TestResultAnswerDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    questionId: value['questionId'],
-    questionText: value['questionText'],
-    selectedAnswer: value['selectedAnswer'],
-    correctAnswer: value['correctAnswer'],
-    isCorrect: value['isCorrect'],
+    questionId: value.questionId,
+    questionText: value.questionText,
+    selectedAnswer: value.selectedAnswer,
+    correctAnswer: value.correctAnswer,
+    isCorrect: value.isCorrect,
   };
 }

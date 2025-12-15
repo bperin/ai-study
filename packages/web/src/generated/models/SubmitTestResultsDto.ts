@@ -12,11 +12,11 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 import type { MissedQuestionDto } from './MissedQuestionDto';
-import { MissedQuestionDtoFromJSON, MissedQuestionDtoFromJSONTyped, MissedQuestionDtoToJSON, MissedQuestionDtoToJSONTyped } from './MissedQuestionDto';
+import { MissedQuestionDtoFromJSON, MissedQuestionDtoFromJSONTyped, MissedQuestionDtoToJSON } from './MissedQuestionDto';
 import type { TestResultAnswerDto } from './TestResultAnswerDto';
-import { TestResultAnswerDtoFromJSON, TestResultAnswerDtoFromJSONTyped, TestResultAnswerDtoToJSON, TestResultAnswerDtoToJSONTyped } from './TestResultAnswerDto';
+import { TestResultAnswerDtoFromJSON, TestResultAnswerDtoFromJSONTyped, TestResultAnswerDtoToJSON } from './TestResultAnswerDto';
 
 /**
  *
@@ -59,12 +59,14 @@ export interface SubmitTestResultsDto {
 /**
  * Check if a given object implements the SubmitTestResultsDto interface.
  */
-export function instanceOfSubmitTestResultsDto(value: object): value is SubmitTestResultsDto {
-  if (!('attemptId' in value) || value['attemptId'] === undefined) return false;
-  if (!('score' in value) || value['score'] === undefined) return false;
-  if (!('totalQuestions' in value) || value['totalQuestions'] === undefined) return false;
-  if (!('missedQuestions' in value) || value['missedQuestions'] === undefined) return false;
-  return true;
+export function instanceOfSubmitTestResultsDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'attemptId' in value;
+  isInstance = isInstance && 'score' in value;
+  isInstance = isInstance && 'totalQuestions' in value;
+  isInstance = isInstance && 'missedQuestions' in value;
+
+  return isInstance;
 }
 
 export function SubmitTestResultsDtoFromJSON(json: any): SubmitTestResultsDto {
@@ -72,7 +74,7 @@ export function SubmitTestResultsDtoFromJSON(json: any): SubmitTestResultsDto {
 }
 
 export function SubmitTestResultsDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): SubmitTestResultsDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -80,24 +82,22 @@ export function SubmitTestResultsDtoFromJSONTyped(json: any, ignoreDiscriminator
     score: json['score'],
     totalQuestions: json['totalQuestions'],
     missedQuestions: (json['missedQuestions'] as Array<any>).map(MissedQuestionDtoFromJSON),
-    allAnswers: json['allAnswers'] == null ? undefined : (json['allAnswers'] as Array<any>).map(TestResultAnswerDtoFromJSON),
+    allAnswers: !exists(json, 'allAnswers') ? undefined : (json['allAnswers'] as Array<any>).map(TestResultAnswerDtoFromJSON),
   };
 }
 
-export function SubmitTestResultsDtoToJSON(json: any): SubmitTestResultsDto {
-  return SubmitTestResultsDtoToJSONTyped(json, false);
-}
-
-export function SubmitTestResultsDtoToJSONTyped(value?: SubmitTestResultsDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function SubmitTestResultsDtoToJSON(value?: SubmitTestResultsDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    attemptId: value['attemptId'],
-    score: value['score'],
-    totalQuestions: value['totalQuestions'],
-    missedQuestions: (value['missedQuestions'] as Array<any>).map(MissedQuestionDtoToJSON),
-    allAnswers: value['allAnswers'] == null ? undefined : (value['allAnswers'] as Array<any>).map(TestResultAnswerDtoToJSON),
+    attemptId: value.attemptId,
+    score: value.score,
+    totalQuestions: value.totalQuestions,
+    missedQuestions: (value.missedQuestions as Array<any>).map(MissedQuestionDtoToJSON),
+    allAnswers: value.allAnswers === undefined ? undefined : (value.allAnswers as Array<any>).map(TestResultAnswerDtoToJSON),
   };
 }

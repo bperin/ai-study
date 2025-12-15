@@ -12,7 +12,10 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
+import type { PdfResponseDtoStats } from './PdfResponseDtoStats';
+import { PdfResponseDtoStatsFromJSON, PdfResponseDtoStatsFromJSONTyped, PdfResponseDtoStatsToJSON } from './PdfResponseDtoStats';
+
 /**
  *
  * @export
@@ -45,21 +48,24 @@ export interface PdfResponseDto {
   objectives: Array<object>;
   /**
    *
-   * @type {object}
+   * @type {PdfResponseDtoStats}
    * @memberof PdfResponseDto
    */
-  stats?: object;
+  stats: PdfResponseDtoStats;
 }
 
 /**
  * Check if a given object implements the PdfResponseDto interface.
  */
-export function instanceOfPdfResponseDto(value: object): value is PdfResponseDto {
-  if (!('id' in value) || value['id'] === undefined) return false;
-  if (!('filename' in value) || value['filename'] === undefined) return false;
-  if (!('createdAt' in value) || value['createdAt'] === undefined) return false;
-  if (!('objectives' in value) || value['objectives'] === undefined) return false;
-  return true;
+export function instanceOfPdfResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'id' in value;
+  isInstance = isInstance && 'filename' in value;
+  isInstance = isInstance && 'createdAt' in value;
+  isInstance = isInstance && 'objectives' in value;
+  isInstance = isInstance && 'stats' in value;
+
+  return isInstance;
 }
 
 export function PdfResponseDtoFromJSON(json: any): PdfResponseDto {
@@ -67,7 +73,7 @@ export function PdfResponseDtoFromJSON(json: any): PdfResponseDto {
 }
 
 export function PdfResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): PdfResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -75,24 +81,22 @@ export function PdfResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: bool
     filename: json['filename'],
     createdAt: new Date(json['createdAt']),
     objectives: json['objectives'],
-    stats: json['stats'] == null ? undefined : json['stats'],
+    stats: PdfResponseDtoStatsFromJSON(json['stats']),
   };
 }
 
-export function PdfResponseDtoToJSON(json: any): PdfResponseDto {
-  return PdfResponseDtoToJSONTyped(json, false);
-}
-
-export function PdfResponseDtoToJSONTyped(value?: PdfResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function PdfResponseDtoToJSON(value?: PdfResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    id: value['id'],
-    filename: value['filename'],
-    createdAt: value['createdAt'].toISOString(),
-    objectives: value['objectives'],
-    stats: value['stats'],
+    id: value.id,
+    filename: value.filename,
+    createdAt: value.createdAt.toISOString(),
+    objectives: value.objectives,
+    stats: PdfResponseDtoStatsToJSON(value.stats),
   };
 }

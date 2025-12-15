@@ -62,12 +62,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/chat`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/chat`,
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
@@ -101,12 +98,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/history/all`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/history/all`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -129,8 +123,8 @@ export class TestsApi extends runtime.BaseAPI {
    * Get detailed results for a specific test attempt
    */
   async testsControllerGetAttemptDetailsRaw(requestParameters: TestsControllerGetAttemptDetailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestHistoryItemDto>> {
-    if (requestParameters['id'] == null) {
-      throw new runtime.RequiredError('id', 'Required parameter "id" was null or undefined when calling testsControllerGetAttemptDetails().');
+    if (requestParameters.id === null || requestParameters.id === undefined) {
+      throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling testsControllerGetAttemptDetails.');
     }
 
     const queryParameters: any = {};
@@ -145,13 +139,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/attempt/{id}`;
-    urlPath = urlPath.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/attempt/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters.id))),
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -174,12 +164,12 @@ export class TestsApi extends runtime.BaseAPI {
    * Get AI assistance during test taking
    */
   async testsControllerGetChatAssistanceRaw(requestParameters: TestsControllerGetChatAssistanceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatAssistanceResponseDto>> {
-    if (requestParameters['pdfId'] == null) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter "pdfId" was null or undefined when calling testsControllerGetChatAssistance().');
+    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
+      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testsControllerGetChatAssistance.');
     }
 
-    if (requestParameters['chatAssistanceDto'] == null) {
-      throw new runtime.RequiredError('chatAssistanceDto', 'Required parameter "chatAssistanceDto" was null or undefined when calling testsControllerGetChatAssistance().');
+    if (requestParameters.chatAssistanceDto === null || requestParameters.chatAssistanceDto === undefined) {
+      throw new runtime.RequiredError('chatAssistanceDto', 'Required parameter requestParameters.chatAssistanceDto was null or undefined when calling testsControllerGetChatAssistance.');
     }
 
     const queryParameters: any = {};
@@ -196,17 +186,13 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/{pdfId}/chat-assistance`;
-    urlPath = urlPath.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters['pdfId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/{pdfId}/chat-assistance`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: ChatAssistanceDtoToJSON(requestParameters['chatAssistanceDto']),
+        body: ChatAssistanceDtoToJSON(requestParameters.chatAssistanceDto),
       },
       initOverrides,
     );
@@ -224,15 +210,15 @@ export class TestsApi extends runtime.BaseAPI {
 
   /**
    */
-  async testsControllerGetGlobalLeaderboardRaw(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['limit'] == null) {
-      throw new runtime.RequiredError('limit', 'Required parameter "limit" was null or undefined when calling testsControllerGetGlobalLeaderboard().');
+  async testsControllerGetGlobalLeaderboardRaw(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<object>>> {
+    if (requestParameters.limit === null || requestParameters.limit === undefined) {
+      throw new runtime.RequiredError('limit', 'Required parameter requestParameters.limit was null or undefined when calling testsControllerGetGlobalLeaderboard.');
     }
 
     const queryParameters: any = {};
 
-    if (requestParameters['limit'] != null) {
-      queryParameters['limit'] = requestParameters['limit'];
+    if (requestParameters.limit !== undefined) {
+      queryParameters['limit'] = requestParameters.limit;
     }
 
     const headerParameters: runtime.HTTPHeaders = {};
@@ -245,12 +231,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/leaderboard`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/leaderboard`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -258,13 +241,14 @@ export class TestsApi extends runtime.BaseAPI {
       initOverrides,
     );
 
-    return new runtime.VoidApiResponse(response);
+    return new runtime.JSONApiResponse<any>(response);
   }
 
   /**
    */
-  async testsControllerGetGlobalLeaderboard(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-    await this.testsControllerGetGlobalLeaderboardRaw(requestParameters, initOverrides);
+  async testsControllerGetGlobalLeaderboard(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<object>> {
+    const response = await this.testsControllerGetGlobalLeaderboardRaw(requestParameters, initOverrides);
+    return await response.value();
   }
 
   /**
@@ -282,12 +266,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/leaderboard/me`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/leaderboard/me`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -306,19 +287,19 @@ export class TestsApi extends runtime.BaseAPI {
 
   /**
    */
-  async testsControllerGetPdfLeaderboardRaw(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['pdfId'] == null) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter "pdfId" was null or undefined when calling testsControllerGetPdfLeaderboard().');
+  async testsControllerGetPdfLeaderboardRaw(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<object>>> {
+    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
+      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testsControllerGetPdfLeaderboard.');
     }
 
-    if (requestParameters['limit'] == null) {
-      throw new runtime.RequiredError('limit', 'Required parameter "limit" was null or undefined when calling testsControllerGetPdfLeaderboard().');
+    if (requestParameters.limit === null || requestParameters.limit === undefined) {
+      throw new runtime.RequiredError('limit', 'Required parameter requestParameters.limit was null or undefined when calling testsControllerGetPdfLeaderboard.');
     }
 
     const queryParameters: any = {};
 
-    if (requestParameters['limit'] != null) {
-      queryParameters['limit'] = requestParameters['limit'];
+    if (requestParameters.limit !== undefined) {
+      queryParameters['limit'] = requestParameters.limit;
     }
 
     const headerParameters: runtime.HTTPHeaders = {};
@@ -331,13 +312,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/leaderboard/pdf/{pdfId}`;
-    urlPath = urlPath.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters['pdfId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/leaderboard/pdf/{pdfId}`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -345,13 +322,14 @@ export class TestsApi extends runtime.BaseAPI {
       initOverrides,
     );
 
-    return new runtime.VoidApiResponse(response);
+    return new runtime.JSONApiResponse<any>(response);
   }
 
   /**
    */
-  async testsControllerGetPdfLeaderboard(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-    await this.testsControllerGetPdfLeaderboardRaw(requestParameters, initOverrides);
+  async testsControllerGetPdfLeaderboard(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<object>> {
+    const response = await this.testsControllerGetPdfLeaderboardRaw(requestParameters, initOverrides);
+    return await response.value();
   }
 
   /**
@@ -370,12 +348,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/history`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/history`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -398,8 +373,8 @@ export class TestsApi extends runtime.BaseAPI {
    * Get test stats: attempt count, avg score, top scorer
    */
   async testsControllerGetTestStatsRaw(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestStatsDto>> {
-    if (requestParameters['pdfId'] == null) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter "pdfId" was null or undefined when calling testsControllerGetTestStats().');
+    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
+      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testsControllerGetTestStats.');
     }
 
     const queryParameters: any = {};
@@ -414,13 +389,9 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/stats/{pdfId}`;
-    urlPath = urlPath.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters['pdfId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/stats/{pdfId}`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -441,9 +412,9 @@ export class TestsApi extends runtime.BaseAPI {
 
   /**
    */
-  async testsControllerSubmitTestRaw(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['submitTestDto'] == null) {
-      throw new runtime.RequiredError('submitTestDto', 'Required parameter "submitTestDto" was null or undefined when calling testsControllerSubmitTest().');
+  async testsControllerSubmitTestRaw(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
+    if (requestParameters.submitTestDto === null || requestParameters.submitTestDto === undefined) {
+      throw new runtime.RequiredError('submitTestDto', 'Required parameter requestParameters.submitTestDto was null or undefined when calling testsControllerSubmitTest.');
     }
 
     const queryParameters: any = {};
@@ -460,26 +431,24 @@ export class TestsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/submit`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/submit`,
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: SubmitTestDtoToJSON(requestParameters['submitTestDto']),
+        body: SubmitTestDtoToJSON(requestParameters.submitTestDto),
       },
       initOverrides,
     );
 
-    return new runtime.VoidApiResponse(response);
+    return new runtime.JSONApiResponse<any>(response);
   }
 
   /**
    */
-  async testsControllerSubmitTest(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-    await this.testsControllerSubmitTestRaw(requestParameters, initOverrides);
+  async testsControllerSubmitTest(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
+    const response = await this.testsControllerSubmitTestRaw(requestParameters, initOverrides);
+    return await response.value();
   }
 }

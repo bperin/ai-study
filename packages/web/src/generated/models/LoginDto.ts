@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -36,10 +36,12 @@ export interface LoginDto {
 /**
  * Check if a given object implements the LoginDto interface.
  */
-export function instanceOfLoginDto(value: object): value is LoginDto {
-  if (!('email' in value) || value['email'] === undefined) return false;
-  if (!('password' in value) || value['password'] === undefined) return false;
-  return true;
+export function instanceOfLoginDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'email' in value;
+  isInstance = isInstance && 'password' in value;
+
+  return isInstance;
 }
 
 export function LoginDtoFromJSON(json: any): LoginDto {
@@ -47,7 +49,7 @@ export function LoginDtoFromJSON(json: any): LoginDto {
 }
 
 export function LoginDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): LoginDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -56,17 +58,15 @@ export function LoginDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function LoginDtoToJSON(json: any): LoginDto {
-  return LoginDtoToJSONTyped(json, false);
-}
-
-export function LoginDtoToJSONTyped(value?: LoginDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function LoginDtoToJSON(value?: LoginDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    email: value['email'],
-    password: value['password'],
+    email: value.email,
+    password: value.password,
   };
 }

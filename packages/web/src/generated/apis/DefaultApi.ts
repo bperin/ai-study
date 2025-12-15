@@ -13,9 +13,32 @@
  */
 
 import * as runtime from '../runtime';
+import type { CreateGcsDocumentDto, CreateTextDocumentDto, QueryDocumentDto, StartSessionDto } from '../models/index';
+import { CreateGcsDocumentDtoFromJSON, CreateGcsDocumentDtoToJSON, CreateTextDocumentDtoFromJSON, CreateTextDocumentDtoToJSON, QueryDocumentDtoFromJSON, QueryDocumentDtoToJSON, StartSessionDtoFromJSON, StartSessionDtoToJSON } from '../models/index';
+
+export interface RagControllerCreateFromTextRequest {
+  createTextDocumentDto: CreateTextDocumentDto;
+}
+
+export interface RagControllerFromGcsRequest {
+  createGcsDocumentDto: CreateGcsDocumentDto;
+}
+
+export interface RagControllerGetDocumentRequest {
+  documentId: string;
+}
+
+export interface RagControllerListChunksRequest {
+  documentId: string;
+}
+
+export interface RagControllerQueryDocumentRequest {
+  documentId: string;
+  queryDocumentDto: QueryDocumentDto;
+}
 
 export interface TestSessionsControllerCreateSessionRequest {
-  body: object;
+  startSessionDto: StartSessionDto;
 }
 
 export interface TestSessionsControllerGetSessionRequest {
@@ -28,16 +51,14 @@ export interface TestSessionsControllerGetSessionRequest {
 export class DefaultApi extends runtime.BaseAPI {
   /**
    */
-  async appControllerGetHelloRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+  async appControllerGetHelloRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
     const queryParameters: any = {};
 
     const headerParameters: runtime.HTTPHeaders = {};
 
-    let urlPath = `/`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -45,20 +66,25 @@ export class DefaultApi extends runtime.BaseAPI {
       initOverrides,
     );
 
-    return new runtime.VoidApiResponse(response);
+    if (this.isJsonMime(response.headers.get('content-type'))) {
+      return new runtime.JSONApiResponse<string>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
   }
 
   /**
    */
-  async appControllerGetHello(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-    await this.appControllerGetHelloRaw(initOverrides);
+  async appControllerGetHello(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+    const response = await this.appControllerGetHelloRaw(initOverrides);
+    return await response.value();
   }
 
   /**
    */
-  async testSessionsControllerCreateSessionRaw(requestParameters: TestSessionsControllerCreateSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['body'] == null) {
-      throw new runtime.RequiredError('body', 'Required parameter "body" was null or undefined when calling testSessionsControllerCreateSession().');
+  async ragControllerCreateFromTextRaw(requestParameters: RagControllerCreateFromTextRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.createTextDocumentDto === null || requestParameters.createTextDocumentDto === undefined) {
+      throw new runtime.RequiredError('createTextDocumentDto', 'Required parameter requestParameters.createTextDocumentDto was null or undefined when calling ragControllerCreateFromText.');
     }
 
     const queryParameters: any = {};
@@ -67,15 +93,13 @@ export class DefaultApi extends runtime.BaseAPI {
 
     headerParameters['Content-Type'] = 'application/json';
 
-    let urlPath = `/test-sessions`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/v1/documents`,
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: requestParameters['body'] as any,
+        body: CreateTextDocumentDtoToJSON(requestParameters.createTextDocumentDto),
       },
       initOverrides,
     );
@@ -85,27 +109,57 @@ export class DefaultApi extends runtime.BaseAPI {
 
   /**
    */
-  async testSessionsControllerCreateSession(requestParameters: TestSessionsControllerCreateSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-    await this.testSessionsControllerCreateSessionRaw(requestParameters, initOverrides);
+  async ragControllerCreateFromText(requestParameters: RagControllerCreateFromTextRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerCreateFromTextRaw(requestParameters, initOverrides);
   }
 
   /**
    */
-  async testSessionsControllerGetSessionRaw(requestParameters: TestSessionsControllerGetSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['id'] == null) {
-      throw new runtime.RequiredError('id', 'Required parameter "id" was null or undefined when calling testSessionsControllerGetSession().');
+  async ragControllerFromGcsRaw(requestParameters: RagControllerFromGcsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.createGcsDocumentDto === null || requestParameters.createGcsDocumentDto === undefined) {
+      throw new runtime.RequiredError('createGcsDocumentDto', 'Required parameter requestParameters.createGcsDocumentDto was null or undefined when calling ragControllerFromGcs.');
     }
 
     const queryParameters: any = {};
 
     const headerParameters: runtime.HTTPHeaders = {};
 
-    let urlPath = `/test-sessions/{id}`;
-    urlPath = urlPath.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])));
+    headerParameters['Content-Type'] = 'application/json';
 
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/v1/documents/from-gcs`,
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+        body: CreateGcsDocumentDtoToJSON(requestParameters.createGcsDocumentDto),
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async ragControllerFromGcs(requestParameters: RagControllerFromGcsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerFromGcsRaw(requestParameters, initOverrides);
+  }
+
+  /**
+   */
+  async ragControllerGetDocumentRaw(requestParameters: RagControllerGetDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling ragControllerGetDocument.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/v1/documents/{documentId}`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -118,7 +172,165 @@ export class DefaultApi extends runtime.BaseAPI {
 
   /**
    */
-  async testSessionsControllerGetSession(requestParameters: TestSessionsControllerGetSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-    await this.testSessionsControllerGetSessionRaw(requestParameters, initOverrides);
+  async ragControllerGetDocument(requestParameters: RagControllerGetDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerGetDocumentRaw(requestParameters, initOverrides);
+  }
+
+  /**
+   */
+  async ragControllerListChunksRaw(requestParameters: RagControllerListChunksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling ragControllerListChunks.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/v1/documents/{documentId}/chunks`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async ragControllerListChunks(requestParameters: RagControllerListChunksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerListChunksRaw(requestParameters, initOverrides);
+  }
+
+  /**
+   */
+  async ragControllerQueryDocumentRaw(requestParameters: RagControllerQueryDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling ragControllerQueryDocument.');
+    }
+
+    if (requestParameters.queryDocumentDto === null || requestParameters.queryDocumentDto === undefined) {
+      throw new runtime.RequiredError('queryDocumentDto', 'Required parameter requestParameters.queryDocumentDto was null or undefined when calling ragControllerQueryDocument.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters['Content-Type'] = 'application/json';
+
+    const response = await this.request(
+      {
+        path: `/v1/documents/{documentId}/query`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+        body: QueryDocumentDtoToJSON(requestParameters.queryDocumentDto),
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async ragControllerQueryDocument(requestParameters: RagControllerQueryDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerQueryDocumentRaw(requestParameters, initOverrides);
+  }
+
+  /**
+   */
+  async ragControllerUploadPdfRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/v1/documents/upload`,
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async ragControllerUploadPdf(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerUploadPdfRaw(initOverrides);
+  }
+
+  /**
+   */
+  async testSessionsControllerCreateSessionRaw(requestParameters: TestSessionsControllerCreateSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
+    if (requestParameters.startSessionDto === null || requestParameters.startSessionDto === undefined) {
+      throw new runtime.RequiredError('startSessionDto', 'Required parameter requestParameters.startSessionDto was null or undefined when calling testSessionsControllerCreateSession.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters['Content-Type'] = 'application/json';
+
+    const response = await this.request(
+      {
+        path: `/test-sessions`,
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+        body: StartSessionDtoToJSON(requestParameters.startSessionDto),
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse<any>(response);
+  }
+
+  /**
+   */
+  async testSessionsControllerCreateSession(requestParameters: TestSessionsControllerCreateSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
+    const response = await this.testSessionsControllerCreateSessionRaw(requestParameters, initOverrides);
+    return await response.value();
+  }
+
+  /**
+   */
+  async testSessionsControllerGetSessionRaw(requestParameters: TestSessionsControllerGetSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
+    if (requestParameters.id === null || requestParameters.id === undefined) {
+      throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling testSessionsControllerGetSession.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/test-sessions/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters.id))),
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse<any>(response);
+  }
+
+  /**
+   */
+  async testSessionsControllerGetSession(requestParameters: TestSessionsControllerGetSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
+    const response = await this.testSessionsControllerGetSessionRaw(requestParameters, initOverrides);
+    return await response.value();
   }
 }

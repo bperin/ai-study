@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -54,13 +54,15 @@ export interface UserResponseDto {
 /**
  * Check if a given object implements the UserResponseDto interface.
  */
-export function instanceOfUserResponseDto(value: object): value is UserResponseDto {
-  if (!('id' in value) || value['id'] === undefined) return false;
-  if (!('email' in value) || value['email'] === undefined) return false;
-  if (!('isAdmin' in value) || value['isAdmin'] === undefined) return false;
-  if (!('createdAt' in value) || value['createdAt'] === undefined) return false;
-  if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
-  return true;
+export function instanceOfUserResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'id' in value;
+  isInstance = isInstance && 'email' in value;
+  isInstance = isInstance && 'isAdmin' in value;
+  isInstance = isInstance && 'createdAt' in value;
+  isInstance = isInstance && 'updatedAt' in value;
+
+  return isInstance;
 }
 
 export function UserResponseDtoFromJSON(json: any): UserResponseDto {
@@ -68,7 +70,7 @@ export function UserResponseDtoFromJSON(json: any): UserResponseDto {
 }
 
 export function UserResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): UserResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -80,20 +82,18 @@ export function UserResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boo
   };
 }
 
-export function UserResponseDtoToJSON(json: any): UserResponseDto {
-  return UserResponseDtoToJSONTyped(json, false);
-}
-
-export function UserResponseDtoToJSONTyped(value?: UserResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function UserResponseDtoToJSON(value?: UserResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    id: value['id'],
-    email: value['email'],
-    isAdmin: value['isAdmin'],
-    createdAt: value['createdAt'].toISOString(),
-    updatedAt: value['updatedAt'].toISOString(),
+    id: value.id,
+    email: value.email,
+    isAdmin: value.isAdmin,
+    createdAt: value.createdAt.toISOString(),
+    updatedAt: value.updatedAt.toISOString(),
   };
 }

@@ -7,8 +7,8 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
-        "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-        "codegen": "openapi-generator-cli generate -i ../../packages/api/openapi.json -g typescript-fetch -o src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec && npm run format"
+        "format": "prettier --write \"src/**/*.ts\"",
+        "codegen": "cp ../api/openapi.json ./openapi.json && openapi-generator-cli generate -i /local/openapi.json -g typescript-fetch -o /local/src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec && rm openapi.json && npm run format"
     },
     "dependencies": {
         "@google/generative-ai": "^0.1.0",

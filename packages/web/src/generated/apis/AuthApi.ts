@@ -44,12 +44,9 @@ export class AuthApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/auth/api-key`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/auth/api-key`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -70,8 +67,8 @@ export class AuthApi extends runtime.BaseAPI {
   /**
    */
   async authControllerRegisterRaw(requestParameters: AuthControllerRegisterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthResponseDto>> {
-    if (requestParameters['createUserDto'] == null) {
-      throw new runtime.RequiredError('createUserDto', 'Required parameter "createUserDto" was null or undefined when calling authControllerRegister().');
+    if (requestParameters.createUserDto === null || requestParameters.createUserDto === undefined) {
+      throw new runtime.RequiredError('createUserDto', 'Required parameter requestParameters.createUserDto was null or undefined when calling authControllerRegister.');
     }
 
     const queryParameters: any = {};
@@ -80,15 +77,13 @@ export class AuthApi extends runtime.BaseAPI {
 
     headerParameters['Content-Type'] = 'application/json';
 
-    let urlPath = `/auth/register`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/auth/register`,
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: CreateUserDtoToJSON(requestParameters['createUserDto']),
+        body: CreateUserDtoToJSON(requestParameters.createUserDto),
       },
       initOverrides,
     );
@@ -106,8 +101,8 @@ export class AuthApi extends runtime.BaseAPI {
   /**
    */
   async authControllerSignInRaw(requestParameters: AuthControllerSignInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthResponseDto>> {
-    if (requestParameters['loginDto'] == null) {
-      throw new runtime.RequiredError('loginDto', 'Required parameter "loginDto" was null or undefined when calling authControllerSignIn().');
+    if (requestParameters.loginDto === null || requestParameters.loginDto === undefined) {
+      throw new runtime.RequiredError('loginDto', 'Required parameter requestParameters.loginDto was null or undefined when calling authControllerSignIn.');
     }
 
     const queryParameters: any = {};
@@ -116,15 +111,13 @@ export class AuthApi extends runtime.BaseAPI {
 
     headerParameters['Content-Type'] = 'application/json';
 
-    let urlPath = `/auth/login`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/auth/login`,
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: LoginDtoToJSON(requestParameters['loginDto']),
+        body: LoginDtoToJSON(requestParameters.loginDto),
       },
       initOverrides,
     );

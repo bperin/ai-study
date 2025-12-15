@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -42,11 +42,13 @@ export interface ConfirmUploadResponseDto {
 /**
  * Check if a given object implements the ConfirmUploadResponseDto interface.
  */
-export function instanceOfConfirmUploadResponseDto(value: object): value is ConfirmUploadResponseDto {
-  if (!('id' in value) || value['id'] === undefined) return false;
-  if (!('filename' in value) || value['filename'] === undefined) return false;
-  if (!('userId' in value) || value['userId'] === undefined) return false;
-  return true;
+export function instanceOfConfirmUploadResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'id' in value;
+  isInstance = isInstance && 'filename' in value;
+  isInstance = isInstance && 'userId' in value;
+
+  return isInstance;
 }
 
 export function ConfirmUploadResponseDtoFromJSON(json: any): ConfirmUploadResponseDto {
@@ -54,7 +56,7 @@ export function ConfirmUploadResponseDtoFromJSON(json: any): ConfirmUploadRespon
 }
 
 export function ConfirmUploadResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): ConfirmUploadResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -64,18 +66,16 @@ export function ConfirmUploadResponseDtoFromJSONTyped(json: any, ignoreDiscrimin
   };
 }
 
-export function ConfirmUploadResponseDtoToJSON(json: any): ConfirmUploadResponseDto {
-  return ConfirmUploadResponseDtoToJSONTyped(json, false);
-}
-
-export function ConfirmUploadResponseDtoToJSONTyped(value?: ConfirmUploadResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function ConfirmUploadResponseDtoToJSON(value?: ConfirmUploadResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    id: value['id'],
-    filename: value['filename'],
-    userId: value['userId'],
+    id: value.id,
+    filename: value.filename,
+    userId: value.userId,
   };
 }

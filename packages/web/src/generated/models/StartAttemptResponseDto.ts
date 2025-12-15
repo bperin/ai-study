@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -42,11 +42,13 @@ export interface StartAttemptResponseDto {
 /**
  * Check if a given object implements the StartAttemptResponseDto interface.
  */
-export function instanceOfStartAttemptResponseDto(value: object): value is StartAttemptResponseDto {
-  if (!('attemptId' in value) || value['attemptId'] === undefined) return false;
-  if (!('pdfId' in value) || value['pdfId'] === undefined) return false;
-  if (!('startedAt' in value) || value['startedAt'] === undefined) return false;
-  return true;
+export function instanceOfStartAttemptResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'attemptId' in value;
+  isInstance = isInstance && 'pdfId' in value;
+  isInstance = isInstance && 'startedAt' in value;
+
+  return isInstance;
 }
 
 export function StartAttemptResponseDtoFromJSON(json: any): StartAttemptResponseDto {
@@ -54,7 +56,7 @@ export function StartAttemptResponseDtoFromJSON(json: any): StartAttemptResponse
 }
 
 export function StartAttemptResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): StartAttemptResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -64,18 +66,16 @@ export function StartAttemptResponseDtoFromJSONTyped(json: any, ignoreDiscrimina
   };
 }
 
-export function StartAttemptResponseDtoToJSON(json: any): StartAttemptResponseDto {
-  return StartAttemptResponseDtoToJSONTyped(json, false);
-}
-
-export function StartAttemptResponseDtoToJSONTyped(value?: StartAttemptResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function StartAttemptResponseDtoToJSON(value?: StartAttemptResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    attemptId: value['attemptId'],
-    pdfId: value['pdfId'],
-    startedAt: value['startedAt'].toISOString(),
+    attemptId: value.attemptId,
+    pdfId: value.pdfId,
+    startedAt: value.startedAt.toISOString(),
   };
 }

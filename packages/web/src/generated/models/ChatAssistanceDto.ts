@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -36,10 +36,12 @@ export interface ChatAssistanceDto {
 /**
  * Check if a given object implements the ChatAssistanceDto interface.
  */
-export function instanceOfChatAssistanceDto(value: object): value is ChatAssistanceDto {
-  if (!('message' in value) || value['message'] === undefined) return false;
-  if (!('questionId' in value) || value['questionId'] === undefined) return false;
-  return true;
+export function instanceOfChatAssistanceDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'message' in value;
+  isInstance = isInstance && 'questionId' in value;
+
+  return isInstance;
 }
 
 export function ChatAssistanceDtoFromJSON(json: any): ChatAssistanceDto {
@@ -47,7 +49,7 @@ export function ChatAssistanceDtoFromJSON(json: any): ChatAssistanceDto {
 }
 
 export function ChatAssistanceDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): ChatAssistanceDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -56,17 +58,15 @@ export function ChatAssistanceDtoFromJSONTyped(json: any, ignoreDiscriminator: b
   };
 }
 
-export function ChatAssistanceDtoToJSON(json: any): ChatAssistanceDto {
-  return ChatAssistanceDtoToJSONTyped(json, false);
-}
-
-export function ChatAssistanceDtoToJSONTyped(value?: ChatAssistanceDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function ChatAssistanceDtoToJSON(value?: ChatAssistanceDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    message: value['message'],
-    questionId: value['questionId'],
+    message: value.message,
+    questionId: value.questionId,
   };
 }

@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -36,10 +36,12 @@ export interface AnswerDto {
 /**
  * Check if a given object implements the AnswerDto interface.
  */
-export function instanceOfAnswerDto(value: object): value is AnswerDto {
-  if (!('mcqId' in value) || value['mcqId'] === undefined) return false;
-  if (!('selectedIdx' in value) || value['selectedIdx'] === undefined) return false;
-  return true;
+export function instanceOfAnswerDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'mcqId' in value;
+  isInstance = isInstance && 'selectedIdx' in value;
+
+  return isInstance;
 }
 
 export function AnswerDtoFromJSON(json: any): AnswerDto {
@@ -47,7 +49,7 @@ export function AnswerDtoFromJSON(json: any): AnswerDto {
 }
 
 export function AnswerDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): AnswerDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -56,17 +58,15 @@ export function AnswerDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function AnswerDtoToJSON(json: any): AnswerDto {
-  return AnswerDtoToJSONTyped(json, false);
-}
-
-export function AnswerDtoToJSONTyped(value?: AnswerDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function AnswerDtoToJSON(value?: AnswerDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    mcqId: value['mcqId'],
-    selectedIdx: value['selectedIdx'],
+    mcqId: value.mcqId,
+    selectedIdx: value.selectedIdx,
   };
 }

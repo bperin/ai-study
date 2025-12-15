@@ -173,7 +173,7 @@ export default function CustomizePage() {
             const api = getPdfsApi();
             await api.pdfsControllerGenerateFlashcards({
                 id: pdfId,
-                body: { prompt }
+                generateFlashcardsDto: { prompt }
             });
             
             router.push(`/study/${pdfId}`);

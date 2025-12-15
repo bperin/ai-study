@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 import type { McqDto } from './McqDto';
-import { McqDtoFromJSON, McqDtoFromJSONTyped, McqDtoToJSON, McqDtoToJSONTyped } from './McqDto';
+import { McqDtoFromJSON, McqDtoFromJSONTyped, McqDtoToJSON } from './McqDto';
 
 /**
  *
@@ -51,12 +51,14 @@ export interface ObjectiveResponseDto {
 /**
  * Check if a given object implements the ObjectiveResponseDto interface.
  */
-export function instanceOfObjectiveResponseDto(value: object): value is ObjectiveResponseDto {
-  if (!('id' in value) || value['id'] === undefined) return false;
-  if (!('title' in value) || value['title'] === undefined) return false;
-  if (!('difficulty' in value) || value['difficulty'] === undefined) return false;
-  if (!('mcqs' in value) || value['mcqs'] === undefined) return false;
-  return true;
+export function instanceOfObjectiveResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'id' in value;
+  isInstance = isInstance && 'title' in value;
+  isInstance = isInstance && 'difficulty' in value;
+  isInstance = isInstance && 'mcqs' in value;
+
+  return isInstance;
 }
 
 export function ObjectiveResponseDtoFromJSON(json: any): ObjectiveResponseDto {
@@ -64,7 +66,7 @@ export function ObjectiveResponseDtoFromJSON(json: any): ObjectiveResponseDto {
 }
 
 export function ObjectiveResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): ObjectiveResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -75,19 +77,17 @@ export function ObjectiveResponseDtoFromJSONTyped(json: any, ignoreDiscriminator
   };
 }
 
-export function ObjectiveResponseDtoToJSON(json: any): ObjectiveResponseDto {
-  return ObjectiveResponseDtoToJSONTyped(json, false);
-}
-
-export function ObjectiveResponseDtoToJSONTyped(value?: ObjectiveResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function ObjectiveResponseDtoToJSON(value?: ObjectiveResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    id: value['id'],
-    title: value['title'],
-    difficulty: value['difficulty'],
-    mcqs: (value['mcqs'] as Array<any>).map(McqDtoToJSON),
+    id: value.id,
+    title: value.title,
+    difficulty: value.difficulty,
+    mcqs: (value.mcqs as Array<any>).map(McqDtoToJSON),
   };
 }

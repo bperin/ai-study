@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -60,14 +60,16 @@ export interface RecordAnswerResponseDto {
 /**
  * Check if a given object implements the RecordAnswerResponseDto interface.
  */
-export function instanceOfRecordAnswerResponseDto(value: object): value is RecordAnswerResponseDto {
-  if (!('isCorrect' in value) || value['isCorrect'] === undefined) return false;
-  if (!('currentScore' in value) || value['currentScore'] === undefined) return false;
-  if (!('currentStreak' in value) || value['currentStreak'] === undefined) return false;
-  if (!('progress' in value) || value['progress'] === undefined) return false;
-  if (!('encouragement' in value) || value['encouragement'] === undefined) return false;
-  if (!('explanation' in value) || value['explanation'] === undefined) return false;
-  return true;
+export function instanceOfRecordAnswerResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'isCorrect' in value;
+  isInstance = isInstance && 'currentScore' in value;
+  isInstance = isInstance && 'currentStreak' in value;
+  isInstance = isInstance && 'progress' in value;
+  isInstance = isInstance && 'encouragement' in value;
+  isInstance = isInstance && 'explanation' in value;
+
+  return isInstance;
 }
 
 export function RecordAnswerResponseDtoFromJSON(json: any): RecordAnswerResponseDto {
@@ -75,7 +77,7 @@ export function RecordAnswerResponseDtoFromJSON(json: any): RecordAnswerResponse
 }
 
 export function RecordAnswerResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): RecordAnswerResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -88,21 +90,19 @@ export function RecordAnswerResponseDtoFromJSONTyped(json: any, ignoreDiscrimina
   };
 }
 
-export function RecordAnswerResponseDtoToJSON(json: any): RecordAnswerResponseDto {
-  return RecordAnswerResponseDtoToJSONTyped(json, false);
-}
-
-export function RecordAnswerResponseDtoToJSONTyped(value?: RecordAnswerResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function RecordAnswerResponseDtoToJSON(value?: RecordAnswerResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    isCorrect: value['isCorrect'],
-    currentScore: value['currentScore'],
-    currentStreak: value['currentStreak'],
-    progress: value['progress'],
-    encouragement: value['encouragement'],
-    explanation: value['explanation'],
+    isCorrect: value.isCorrect,
+    currentScore: value.currentScore,
+    currentStreak: value.currentStreak,
+    progress: value.progress,
+    encouragement: value.encouragement,
+    explanation: value.explanation,
   };
 }

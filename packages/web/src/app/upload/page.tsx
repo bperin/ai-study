@@ -54,7 +54,7 @@ export default function UploadPage() {
             let signResponse;
             try {
                 signResponse = await uploadsApi.uploadsControllerCreateSignedUploadUrl({
-                    body: {
+                    createUploadUrlDto: {
                         fileName: file.name,
                         contentType: "application/pdf",
                     },
@@ -100,7 +100,7 @@ export default function UploadPage() {
             try {
                 const { uploadsApi: confirmUploadsApi } = refreshApiConfig();
                 confirmResponse = await confirmUploadsApi.uploadsControllerConfirmUpload({
-                    body: {
+                    confirmUploadDto: {
                         filePath,
                         fileName: file.name,
                     },

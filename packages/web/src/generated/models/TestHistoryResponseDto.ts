@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 import type { TestHistoryItemDto } from './TestHistoryItemDto';
-import { TestHistoryItemDtoFromJSON, TestHistoryItemDtoFromJSONTyped, TestHistoryItemDtoToJSON, TestHistoryItemDtoToJSONTyped } from './TestHistoryItemDto';
+import { TestHistoryItemDtoFromJSON, TestHistoryItemDtoFromJSONTyped, TestHistoryItemDtoToJSON } from './TestHistoryItemDto';
 
 /**
  *
@@ -39,10 +39,12 @@ export interface TestHistoryResponseDto {
 /**
  * Check if a given object implements the TestHistoryResponseDto interface.
  */
-export function instanceOfTestHistoryResponseDto(value: object): value is TestHistoryResponseDto {
-  if (!('attempts' in value) || value['attempts'] === undefined) return false;
-  if (!('totalAttempts' in value) || value['totalAttempts'] === undefined) return false;
-  return true;
+export function instanceOfTestHistoryResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'attempts' in value;
+  isInstance = isInstance && 'totalAttempts' in value;
+
+  return isInstance;
 }
 
 export function TestHistoryResponseDtoFromJSON(json: any): TestHistoryResponseDto {
@@ -50,7 +52,7 @@ export function TestHistoryResponseDtoFromJSON(json: any): TestHistoryResponseDt
 }
 
 export function TestHistoryResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): TestHistoryResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -59,17 +61,15 @@ export function TestHistoryResponseDtoFromJSONTyped(json: any, ignoreDiscriminat
   };
 }
 
-export function TestHistoryResponseDtoToJSON(json: any): TestHistoryResponseDto {
-  return TestHistoryResponseDtoToJSONTyped(json, false);
-}
-
-export function TestHistoryResponseDtoToJSONTyped(value?: TestHistoryResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function TestHistoryResponseDtoToJSON(value?: TestHistoryResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    attempts: (value['attempts'] as Array<any>).map(TestHistoryItemDtoToJSON),
-    totalAttempts: value['totalAttempts'],
+    attempts: (value.attempts as Array<any>).map(TestHistoryItemDtoToJSON),
+    totalAttempts: value.totalAttempts,
   };
 }

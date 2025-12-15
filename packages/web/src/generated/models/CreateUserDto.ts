@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -36,10 +36,12 @@ export interface CreateUserDto {
 /**
  * Check if a given object implements the CreateUserDto interface.
  */
-export function instanceOfCreateUserDto(value: object): value is CreateUserDto {
-  if (!('email' in value) || value['email'] === undefined) return false;
-  if (!('password' in value) || value['password'] === undefined) return false;
-  return true;
+export function instanceOfCreateUserDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'email' in value;
+  isInstance = isInstance && 'password' in value;
+
+  return isInstance;
 }
 
 export function CreateUserDtoFromJSON(json: any): CreateUserDto {
@@ -47,7 +49,7 @@ export function CreateUserDtoFromJSON(json: any): CreateUserDto {
 }
 
 export function CreateUserDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): CreateUserDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -56,17 +58,15 @@ export function CreateUserDtoFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function CreateUserDtoToJSON(json: any): CreateUserDto {
-  return CreateUserDtoToJSONTyped(json, false);
-}
-
-export function CreateUserDtoToJSONTyped(value?: CreateUserDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function CreateUserDtoToJSON(value?: CreateUserDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    email: value['email'],
-    password: value['password'],
+    email: value.email,
+    password: value.password,
   };
 }

@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -60,12 +60,14 @@ export interface McqDto {
 /**
  * Check if a given object implements the McqDto interface.
  */
-export function instanceOfMcqDto(value: object): value is McqDto {
-  if (!('id' in value) || value['id'] === undefined) return false;
-  if (!('question' in value) || value['question'] === undefined) return false;
-  if (!('options' in value) || value['options'] === undefined) return false;
-  if (!('correctIdx' in value) || value['correctIdx'] === undefined) return false;
-  return true;
+export function instanceOfMcqDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'id' in value;
+  isInstance = isInstance && 'question' in value;
+  isInstance = isInstance && 'options' in value;
+  isInstance = isInstance && 'correctIdx' in value;
+
+  return isInstance;
 }
 
 export function McqDtoFromJSON(json: any): McqDto {
@@ -73,7 +75,7 @@ export function McqDtoFromJSON(json: any): McqDto {
 }
 
 export function McqDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): McqDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -81,26 +83,24 @@ export function McqDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): Mc
     question: json['question'],
     options: json['options'],
     correctIdx: json['correctIdx'],
-    explanation: json['explanation'] == null ? undefined : json['explanation'],
-    hint: json['hint'] == null ? undefined : json['hint'],
+    explanation: !exists(json, 'explanation') ? undefined : json['explanation'],
+    hint: !exists(json, 'hint') ? undefined : json['hint'],
   };
 }
 
-export function McqDtoToJSON(json: any): McqDto {
-  return McqDtoToJSONTyped(json, false);
-}
-
-export function McqDtoToJSONTyped(value?: McqDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function McqDtoToJSON(value?: McqDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    id: value['id'],
-    question: value['question'],
-    options: value['options'],
-    correctIdx: value['correctIdx'],
-    explanation: value['explanation'],
-    hint: value['hint'],
+    id: value.id,
+    question: value.question,
+    options: value.options,
+    correctIdx: value.correctIdx,
+    explanation: value.explanation,
+    hint: value.hint,
   };
 }

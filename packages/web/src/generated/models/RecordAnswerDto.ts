@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -42,11 +42,13 @@ export interface RecordAnswerDto {
 /**
  * Check if a given object implements the RecordAnswerDto interface.
  */
-export function instanceOfRecordAnswerDto(value: object): value is RecordAnswerDto {
-  if (!('questionId' in value) || value['questionId'] === undefined) return false;
-  if (!('selectedAnswer' in value) || value['selectedAnswer'] === undefined) return false;
-  if (!('timeSpent' in value) || value['timeSpent'] === undefined) return false;
-  return true;
+export function instanceOfRecordAnswerDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'questionId' in value;
+  isInstance = isInstance && 'selectedAnswer' in value;
+  isInstance = isInstance && 'timeSpent' in value;
+
+  return isInstance;
 }
 
 export function RecordAnswerDtoFromJSON(json: any): RecordAnswerDto {
@@ -54,7 +56,7 @@ export function RecordAnswerDtoFromJSON(json: any): RecordAnswerDto {
 }
 
 export function RecordAnswerDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): RecordAnswerDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -64,18 +66,16 @@ export function RecordAnswerDtoFromJSONTyped(json: any, ignoreDiscriminator: boo
   };
 }
 
-export function RecordAnswerDtoToJSON(json: any): RecordAnswerDto {
-  return RecordAnswerDtoToJSONTyped(json, false);
-}
-
-export function RecordAnswerDtoToJSONTyped(value?: RecordAnswerDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function RecordAnswerDtoToJSON(value?: RecordAnswerDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    questionId: value['questionId'],
-    selectedAnswer: value['selectedAnswer'],
-    timeSpent: value['timeSpent'],
+    questionId: value.questionId,
+    selectedAnswer: value.selectedAnswer,
+    timeSpent: value.timeSpent,
   };
 }

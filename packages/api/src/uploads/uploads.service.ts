@@ -4,6 +4,7 @@ import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PdfTextService } from '../pdfs/pdf-text.service';
+import { IngestService } from '../rag/services/ingest.service';
 
 @Injectable()
 export class UploadsService {
@@ -14,11 +15,12 @@ export class UploadsService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly pdfTextService: PdfTextService,
+    private readonly ingestService: IngestService,
   ) {
     this.storage = new Storage({
       projectId:
         this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') ||
-        'pro-pulsar-274402',
+        'slap-ai-481400',
     });
     const bucketName =
       this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
@@ -68,6 +70,15 @@ export class UploadsService {
         gcsPath: filePath, // Store GCS path
       },
     });
+
+    // Trigger RAG ingestion
+    try {
+      const gcsUri = `gcs://${this.bucketName}/${filePath}`;
+      await this.ingestService.createFromGcs(fileName, gcsUri);
+    } catch (error: any) {
+      console.error(`Failed to ingest document for RAG: ${error.message}`);
+      // We don't fail the upload if ingestion fails, but we log it
+    }
 
     return {
       id: pdf.id,

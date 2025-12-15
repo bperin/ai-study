@@ -41,8 +41,8 @@ export class TestTakingApi extends runtime.BaseAPI {
    * Complete the test
    */
   async testTakingControllerCompleteTestRaw(requestParameters: TestTakingControllerCompleteTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['attemptId'] == null) {
-      throw new runtime.RequiredError('attemptId', 'Required parameter "attemptId" was null or undefined when calling testTakingControllerCompleteTest().');
+    if (requestParameters.attemptId === null || requestParameters.attemptId === undefined) {
+      throw new runtime.RequiredError('attemptId', 'Required parameter requestParameters.attemptId was null or undefined when calling testTakingControllerCompleteTest.');
     }
 
     const queryParameters: any = {};
@@ -57,13 +57,9 @@ export class TestTakingApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/taking/{attemptId}/complete`;
-    urlPath = urlPath.replace(`{${'attemptId'}}`, encodeURIComponent(String(requestParameters['attemptId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/taking/{attemptId}/complete`.replace(`{${'attemptId'}}`, encodeURIComponent(String(requestParameters.attemptId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
@@ -85,8 +81,8 @@ export class TestTakingApi extends runtime.BaseAPI {
    * Get current test session state
    */
   async testTakingControllerGetSessionRaw(requestParameters: TestTakingControllerGetSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestSessionStateDto>> {
-    if (requestParameters['attemptId'] == null) {
-      throw new runtime.RequiredError('attemptId', 'Required parameter "attemptId" was null or undefined when calling testTakingControllerGetSession().');
+    if (requestParameters.attemptId === null || requestParameters.attemptId === undefined) {
+      throw new runtime.RequiredError('attemptId', 'Required parameter requestParameters.attemptId was null or undefined when calling testTakingControllerGetSession.');
     }
 
     const queryParameters: any = {};
@@ -101,13 +97,9 @@ export class TestTakingApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/taking/{attemptId}`;
-    urlPath = urlPath.replace(`{${'attemptId'}}`, encodeURIComponent(String(requestParameters['attemptId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/taking/{attemptId}`.replace(`{${'attemptId'}}`, encodeURIComponent(String(requestParameters.attemptId))),
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -130,12 +122,12 @@ export class TestTakingApi extends runtime.BaseAPI {
    * Record an answer
    */
   async testTakingControllerRecordAnswerRaw(requestParameters: TestTakingControllerRecordAnswerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecordAnswerResponseDto>> {
-    if (requestParameters['attemptId'] == null) {
-      throw new runtime.RequiredError('attemptId', 'Required parameter "attemptId" was null or undefined when calling testTakingControllerRecordAnswer().');
+    if (requestParameters.attemptId === null || requestParameters.attemptId === undefined) {
+      throw new runtime.RequiredError('attemptId', 'Required parameter requestParameters.attemptId was null or undefined when calling testTakingControllerRecordAnswer.');
     }
 
-    if (requestParameters['recordAnswerDto'] == null) {
-      throw new runtime.RequiredError('recordAnswerDto', 'Required parameter "recordAnswerDto" was null or undefined when calling testTakingControllerRecordAnswer().');
+    if (requestParameters.recordAnswerDto === null || requestParameters.recordAnswerDto === undefined) {
+      throw new runtime.RequiredError('recordAnswerDto', 'Required parameter requestParameters.recordAnswerDto was null or undefined when calling testTakingControllerRecordAnswer.');
     }
 
     const queryParameters: any = {};
@@ -152,17 +144,13 @@ export class TestTakingApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/taking/{attemptId}/answer`;
-    urlPath = urlPath.replace(`{${'attemptId'}}`, encodeURIComponent(String(requestParameters['attemptId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/taking/{attemptId}/answer`.replace(`{${'attemptId'}}`, encodeURIComponent(String(requestParameters.attemptId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: RecordAnswerDtoToJSON(requestParameters['recordAnswerDto']),
+        body: RecordAnswerDtoToJSON(requestParameters.recordAnswerDto),
       },
       initOverrides,
     );
@@ -182,8 +170,8 @@ export class TestTakingApi extends runtime.BaseAPI {
    * Start or resume a test session
    */
   async testTakingControllerStartSessionRaw(requestParameters: TestTakingControllerStartSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestSessionStateDto>> {
-    if (requestParameters['pdfId'] == null) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter "pdfId" was null or undefined when calling testTakingControllerStartSession().');
+    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
+      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testTakingControllerStartSession.');
     }
 
     const queryParameters: any = {};
@@ -198,13 +186,9 @@ export class TestTakingApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/taking/start/{pdfId}`;
-    urlPath = urlPath.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters['pdfId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/taking/start/{pdfId}`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,

@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 import type { TestResultAnswerDto } from './TestResultAnswerDto';
-import { TestResultAnswerDtoFromJSON, TestResultAnswerDtoFromJSONTyped, TestResultAnswerDtoToJSON, TestResultAnswerDtoToJSONTyped } from './TestResultAnswerDto';
+import { TestResultAnswerDtoFromJSON, TestResultAnswerDtoFromJSONTyped, TestResultAnswerDtoToJSON } from './TestResultAnswerDto';
 
 /**
  *
@@ -99,15 +99,17 @@ export interface TestHistoryItemDto {
 /**
  * Check if a given object implements the TestHistoryItemDto interface.
  */
-export function instanceOfTestHistoryItemDto(value: object): value is TestHistoryItemDto {
-  if (!('id' in value) || value['id'] === undefined) return false;
-  if (!('pdfId' in value) || value['pdfId'] === undefined) return false;
-  if (!('pdfTitle' in value) || value['pdfTitle'] === undefined) return false;
-  if (!('score' in value) || value['score'] === undefined) return false;
-  if (!('total' in value) || value['total'] === undefined) return false;
-  if (!('percentage' in value) || value['percentage'] === undefined) return false;
-  if (!('completedAt' in value) || value['completedAt'] === undefined) return false;
-  return true;
+export function instanceOfTestHistoryItemDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'id' in value;
+  isInstance = isInstance && 'pdfId' in value;
+  isInstance = isInstance && 'pdfTitle' in value;
+  isInstance = isInstance && 'score' in value;
+  isInstance = isInstance && 'total' in value;
+  isInstance = isInstance && 'percentage' in value;
+  isInstance = isInstance && 'completedAt' in value;
+
+  return isInstance;
 }
 
 export function TestHistoryItemDtoFromJSON(json: any): TestHistoryItemDto {
@@ -115,7 +117,7 @@ export function TestHistoryItemDtoFromJSON(json: any): TestHistoryItemDto {
 }
 
 export function TestHistoryItemDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): TestHistoryItemDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -126,35 +128,33 @@ export function TestHistoryItemDtoFromJSONTyped(json: any, ignoreDiscriminator: 
     total: json['total'],
     percentage: json['percentage'],
     completedAt: new Date(json['completedAt']),
-    report: json['report'] == null ? undefined : json['report'],
-    summary: json['summary'] == null ? undefined : json['summary'],
-    userId: json['userId'] == null ? undefined : json['userId'],
-    userEmail: json['userEmail'] == null ? undefined : json['userEmail'],
-    answers: json['answers'] == null ? undefined : (json['answers'] as Array<any>).map(TestResultAnswerDtoFromJSON),
+    report: !exists(json, 'report') ? undefined : json['report'],
+    summary: !exists(json, 'summary') ? undefined : json['summary'],
+    userId: !exists(json, 'userId') ? undefined : json['userId'],
+    userEmail: !exists(json, 'userEmail') ? undefined : json['userEmail'],
+    answers: !exists(json, 'answers') ? undefined : (json['answers'] as Array<any>).map(TestResultAnswerDtoFromJSON),
   };
 }
 
-export function TestHistoryItemDtoToJSON(json: any): TestHistoryItemDto {
-  return TestHistoryItemDtoToJSONTyped(json, false);
-}
-
-export function TestHistoryItemDtoToJSONTyped(value?: TestHistoryItemDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function TestHistoryItemDtoToJSON(value?: TestHistoryItemDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    id: value['id'],
-    pdfId: value['pdfId'],
-    pdfTitle: value['pdfTitle'],
-    score: value['score'],
-    total: value['total'],
-    percentage: value['percentage'],
-    completedAt: value['completedAt'].toISOString(),
-    report: value['report'],
-    summary: value['summary'],
-    userId: value['userId'],
-    userEmail: value['userEmail'],
-    answers: value['answers'] == null ? undefined : (value['answers'] as Array<any>).map(TestResultAnswerDtoToJSON),
+    id: value.id,
+    pdfId: value.pdfId,
+    pdfTitle: value.pdfTitle,
+    score: value.score,
+    total: value.total,
+    percentage: value.percentage,
+    completedAt: value.completedAt.toISOString(),
+    report: value.report,
+    summary: value.summary,
+    userId: value.userId,
+    userEmail: value.userEmail,
+    answers: value.answers === undefined ? undefined : (value.answers as Array<any>).map(TestResultAnswerDtoToJSON),
   };
 }
