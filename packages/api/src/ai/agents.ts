@@ -1,4 +1,5 @@
 import { LlmAgent } from '@google/adk';
+import { RetrieveService } from '../rag/services/retrieve.service';
 import {
   CONTENT_ANALYZER_INSTRUCTION,
   QUESTION_GENERATOR_INSTRUCTION,
@@ -7,7 +8,12 @@ import {
   TEST_ANALYZER_INSTRUCTION,
 } from './prompts';
 import { GEMINI_MODEL } from '../constants/models';
-import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from './tools';
+import {
+  createDocumentSearchTool,
+  createGetPdfInfoTool,
+  createSaveObjectiveTool,
+  createWebSearchTool,
+} from './tools';
 
 // Model constants
 const GEMINI_CONTENT_ANALYZER_MODEL = GEMINI_MODEL;
@@ -32,13 +38,23 @@ export function createContentAnalyzerAgent() {
  * Creates a question generator sub-agent
  * This agent generates high-quality multiple choice questions
  */
-export function createQuestionGeneratorAgent(pdfFilename: string, gcsPath: string, gcsService: any, pdfTextService: any) {
+export function createQuestionGeneratorAgent(
+  pdfFilename: string,
+  gcsPath: string,
+  gcsService: any,
+  pdfTextService: any,
+  retrieveService: RetrieveService,
+) {
   return new LlmAgent({
     name: 'question_generator',
     description: 'Generates high-quality multiple choice questions for educational purposes',
     model: GEMINI_QUESTION_GENERATOR_MODEL,
     instruction: QUESTION_GENERATOR_INSTRUCTION,
-    tools: [createGetPdfInfoTool(pdfFilename, gcsPath, gcsService, pdfTextService), createWebSearchTool()],
+    tools: [
+      createGetPdfInfoTool(pdfFilename, gcsPath, gcsService, pdfTextService),
+      createDocumentSearchTool(retrieveService, pdfFilename, gcsPath),
+      createWebSearchTool(),
+    ],
   });
 }
 
@@ -69,13 +85,20 @@ export function createQuestionGeneratorAgentByDifficulty(
   difficulty: 'easy' | 'medium' | 'hard',
   prisma: any,
   pdfId: string,
+  retrieveService: RetrieveService,
+  pdfFilename: string,
+  gcsPath: string,
 ) {
   return new LlmAgent({
     name: `question_generator_${difficulty}`,
     description: `Generates ${difficulty} difficulty questions`,
     model: GEMINI_QUESTION_GENERATOR_MODEL,
     instruction: QUESTION_GENERATOR_INSTRUCTION,
-    tools: [createSaveObjectiveTool(prisma, pdfId), createWebSearchTool()],
+    tools: [
+      createSaveObjectiveTool(prisma, pdfId),
+      createDocumentSearchTool(retrieveService, pdfFilename, gcsPath),
+      createWebSearchTool(),
+    ],
   });
 }
 
@@ -84,13 +107,18 @@ export function createTestAnalyzerAgent(
   gcsPath: string,
   gcsService: any,
   pdfTextService: any,
+  retrieveService: RetrieveService,
 ) {
   return new LlmAgent({
     name: 'test_analyzer',
     description: 'Analyzes test results and suggests study strategies with web-enhanced resources',
     model: GEMINI_QUALITY_ANALYZER_MODEL,
     instruction: TEST_ANALYZER_INSTRUCTION,
-    tools: [createGetPdfInfoTool(pdfFilename, gcsPath, gcsService, pdfTextService), createWebSearchTool()],
+    tools: [
+      createGetPdfInfoTool(pdfFilename, gcsPath, gcsService, pdfTextService),
+      createDocumentSearchTool(retrieveService, pdfFilename, gcsPath),
+      createWebSearchTool(),
+    ],
   });
 }
 
@@ -98,13 +126,18 @@ export function createTestAnalyzerAgent(
  * Creates a test plan chat agent
  * This agent helps students create test plans from PDF content
  */
-export function createTestPlanChatAgent(pdfContent: string) {
+export function createTestPlanChatAgent(
+  retrieveService: RetrieveService,
+  pdfFilename: string,
+  gcsPath: string,
+) {
   const { TEST_PLAN_CHAT_PROMPT } = require('./prompts');
   return new LlmAgent({
     name: 'test_plan_chat',
     description: 'Helps students create customized test plans from their study materials',
     model: GEMINI_MODEL,
-    instruction: TEST_PLAN_CHAT_PROMPT('Study Guide', pdfContent),
+    instruction: TEST_PLAN_CHAT_PROMPT(pdfFilename || 'Study Guide', ''), // Removed direct content
+    tools: [createDocumentSearchTool(retrieveService, pdfFilename, gcsPath)],
   });
 }
 
@@ -112,13 +145,20 @@ export function createTestPlanChatAgent(pdfContent: string) {
  * Creates a test assistance agent
  * This agent helps students during test taking without giving away answers
  */
-export function createTestAssistanceAgent(question: string, options: string[], pdfContent: string) {
+export function createTestAssistanceAgent(
+  question: string,
+  options: string[],
+  retrieveService: RetrieveService,
+  pdfFilename: string,
+  gcsPath: string,
+) {
   const { TEST_ASSISTANCE_CHAT_PROMPT } = require('./prompts');
   return new LlmAgent({
     name: 'test_assistant',
     description: 'Provides helpful hints and explanations during test taking without revealing answers',
     model: GEMINI_MODEL,
-    instruction: TEST_ASSISTANCE_CHAT_PROMPT(question, options, pdfContent),
+    instruction: TEST_ASSISTANCE_CHAT_PROMPT(question, options, ''), // Removed direct content
+    tools: [createDocumentSearchTool(retrieveService, pdfFilename, gcsPath)],
   });
 }
 

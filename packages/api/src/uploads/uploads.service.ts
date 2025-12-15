@@ -72,13 +72,19 @@ export class UploadsService {
     });
 
     // Trigger RAG ingestion
-    try {
-      const gcsUri = `gcs://${this.bucketName}/${filePath}`;
-      await this.ingestService.createFromGcs(fileName, gcsUri);
-    } catch (error: any) {
-      console.error(`Failed to ingest document for RAG: ${error.message}`);
-      // We don't fail the upload if ingestion fails, but we log it
-    }
+    (async () => {
+      try {
+        console.log(`[RAG Ingestion] Starting for PDF ${pdf.id}: ${fileName}`);
+        const gcsUri = `gcs://${this.bucketName}/${filePath}`;
+        await this.ingestService.createFromGcs(fileName, gcsUri);
+        console.log(`[RAG Ingestion] Successfully completed for PDF ${pdf.id}`);
+      } catch (error: any) {
+        console.error(`[RAG Ingestion] Failed to ingest document for RAG (PDF ${pdf.id}): ${error.message}`);
+        if (error.stack) console.error(error.stack);
+      }
+    })().catch(err => {
+      console.error(`[RAG Ingestion] Fatal error in async ingestion task:`, err);
+    });
 
     return {
       id: pdf.id,

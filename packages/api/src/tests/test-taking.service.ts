@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { RetrieveService } from '../rag/services/retrieve.service';
+import { createAdkRunner, isAdkAvailable } from '../ai/adk.helpers';
+import { createTestAssistanceAgent } from '../ai/agents';
+import { PdfTextService } from '../pdfs/pdf-text.service';
+import { GcsService } from '../pdfs/gcs.service';
 import { GEMINI_MODEL } from '../constants/models';
 
 /**
@@ -57,6 +62,9 @@ export class TestTakingService {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly retrieveService: RetrieveService,
+    private readonly pdfTextService: PdfTextService,
+    private readonly gcsService: GcsService,
   ) {
     const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
     if (apiKey) {
@@ -193,6 +201,57 @@ export class TestTakingService {
   /**
    * Record an answer and update state
    */
+  /**
+   * Get AI assistance for a specific question
+   */
+  async getQuestionAssistance(attemptId: string, questionId: string): Promise<string> {
+    const attempt = await this.prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      include: { pdf: true },
+    });
+
+    if (!attempt) throw new NotFoundException('Attempt not found');
+
+    const question = await this.prisma.mcq.findUnique({
+      where: { id: questionId },
+    });
+
+    if (!question) throw new NotFoundException('Question not found');
+
+    // Extract PDF text for context
+    let pdfContent = '';
+    if (attempt.pdf.gcsPath) {
+      try {
+        const buffer = await this.gcsService.downloadFile(attempt.pdf.gcsPath);
+        const extracted = await this.pdfTextService.extractText(buffer);
+        pdfContent = extracted.structuredText.substring(0, 50000);
+      } catch (e) {
+        console.error(`[TestTakingService] Failed to extract PDF text:`, e);
+      }
+    }
+
+    if (!isAdkAvailable()) {
+      return 'AI assistance is currently unavailable.';
+    }
+
+    const agent = createTestAssistanceAgent(
+      question.question,
+      question.options,
+      this.retrieveService,
+      attempt.pdf.filename,
+      attempt.pdf.gcsPath || '',
+    );
+
+    const runner = createAdkRunner({ agent, appName: 'test-assistant' });
+    if (!runner) return 'Failed to initialize AI assistant.';
+
+    const result = await runner.run({
+      agent,
+      prompt: 'I need a hint for this question. Please help me understand the concept without giving away the answer.'
+    });
+    return result.text;
+  }
+
   async recordAnswer(attemptId: string, questionId: string, selectedAnswer: number, timeSpent: number): Promise<any> {
     // Load attempt from DB
     const attempt = await this.prisma.testAttempt.findUnique({

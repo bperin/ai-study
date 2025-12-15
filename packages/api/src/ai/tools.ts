@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { z } from 'zod';
 import * as pdfParse from 'pdf-parse';
 import { GcsService } from '../pdfs/gcs.service';
+import { RetrieveService } from '../rag/services/retrieve.service';
 
 /**
  * Tool for saving a single objective with its questions to the database
@@ -117,6 +118,58 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
           filename: pdfFilename,
           error: 'Failed to extract PDF content. Please use the filename to infer the topic.',
         };
+      }
+    },
+  });
+}
+
+/**
+ * Tool for semantic search within the document
+ */
+export function createDocumentSearchTool(retrieveService: RetrieveService, pdfFilename: string, gcsPath: string) {
+  const parametersSchema = z.object({
+    query: z.string().describe('The search query to find relevant parts of the document'),
+  });
+
+  return new FunctionTool({
+    name: 'search_document',
+    description: 'Semantically searches the current document for relevant information based on a natural language query.',
+    parameters: parametersSchema,
+    execute: async ({ query }) => {
+      console.log(`[AI Tool] search_document called with query: ${query}`);
+      try {
+        // Find document chunks for this file
+        // We'll use a hacky but effective way to find the documentId by scanning Chunks for the gcsPath or filename
+        // A better way would be passing documentId directly if we had it in the agent context
+        const chunks = await (retrieveService as any).prisma.chunk.findMany({
+          where: {
+            document: {
+              OR: [
+                { sourceUri: { contains: gcsPath } },
+                { title: { equals: pdfFilename, mode: 'insensitive' } },
+              ],
+            },
+          },
+          orderBy: { chunkIndex: 'asc' },
+        });
+
+        if (chunks.length === 0) {
+          return { error: 'Document not indexed for search yet.' };
+        }
+
+        const ranked = await retrieveService.rankChunks(query, chunks, 5);
+        const context = ranked
+          .map((chunk) => `[Relevance: ${Math.round(chunk.score * 100)}%] Content: ${chunk.content.trim()}`)
+          .join('\n\n---\n\n');
+
+        return {
+          results: context,
+          count: ranked.length,
+          message: `Found ${ranked.length} relevant sections in the document.`,
+        };
+      } catch (error: any) {
+        console.error(`[AI Tool] Error searching document:`, error);
+        return { error: `Failed to search document: ${error.message}` };
       }
     },
   });

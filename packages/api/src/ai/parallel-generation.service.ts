@@ -153,7 +153,14 @@ export class ParallelGenerationService {
 
     if (useADK) {
       try {
-        const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId);
+        const agent = createQuestionGeneratorAgentByDifficulty(
+          difficulty,
+          this.prisma,
+          pdfId,
+          this.retrieveService,
+          pdfFilename,
+          gcsPath,
+        );
 
         const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
         if (!runner) {
@@ -168,12 +175,13 @@ export class ParallelGenerationService {
 
     if (!useADK) {
       // Direct Gemini fallback for question generation
-      console.log(`[Question Generator ${difficulty}] 🔄 Using direct Gemini fallback`);
+      console.log(`[Question Generator ${difficulty}] 🔄 Using direct Gemini fallback (with RAG context)`);
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_QUESTION_GENERATOR_MODEL });
 
-      const prompt = `${QUESTION_GENERATOR_INSTRUCTION}\n\nGenerate ${count} ${difficulty} difficulty questions from the provided PDF content.\n\nSOURCE MATERIAL (${contextSource}):\n${ragContext || pdfContent}`;
+      // Fallback still uses RAG context if available, but no raw PDF fallback
+      const prompt = `${QUESTION_GENERATOR_INSTRUCTION}\n\nGenerate ${count} ${difficulty} difficulty questions from the provided document content.\n\nSOURCE MATERIAL (${contextSource}):\n${ragContext || 'NO CONTEXT AVAILABLE'}`;
 
       const result = await model.generateContent(prompt);
       const response = result.response.text();
@@ -184,7 +192,14 @@ export class ParallelGenerationService {
     }
 
     // Continue with ADK if available
-    const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId);
+    const agent = createQuestionGeneratorAgentByDifficulty(
+      difficulty,
+      this.prisma,
+      pdfId,
+      this.retrieveService,
+      pdfFilename,
+      gcsPath,
+    );
 
     const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
     if (!runner) {
@@ -224,14 +239,14 @@ Generate ${count} ${difficulty} difficulty questions.
 
 USER INSTRUCTIONS: "${userPrompt}"
 
-SOURCE MATERIAL (${contextSource}):
-${ragContext || pdfContext}
+Please use the search_document tool to find relevant content from the document to generate these questions.
 `;
 
     // Run agent
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // @ts-ignore
     for await (const _event of runner.runAsync({
+      agent,
       userId,
       sessionId,
       newMessage: {
@@ -295,6 +310,7 @@ ${ragContext || pdfContext}
     let qualitySummary = 'Quality analysis pending.';
 
     for await (const event of runner.runAsync({
+      agent,
       userId,
       sessionId,
       newMessage: {
@@ -394,7 +410,13 @@ ${ragContext || pdfContext}
     const gcsPath = pdf.gcsPath || pdf.content || '';
 
     // Create analyzer agent with web search capability
-    const agent = createTestAnalyzerAgent(pdfFilename, gcsPath, this.gcsService, this.pdfTextService);
+    const agent = createTestAnalyzerAgent(
+      pdfFilename,
+      gcsPath,
+      this.gcsService,
+      this.pdfTextService,
+      this.retrieveService,
+    );
 
     const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
     if (!runner) {
@@ -432,6 +454,7 @@ ${ragContext || pdfContext}
 
     // @ts-ignore
     for await (const event of runner.runAsync({
+      agent,
       userId,
       sessionId,
       newMessage: {

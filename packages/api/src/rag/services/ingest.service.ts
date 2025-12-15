@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import { Storage } from '@google-cloud/storage';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -103,6 +104,7 @@ export class IngestService {
   }
 
   private async processDocument(documentId: string, text: string, mimeType: string) {
+    this.logger.log(`Processing document ${documentId} with ${text.length} chars`);
     const chunks = this.chunkService.chunkText(text);
     if (!chunks.length) {
       await this.prisma.document.update({
@@ -112,29 +114,76 @@ export class IngestService {
       throw new BadRequestException('No extractable text');
     }
 
-    let embeddings: number[][] = [];
-    if (this.embedService.isEnabled()) {
-      this.logger.log(`Computing embeddings for ${chunks.length} chunks`);
-      embeddings = await Promise.all(chunks.map((chunk) => this.embedService.embedText(chunk.content)));
+    this.logger.log(`Computing embeddings for ${chunks.length} chunks`);
+    const embeddings = await Promise.all(chunks.map((chunk) => this.embedService.embedText(chunk.content)));
+
+    const chunkData = chunks.map((chunk, idx) => {
+      const embedding = embeddings[idx];
+      const embeddingSql = embedding ? `[${embedding.join(',')}]` : null;
+
+      return {
+        id: crypto.randomUUID(),
+        documentId,
+        chunkIndex: chunk.chunkIndex,
+        content: chunk.content,
+        contentHash: chunk.contentHash,
+        startChar: chunk.startChar,
+        endChar: chunk.endChar,
+        embeddingJson: embedding || null,
+        embeddingSql,
+      };
+    });
+
+    this.logger.log(`Saving ${chunkData.length} chunks to database`);
+    this.logger.log(`Saving ${chunkData.length} chunks to database in batches`);
+
+    // Process in batches outside of a transaction to avoid Prisma Accelerate timeouts (15s limit)
+    const BATCH_SIZE = 25;
+    for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
+      const batch = chunkData.slice(i, i + BATCH_SIZE);
+      this.logger.log(`Processing batch ${i / BATCH_SIZE + 1} (${batch.length} chunks)`);
+
+      await this.prisma.$transaction(async (tx) => {
+        for (const data of batch) {
+          if (data.embeddingSql) {
+            await tx.$executeRawUnsafe(
+              `INSERT INTO "Chunk" ("id", "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "embeddingVec")
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector)`,
+              data.id,
+              data.documentId,
+              data.chunkIndex,
+              data.content,
+              data.contentHash,
+              data.startChar,
+              data.endChar,
+              JSON.stringify(data.embeddingJson),
+              data.embeddingSql,
+            );
+          } else {
+            await tx.chunk.create({
+              data: {
+                id: data.id,
+                documentId: data.documentId,
+                chunkIndex: data.chunkIndex,
+                content: data.content,
+                contentHash: data.contentHash,
+                startChar: data.startChar,
+                endChar: data.endChar,
+                embeddingJson: data.embeddingJson as any,
+              },
+            });
+          }
+        }
+      }, {
+        maxWait: 5000,
+        timeout: 15000, // Stay within Prisma Accelerate 15s limit
+      });
     }
 
-    const chunkData: Prisma.ChunkCreateManyInput[] = chunks.map((chunk, idx) => ({
-      documentId,
-      chunkIndex: chunk.chunkIndex,
-      content: chunk.content,
-      contentHash: chunk.contentHash,
-      startChar: chunk.startChar,
-      endChar: chunk.endChar,
-      embeddingJson: embeddings[idx] ? (embeddings[idx] as unknown as Prisma.InputJsonValue) : undefined,
-    }));
-
-    await this.prisma.$transaction([
-      this.prisma.chunk.createMany({ data: chunkData }),
-      this.prisma.document.update({
-        where: { id: documentId },
-        data: { status: 'READY', mimeType, errorMessage: null },
-      }),
-    ]);
+    await this.prisma.document.update({
+      where: { id: documentId },
+      data: { status: 'READY', mimeType, errorMessage: null },
+    });
 
     return { documentId, status: 'READY', chunks: chunks.length };
   }

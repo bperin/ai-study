@@ -11,6 +11,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+import { RetrieveService } from '../rag/services/retrieve.service';
+
 @Injectable()
 export class PdfsService {
   constructor(
@@ -18,6 +20,7 @@ export class PdfsService {
     private readonly parallelGenerationService: ParallelGenerationService,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
+    private readonly retrieveService: RetrieveService,
   ) { }
 
   async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
@@ -321,7 +324,7 @@ export class PdfsService {
       try {
         const { createTestPlanChatAgent } = require('../ai/agents');
 
-        const agent = createTestPlanChatAgent(pdfContent);
+        const agent = createTestPlanChatAgent(this.retrieveService, pdf.filename, pdf.gcsPath || '');
         const conversationHistory = history || [];
         let conversationContext = '';
         if (conversationHistory.length > 0) {
@@ -329,7 +332,7 @@ export class PdfsService {
         }
 
         const fullMessage = `${conversationContext}\n\nStudent's message: ${message}`;
-        const result = await adkRunner.run(agent, fullMessage);
+        const result = await adkRunner.run({ agent, prompt: fullMessage });
         response = result.text;
       } catch (adkError) {
         console.error('[Chat Service] ❌ ADK agent failed, falling back to direct Gemini:', adkError);
@@ -426,7 +429,7 @@ export class PdfsService {
     // Create ADK-based test plan agent for auto-generation
     const { createTestPlanChatAgent } = require('../ai/agents');
 
-    const agent = createTestPlanChatAgent(pdfContent);
+    const agent = createTestPlanChatAgent(this.retrieveService, pdf.filename, pdf.gcsPath || '');
     const runner = createAdkRunner();
 
     if (!runner) {
@@ -435,7 +438,7 @@ export class PdfsService {
 
     const autoGenPrompt = `Based on the PDF content, automatically generate a comprehensive test plan. Create a balanced mix of easy, medium, and hard questions covering the main topics. Respond with a complete test plan in JSON format.`;
 
-    const result = await runner.run(agent, autoGenPrompt);
+    const result = await runner.run({ agent, prompt: autoGenPrompt });
     const response = result.text;
 
     // Try to parse JSON from response
