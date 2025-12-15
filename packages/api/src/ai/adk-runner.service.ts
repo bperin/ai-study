@@ -14,22 +14,30 @@ export class AdkRunnerService implements OnModuleInit {
     private async initializeAdkRunner() {
         try {
             // Test ADK availability
-            const { InMemoryRunner } = require('@google/adk');
+            const { InMemoryRunner, LlmAgent } = require('@google/adk');
             const { InMemorySessionService } = require('@google/adk');
-            
-            // Initialize session service
-            this.sessionService = new InMemorySessionService();
-            
+
+            // Initialize session service with Custom implementation
+            this.sessionService = new CustomSessionService();
+
+            // Create a dummy agent for testing
+            const testAgent = new LlmAgent({
+                name: 'test_agent',
+                description: 'test',
+                model: 'gemini-2.5-flash',
+                instruction: 'test'
+            });
+
             // Create a test runner to verify ADK works
             const testRunner = new InMemoryRunner({
-                agent: null,
+                agent: testAgent,
                 appName: 'ai-study-test',
                 sessionService: this.sessionService,
             });
-            
+
             this.isAdkAvailable = true;
             this.logger.log('✅ ADK Runner Service initialized successfully');
-            
+
         } catch (error) {
             this.isAdkAvailable = false;
             this.logger.warn('❌ ADK not available - services will use Gemini fallback', (error as Error).message);
@@ -58,39 +66,43 @@ export class AdkRunnerService implements OnModuleInit {
 
         try {
             const { InMemoryRunner } = require('@google/adk');
-            
-            // Create runner for this specific agent
+
+            // Create a fresh session service for this request (stateless/isolated per call)
+            const localSessionService = new CustomSessionService();
+            const sessionId = `session-${userId}-${Date.now()}`;
+
+            // Create session in our custom service
+            await localSessionService.createSession({
+                appName,
+                userId,
+                sessionId,
+            });
+
             const runner = new InMemoryRunner({
                 agent,
                 appName,
-                sessionService: this.sessionService,
+                sessionService: localSessionService,
             });
 
-            // Create or get session for this user
-            const session = await this.sessionService.createSession({
-                appName,
-                userId,
-            });
+            this.logger.debug(`Running agent for user ${userId} in session ${sessionId}`);
 
-            this.logger.debug(`Running agent for user ${userId} in session ${session.id}`);
-
-            // Create user message
             const userMessage = {
                 role: 'user',
                 parts: [{ text: message }],
             };
 
-            // Run agent and collect response
-            let responseText = '';
-            
-            for await (const event of runner.runAsync({
+            const stream = await runner.runAsync({
                 userId,
-                sessionId: session.id,
+                sessionId,
                 newMessage: userMessage,
-            })) {
-                // Process events and get final response
-                if (event.content && event.content.parts && event.content.parts.length > 0) {
-                    responseText = event.content.parts[0].text;
+            });
+
+            let responseText = '';
+            for await (const event of stream) {
+                // Capture model response
+                const content = (event as any).content;
+                if (content && content.role === 'model' && content.parts?.length > 0) {
+                    responseText = content.parts.map((p: any) => p.text).join('');
                 }
             }
 
@@ -118,7 +130,7 @@ export class AdkRunnerService implements OnModuleInit {
 
         try {
             const { InMemoryRunner } = require('@google/adk');
-            
+
             // Create runner for question generation
             const runner = new InMemoryRunner({
                 agent,
@@ -181,6 +193,72 @@ export class AdkRunnerService implements OnModuleInit {
             // Add cleanup logic here if session service supports it
         } catch (error) {
             this.logger.error('Error cleaning up old sessions:', error);
+        }
+    }
+}
+
+/**
+ * Custom Simple Session Service to bypass library issues
+ */
+class CustomSessionService {
+    private sessions = new Map<string, any>();
+
+    async createSession(options: any) {
+        const id = options.sessionId || `session-${Date.now()}`;
+        const session = {
+            id: id,
+            appName: options.appName,
+            userId: options.userId,
+            state: options.state || {},
+            history: []
+        };
+        this.sessions.set(id, session);
+        console.log(`[CustomSession] Created session ${id}`);
+        return session;
+    }
+
+    async getSession(arg1: any, arg2?: any, arg3?: any) {
+        // Handle different signatures: (sessionId) or (app, user, sessionId)
+        let sessionId = null;
+
+        if (typeof arg1 === 'string' && !arg2) {
+            sessionId = arg1;
+        } else if (typeof arg3 === 'string') {
+            sessionId = arg3;
+        } else if (typeof arg1 === 'object' && arg1.sessionId) {
+            sessionId = arg1.sessionId;
+        }
+
+        if (sessionId && this.sessions.has(sessionId)) {
+            return this.sessions.get(sessionId);
+        }
+
+        // Try finding by ID directly if arg1 matches a key
+        if (typeof arg1 === 'string' && this.sessions.has(arg1)) {
+            return this.sessions.get(arg1);
+        }
+
+        console.warn(`[CustomSession] Session not found. Lookup args:`, arg1, arg2, arg3);
+        return null;
+    }
+
+    async updateSession(session: any) {
+        if (session && session.id) {
+            this.sessions.set(session.id, session);
+        }
+    }
+
+    async appendEvent(session: any, event: any) {
+        // Ensure session object is up to date
+        const currentSession = this.sessions.get(session.id) || session;
+        if (!currentSession.history) currentSession.history = [];
+        currentSession.history.push(event);
+        this.sessions.set(currentSession.id, currentSession);
+    }
+
+    async saveSession(session: any) {
+        if (session && session.id) {
+            this.sessions.set(session.id, session);
         }
     }
 }
