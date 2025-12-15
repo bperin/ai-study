@@ -77,18 +77,32 @@ export default function CustomizePage() {
         setChatting(true);
 
         try {
-            // Use backend chat endpoint with PDF context
-            const api = getPdfsApi();
-            
-            // @ts-ignore - The generated client types might be slightly off for the response type
-            const data: any = await api.pdfsControllerChatPlan({
-                chatMessageDto: {
+            // Use direct fetch since generated API client returns void
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/pdfs/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                },
+                body: JSON.stringify({
                     message: userMessage,
                     pdfId: pdfId,
-                    // @ts-ignore - mismatch in expected structure
                     conversationHistory: messages
-                }
+                })
             });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Chat API error details:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorBody: errorText,
+                    requestBody: { message: userMessage, pdfId, conversationHistory: messages }
+                });
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+            }
+
+            const data = await response.json();
 
             const assistantMessage = data.message || (data.testPlan ? "I've created a test plan for you based on your request." : "I'm not sure how to respond to that.");
             setMessages((prev) => [...prev, { role: "assistant", content: assistantMessage }]);
