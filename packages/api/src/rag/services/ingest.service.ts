@@ -271,8 +271,8 @@ export class IngestService {
           }
         }
       }, {
-        maxWait: 5000,
-        timeout: 15000, // Stay within Prisma Accelerate 15s limit
+        maxWait: 10000,
+        timeout: 25000, // Increase timeout to handle latency
       });
     }
 

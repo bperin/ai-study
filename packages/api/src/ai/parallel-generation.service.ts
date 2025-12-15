@@ -192,7 +192,7 @@ export class ParallelGenerationService {
 
       // Parse and save questions directly (simplified fallback)
       console.log(`[Question Generator ${difficulty}] Generated questions via Gemini fallback`);
-      return;
+      return { objectivesCreated: 0, questionsCreated: 0 };
     }
 
     // Continue with ADK if available

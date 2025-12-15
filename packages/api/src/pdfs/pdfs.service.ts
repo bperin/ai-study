@@ -12,6 +12,7 @@ const path = require('path');
 const os = require('os');
 
 import { RetrieveService } from '../rag/services/retrieve.service';
+import { PdfStatusGateway } from '../pdf-status.gateway';
 
 @Injectable()
 export class PdfsService {
@@ -21,6 +22,7 @@ export class PdfsService {
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
+    private readonly pdfStatusGateway: PdfStatusGateway,
   ) { }
 
   async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
@@ -42,6 +44,9 @@ export class PdfsService {
         status: 'generating',
       },
     });
+
+    // Notify client that generation has started
+    this.pdfStatusGateway.sendStatusUpdate(userId, true);
 
     // 2. Use parallel generation for faster results
     console.log(`PDF record for generation:`, {
@@ -76,13 +81,22 @@ export class PdfsService {
           where: { id: session.id },
           data: { status: 'completed' },
         });
+        this.pdfStatusGateway.sendStatusUpdate(userId, false);
         console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
       } catch (e: any) {
+        this.pdfStatusGateway.sendStatusUpdate(userId, false);
         console.error(`[Background] Flashcard generation failed for PDF ${pdfId}: ${e.message}`);
         try {
+          // If we managed to generate some questions, mark as ready instead of failed
+          const questionsCount = await this.prisma.mcq.count({
+            where: { objective: { pdfId } }
+          });
+
           await this.prisma.pdfSession.update({
             where: { id: session.id },
-            data: { status: 'failed' },
+            data: {
+              status: questionsCount > 0 ? 'completed' : 'failed',
+            },
           });
         } catch (updateError: any) {
           console.error(`[Background] Failed to update session status to failed: ${updateError.message}`);

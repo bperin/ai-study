@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PdfStatusModule } from './pdf-status.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -16,6 +17,7 @@ import { RagModule } from './rag/rag.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    PdfStatusModule,
     PrismaModule,
     UsersModule,
     AuthModule,
