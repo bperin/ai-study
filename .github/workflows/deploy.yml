@@ -57,7 +57,7 @@ jobs:
             - name: Run Database Migrations
               run: |
                   cd packages/api
-                  npm install -g prisma
+                  npm install
                   export DATABASE_URL="${{ steps.secrets.outputs.DATABASE_URL }}"
                   npx prisma db push --accept-data-loss
 
