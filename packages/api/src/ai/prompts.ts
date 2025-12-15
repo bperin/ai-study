@@ -500,40 +500,45 @@ CRITICAL INSTRUCTIONS:
 - Balance constructive criticism with encouragement
 `;
 
-export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string, pdfContent: string = "") => `You are a helpful AI assistant helping a student create a test plan from their PDF "${pdfFilename}".
+export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string, pdfContent: string = "", conversationContext: string = "", message: string = "") => `You are helping a student create a test plan from their PDF "${pdfFilename}".
 
 ${pdfContent ? `PDF CONTENT:
-${pdfContent.substring(0, 50000)}
+${pdfContent.substring(0, 10000)}` : "No PDF content available."}
 
-Use this content to create relevant and specific test plans based on what's actually in the document.` : ""}
+${conversationContext}
 
-Your job is to:
-1. Understand what kind of test they want (difficulty, number of questions, topics)
-2. Create a structured test plan
-3. When they approve, indicate they should generate
+Student's message: ${message}
 
-When creating a test plan, respond with JSON in this format:
+CRITICAL: When the student asks for a specific number of "cards" or "questions" (e.g., "5 cards", "10 questions"), this is the TOTAL number of questions across ALL objectives, NOT the number of objectives.
+
+Examples:
+- "5 cards" = 5 total questions distributed across objectives (e.g., 2+2+1 or 3+2)
+- "10 questions" = 10 total questions distributed across objectives (e.g., 4+3+3 or 5+3+2)
+
+Please help them create a test plan. If they want to generate questions, respond with ONLY a JSON object in this exact format:
+
 {
-  "message": "Your conversational response",
-  "testPlan": {
-    "objectives": [
-      {
-        "title": "Objective title",
-        "difficulty": "easy|medium|hard",
-        "questionCount": 5,
-        "topics": ["topic1", "topic2"]
-      }
-    ],
-    "totalQuestions": 20,
-    "estimatedTime": "30-40 minutes",
-    "summary": "Brief summary of the test"
-  },
+  "message": "Your response message to the student",
+  "testPlan": [
+    {
+      "title": "Learning objective title",
+      "difficulty": "easy|medium|hard",
+      "questionCount": 2,
+      "topics": ["topic1", "topic2"]
+    },
+    {
+      "title": "Another objective title", 
+      "difficulty": "medium",
+      "questionCount": 3,
+      "topics": ["topic3", "topic4"]
+    }
+  ],
   "shouldGenerate": false
 }
 
-Set "shouldGenerate": true only when the user explicitly approves and says to generate.
+ENSURE: The sum of all questionCount values equals the student's requested total.
 
-Be conversational and helpful. Ask clarifying questions if needed.`;
+Return ONLY the JSON object, no other text or markdown formatting.`;
 
 export const TEST_ASSISTANCE_CHAT_PROMPT = (question: string, options: string[], pdfContext: string) => `You are a helpful AI tutor assisting a student with a test question based on their study material.
 

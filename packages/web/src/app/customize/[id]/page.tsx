@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { FileText, Send, Sparkles, Loader2, BookOpen, Zap } from "lucide-react";
+import { FileText, Send, Sparkles, Loader2, BookOpen, Zap, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -148,6 +148,19 @@ export default function CustomizePage() {
         }
     };
 
+    const handleRemoveObjective = (indexToRemove: number) => {
+        if (!testPlan || !testPlan.objectives) return;
+        
+        const updatedObjectives = testPlan.objectives.filter((_, index) => index !== indexToRemove);
+        const updatedTotalQuestions = updatedObjectives.reduce((sum, obj) => sum + obj.questionCount, 0);
+        
+        setTestPlan({
+            ...testPlan,
+            objectives: updatedObjectives,
+            totalQuestions: updatedTotalQuestions
+        });
+    };
+
     const handleGenerate = async () => {
         if (!testPlan || !testPlan.objectives) return;
 
@@ -269,9 +282,9 @@ export default function CustomizePage() {
                                     <div className="space-y-3">
                                         <h4 className="font-semibold text-sm text-muted-foreground uppercase">Objectives</h4>
                                         {(testPlan.objectives || []).map((obj, index) => (
-                                            <div key={index} className={`p-4 rounded-lg border-2 ${difficultyColors[obj.difficulty]}`}>
+                                            <div key={index} className={`p-4 rounded-lg border-2 relative ${difficultyColors[obj.difficulty]}`}>
                                                 <div className="flex items-start justify-between mb-2">
-                                                    <div className="flex-1">
+                                                    <div className="flex-1 pr-8">
                                                         <h5 className="font-semibold">{obj.title}</h5>
                                                         <div className="flex items-center gap-2 mt-1">
                                                             <Badge variant="outline" className="capitalize">
@@ -280,6 +293,15 @@ export default function CustomizePage() {
                                                             <Badge variant="outline">{obj.questionCount} questions</Badge>
                                                         </div>
                                                     </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="absolute top-2 right-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                        onClick={() => handleRemoveObjective(index)}
+                                                        title="Remove this objective"
+                                                    >
+                                                        <Minus className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
                                                 {obj.topics && obj.topics.length > 0 && (
                                                     <div className="mt-2 flex flex-wrap gap-1">
