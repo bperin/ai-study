@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getPdfsApi, getUsersApi, getTestsApi } from "@/api-client";
+import { getPdfsApi, getUsersApi, getTestsApi, defaultApi } from "@/api-client";
 import { PdfResponseDto, TestHistoryItemDto, UserResponseDto } from "@/generated";
-import { Info, Trash2, Crown, Users } from "lucide-react";
+import { Info, Trash2, Crown, Users, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import Logo from "@/components/Logo";
 
 type PdfObjective = {
@@ -28,6 +29,23 @@ export default function DashboardPage() {
     const [history, setHistory] = useState<TestHistoryItemDto[]>([]);
     const [user, setUser] = useState<UserResponseDto | null>(null);
     const [pdfToDelete, setPdfToDelete] = useState<string | null>(null);
+    const [reprocessing, setReprocessing] = useState(false);
+
+    const handleReprocessAll = async () => {
+        if (!confirm("Are you sure you want to re-vectorize all documents? This may take some time.")) return;
+        
+        setReprocessing(true);
+        try {
+            await defaultApi.ragControllerReprocessAll();
+            toast.success("Bulk reprocessing started in background");
+        } catch (error: any) {
+            console.error("Failed to start reprocessing:", error);
+            toast.error(`Failed: ${error.message}`);
+        } finally {
+            setReprocessing(false);
+        }
+    };
+
     const handleLogout = useCallback(() => {
         localStorage.removeItem("access_token");
         router.push("/login");
@@ -91,6 +109,18 @@ export default function DashboardPage() {
             <header className="flex h-16 items-center justify-between border-b border-border bg-card/50 backdrop-blur-sm px-6">
                 <Logo size="sm" />
                 <div className="flex items-center gap-3">
+                    {user?.isAdmin && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="mr-4 gap-2 border-primary/20 hover:bg-primary/5"
+                            onClick={handleReprocessAll}
+                            disabled={reprocessing}
+                        >
+                            <RefreshCw className={`h-4 w-4 ${reprocessing ? 'animate-spin' : ''}`} />
+                            {reprocessing ? 'Reprocessing...' : 'Reprocess All RAG'}
+                        </Button>
+                    )}
                     <div className="text-right">
                         <div className="flex items-center gap-2 justify-end">
                             <p className="text-sm font-medium">{user?.email?.split("@")[0]}</p>

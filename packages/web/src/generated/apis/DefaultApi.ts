@@ -37,6 +37,10 @@ export interface RagControllerQueryDocumentRequest {
   queryDocumentDto: QueryDocumentDto;
 }
 
+export interface RagControllerReprocessRequest {
+  documentId: string;
+}
+
 export interface TestSessionsControllerCreateSessionRequest {
   startSessionDto: StartSessionDto;
 }
@@ -241,6 +245,78 @@ export class DefaultApi extends runtime.BaseAPI {
    */
   async ragControllerQueryDocument(requestParameters: RagControllerQueryDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
     await this.ragControllerQueryDocumentRaw(requestParameters, initOverrides);
+  }
+
+  /**
+   */
+  async ragControllerReprocessRaw(requestParameters: RagControllerReprocessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling ragControllerReprocess.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      const token = this.configuration.accessToken;
+      const tokenString = await token('bearer', []);
+
+      if (tokenString) {
+        headerParameters['Authorization'] = `Bearer ${tokenString}`;
+      }
+    }
+    const response = await this.request(
+      {
+        path: `/v1/documents/{documentId}/reprocess`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async ragControllerReprocess(requestParameters: RagControllerReprocessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerReprocessRaw(requestParameters, initOverrides);
+  }
+
+  /**
+   */
+  async ragControllerReprocessAllRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      const token = this.configuration.accessToken;
+      const tokenString = await token('bearer', []);
+
+      if (tokenString) {
+        headerParameters['Authorization'] = `Bearer ${tokenString}`;
+      }
+    }
+    const response = await this.request(
+      {
+        path: `/v1/documents/reprocess-all`,
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async ragControllerReprocessAll(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerReprocessAllRaw(initOverrides);
   }
 
   /**

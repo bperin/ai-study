@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -16,6 +17,9 @@ import { RagService } from './services/rag.service';
 import { CreateTextDocumentDto } from './dto/create-text-document.dto';
 import { CreateGcsDocumentDto } from './dto/create-gcs-document.dto';
 import { QueryDocumentDto } from './dto/query-document.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('v1/documents')
 export class RagController {
@@ -45,6 +49,20 @@ export class RagController {
   @Get(':documentId')
   async getDocument(@Param('documentId') documentId: string) {
     return this.ragService.getDocument(documentId);
+  }
+
+  @Post('reprocess-all')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  async reprocessAll() {
+    return this.ingestService.reprocessAllDocuments();
+  }
+
+  @Post(':documentId/reprocess')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  async reprocess(@Param('documentId') documentId: string) {
+    return this.ingestService.reprocessDocument(documentId);
   }
 
   @Get(':documentId/chunks')

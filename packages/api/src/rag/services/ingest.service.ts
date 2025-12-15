@@ -93,6 +93,71 @@ export class IngestService {
     }
   }
 
+  async reprocessDocument(documentId: string) {
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!document) {
+      throw new BadRequestException('Document not found');
+    }
+
+    if (!document.sourceUri || document.sourceType !== 'gcs') {
+      throw new BadRequestException('Only GCS-based documents can be reprocessed currently');
+    }
+
+    this.logger.log(`Reprocessing document ${documentId}: ${document.title}`);
+
+    // Update status to PROCESSING and clear existing chunks
+    await this.prisma.chunk.deleteMany({
+      where: { documentId },
+    });
+
+    await this.prisma.document.update({
+      where: { id: documentId },
+      data: { status: 'PROCESSING', errorMessage: null },
+    });
+
+    try {
+      const { bucket: bucketName, path } = this.parseGcsUri(document.sourceUri);
+      const bucket = this.storage.bucket(bucketName);
+      const [buffer] = await bucket.file(path).download();
+      const text = await this.pdfService.extractText(buffer);
+      return await this.processDocument(documentId, text, document.mimeType || 'application/pdf');
+    } catch (error) {
+      await this.prisma.document.update({
+        where: { id: documentId },
+        data: { status: 'FAILED', errorMessage: (error as Error).message },
+      });
+      throw error;
+    }
+  }
+
+  async reprocessAllDocuments() {
+    const documents = await this.prisma.document.findMany({
+      where: { sourceType: 'gcs' },
+      select: { id: true, title: true },
+    });
+
+    this.logger.log(`Queueing reprocessing for ${documents.length} GCS documents`);
+
+    // Run in background
+    (async () => {
+      for (const doc of documents) {
+        try {
+          await this.reprocessDocument(doc.id);
+          this.logger.log(`Successfully reprocessed ${doc.id} (${doc.title})`);
+        } catch (e: any) {
+          this.logger.error(`Failed to reprocess ${doc.id}: ${e.message}`);
+        }
+      }
+    })().catch(err => {
+      this.logger.error('Fatal error in bulk reprocessing background task', err);
+    });
+
+    return { message: `Started reprocessing ${documents.length} documents in background` };
+  }
+
   private parseGcsUri(uri: string): { bucket: string; path: string } {
     const parts = uri.replace('gcs://', '').split('/');
     const bucket = parts.shift();
