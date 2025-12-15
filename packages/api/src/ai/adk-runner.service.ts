@@ -218,8 +218,14 @@ class CustomSessionService {
     }
 
     async getSession(arg1: any, arg2?: any, arg3?: any) {
+        console.error(`[CustomSession] getSession called with:`, arg1, arg2, arg3);
         // Handle different signatures: (sessionId) or (app, user, sessionId)
         let sessionId = null;
+
+        // Direct lookup if arg1 is the ID
+        if (typeof arg1 === 'string' && this.sessions.has(arg1)) {
+            return this.sessions.get(arg1);
+        }
 
         if (typeof arg1 === 'string' && !arg2) {
             sessionId = arg1;
@@ -260,5 +266,10 @@ class CustomSessionService {
         if (session && session.id) {
             this.sessions.set(session.id, session);
         }
+    }
+
+    async loadSession(sessionId: string) {
+        console.error(`[CustomSession] loadSession called with:`, sessionId);
+        return this.getSession(sessionId);
     }
 }
