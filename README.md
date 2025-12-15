@@ -57,10 +57,10 @@ AI Study leverages **Google's ADK (Agent Development Kit)** with multiple specia
 
 | Diagram Type | Visualization |
 |---|---|
-| **System Architecture** | [![System Architecture](./docs/ai-study-architecture.png)](./docs/ai-study-architecture.md) |
-| **Agent Details** | [![Agent Details](./docs/ai-study-agent-details.png)](./docs/ai-study-agent-details.md) |
-| **Data Flow** | [![Data Flow](./docs/ai-study-data-flow.png)](./docs/ai-study-data-flow.md) |
-| **Workflow Sequence** | [![Workflow Sequence](./docs/ai-study-workflow.png)](./docs/ai-study-workflow.md) |
+| **System Architecture** | [![System Architecture](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-architecture-1.png)](./docs/ai-study-architecture.md) |
+| **Agent Details** | [![Agent Details](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-agent-details-1.png)](./docs/ai-study-agent-details.md) |
+| **Data Flow** | [![Data Flow](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-data-flow-1.png)](./docs/ai-study-data-flow.md) |
+| **Workflow Sequence** | [![Workflow Sequence](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-workflow-1.png)](./docs/ai-study-workflow.md) |
 
 </details>
 
