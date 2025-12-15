@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { TestsModule } from './tests/tests.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { PdfsModule } from './pdfs/pdfs.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PdfsModule } from './pdfs/pdfs.module';
     TestsModule,
     UploadsModule,
     PdfsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
