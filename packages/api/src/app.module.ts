@@ -9,6 +9,7 @@ import { TestsModule } from './tests/tests.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { PdfsModule } from './pdfs/pdfs.module';
 import { AiModule } from './ai/ai.module';
+import { RagModule } from './rag/rag.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AiModule } from './ai/ai.module';
     UploadsModule,
     PdfsModule,
     AiModule,
+    RagModule,
   ],
   controllers: [AppController],
   providers: [AppService],
