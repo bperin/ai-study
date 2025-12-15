@@ -1,0 +1,32 @@
+# Node modules
+node_modules
+npm-debug.log
+.npm
+
+# Build outputs
+dist
+.turbo
+
+# Environment and secrets
+.env
+.env.local
+.env.production
+
+# Development files
+.vercel
+.DS_Store
+
+# Documentation and assets (not needed for API)
+../../docs/
+../../**/*.png
+../../**/*.svg
+../../diagrams/
+../../renders/
+
+# Web package (not needed for API build)
+../web/
+
+# Git and IDE
+.git
+.gitignore
+*.log
