@@ -5,6 +5,7 @@ import { GcsService } from './gcs.service';
 import { PdfTextService } from './pdf-text.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TEST_PLAN_CHAT_PROMPT } from '../ai/prompts';
+import { createAdkRunner } from '../ai/adk.helpers';
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
@@ -306,28 +307,21 @@ export class PdfsService {
       }
     }
 
-    // Check if ADK is available, otherwise use direct Gemini
-    let useADK = false;
-    try {
-      const { InMemoryRunner } = require('@google/adk');
-      const runner = new InMemoryRunner();
-      useADK = true;
-      console.log('[Chat Service] ✅ ADK available - using ADK agent');
-    } catch (adkImportError) {
-      console.log('[Chat Service] ❌ ADK not available - using direct Gemini fallback');
-      useADK = false;
-    }
+    const adkRunner = createAdkRunner();
+    let useADK = !!adkRunner;
+    console.log(
+      useADK
+        ? '[Chat Service] ✅ ADK available - using ADK agent'
+        : '[Chat Service] ❌ ADK not available - using direct Gemini fallback',
+    );
 
     let response = '';
 
     if (useADK) {
       try {
         const { createTestPlanChatAgent } = require('../ai/agents');
-        const { InMemoryRunner } = require('@google/adk');
 
         const agent = createTestPlanChatAgent(pdfContent);
-        const runner = new InMemoryRunner();
-
         const conversationHistory = history || [];
         let conversationContext = '';
         if (conversationHistory.length > 0) {
@@ -335,7 +329,7 @@ export class PdfsService {
         }
 
         const fullMessage = `${conversationContext}\n\nStudent's message: ${message}`;
-        const result = await runner.run(agent, fullMessage);
+        const result = await adkRunner.run(agent, fullMessage);
         response = result.text;
       } catch (adkError) {
         console.error('[Chat Service] ❌ ADK agent failed, falling back to direct Gemini:', adkError);
@@ -431,10 +425,13 @@ export class PdfsService {
 
     // Create ADK-based test plan agent for auto-generation
     const { createTestPlanChatAgent } = require('../ai/agents');
-    const { InMemoryRunner } = require('@google/adk');
 
     const agent = createTestPlanChatAgent(pdfContent);
-    const runner = new InMemoryRunner();
+    const runner = createAdkRunner();
+
+    if (!runner) {
+      throw new Error('ADK not available for auto-generating test plans');
+    }
 
     const autoGenPrompt = `Based on the PDF content, automatically generate a comprehensive test plan. Create a balanced mix of easy, medium, and hard questions covering the main topics. Respond with a complete test plan in JSON format.`;
 

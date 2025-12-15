@@ -21,10 +21,10 @@ export default function Home() {
                 <Logo size="xl" />
             </div>
             <div className="flex gap-4">
-                <Link href="/login" className="rounded bg-red-600 px-6 py-3 text-white hover:bg-red-700">
+                <Link href="/login" className="rounded bg-white px-6 py-3 text-gray-900 shadow hover:bg-gray-100">
                     Login
                 </Link>
-                <Link href="/register" className="rounded border border-red-600 px-6 py-3 text-red-600 hover:bg-red-50">
+                <Link href="/register" className="rounded border border-white px-6 py-3 text-white hover:bg-white hover:text-gray-900">
                     Register
                 </Link>
             </div>

@@ -1,6 +1,13 @@
 import { LlmAgent } from '@google/adk';
-import { CONTENT_ANALYZER_INSTRUCTION, QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION } from './prompts';
+import {
+  CONTENT_ANALYZER_INSTRUCTION,
+  QUESTION_GENERATOR_INSTRUCTION,
+  QUALITY_ANALYZER_INSTRUCTION,
+  ROOT_AGENT_INSTRUCTION,
+  TEST_ANALYZER_INSTRUCTION,
+} from './prompts';
 import { GEMINI_MODEL } from '../constants/models';
+import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from './tools';
 
 // Model constants
 const GEMINI_CONTENT_ANALYZER_MODEL = GEMINI_MODEL;
@@ -26,8 +33,6 @@ export function createContentAnalyzerAgent() {
  * This agent generates high-quality multiple choice questions
  */
 export function createQuestionGeneratorAgent(pdfFilename: string, gcsPath: string, gcsService: any, pdfTextService: any) {
-  const { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } = require('./tools');
-
   return new LlmAgent({
     name: 'question_generator',
     description: 'Generates high-quality multiple choice questions for educational purposes',
@@ -47,6 +52,45 @@ export function createQualityAnalyzerAgent() {
     description: 'Reviews generated flashcards and provides a comprehensive quality report',
     model: GEMINI_QUALITY_ANALYZER_MODEL,
     instruction: QUALITY_ANALYZER_INSTRUCTION,
+  });
+}
+
+export function createFlashcardOrchestratorAgent(tools: any[]) {
+  return new LlmAgent({
+    name: 'flashcard_orchestrator',
+    description: 'Orchestrates the generation of educational flashcards from PDF content',
+    model: GEMINI_MODEL,
+    instruction: ROOT_AGENT_INSTRUCTION,
+    tools,
+  });
+}
+
+export function createQuestionGeneratorAgentByDifficulty(
+  difficulty: 'easy' | 'medium' | 'hard',
+  prisma: any,
+  pdfId: string,
+) {
+  return new LlmAgent({
+    name: `question_generator_${difficulty}`,
+    description: `Generates ${difficulty} difficulty questions`,
+    model: GEMINI_QUESTION_GENERATOR_MODEL,
+    instruction: QUESTION_GENERATOR_INSTRUCTION,
+    tools: [createSaveObjectiveTool(prisma, pdfId), createWebSearchTool()],
+  });
+}
+
+export function createTestAnalyzerAgent(
+  pdfFilename: string,
+  gcsPath: string,
+  gcsService: any,
+  pdfTextService: any,
+) {
+  return new LlmAgent({
+    name: 'test_analyzer',
+    description: 'Analyzes test results and suggests study strategies with web-enhanced resources',
+    model: GEMINI_QUALITY_ANALYZER_MODEL,
+    instruction: TEST_ANALYZER_INSTRUCTION,
+    tools: [createGetPdfInfoTool(pdfFilename, gcsPath, gcsService, pdfTextService), createWebSearchTool()],
   });
 }
 

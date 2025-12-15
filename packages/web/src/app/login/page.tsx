@@ -43,7 +43,7 @@ export default function LoginPage() {
                 <form onSubmit={handleSubmit} className="mt-8 flex w-full max-w-md flex-col space-y-4">
                     <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded border p-2" required />
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded border p-2" required />
-                    <Button type="submit" className="w-full">
+                    <Button type="submit" variant="default" className="w-full">
                         Sign In
                     </Button>
                     {error && <p className="text-red-500">{error}</p>}
