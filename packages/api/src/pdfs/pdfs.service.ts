@@ -305,21 +305,60 @@ export class PdfsService {
             }
         }
 
-        // Use direct Gemini chat (ADK agent was causing issues)
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-
-        const conversationHistory = history || [];
-        let conversationContext = "";
-        if (conversationHistory.length > 0) {
-            conversationContext = "\n\nPrevious conversation:\n" + 
-                conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
+        // Check if ADK is available, otherwise use direct Gemini
+        let useADK = false;
+        try {
+            const { InMemoryRunner } = require("@google/adk");
+            const runner = new InMemoryRunner();
+            useADK = true;
+        } catch (adkImportError) {
+            console.log('[Chat Service] ADK not available, using direct Gemini');
+            useADK = false;
         }
 
-        const prompt = TEST_PLAN_CHAT_PROMPT(pdf.filename, pdfContent, conversationContext, message);
+        let response = "";
+        
+        if (useADK) {
+            try {
+                const { createTestPlanChatAgent } = require("../ai/agents");
+                const { InMemoryRunner } = require("@google/adk");
+                
+                const agent = createTestPlanChatAgent(pdfContent);
+                const runner = new InMemoryRunner();
+                
+                const conversationHistory = history || [];
+                let conversationContext = "";
+                if (conversationHistory.length > 0) {
+                    conversationContext = "\n\nPrevious conversation:\n" + 
+                        conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
+                }
+                
+                const fullMessage = `${conversationContext}\n\nStudent's message: ${message}`;
+                const result = await runner.run(agent, fullMessage);
+                response = result.text;
+            } catch (adkError) {
+                console.error('[Chat Service] ADK agent failed, falling back to direct Gemini:', adkError);
+                useADK = false;
+            }
+        }
+        
+        if (!useADK) {
+            // Direct Gemini fallback
+            const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+            const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-        const result = await model.generateContent(prompt);
-        const response = result.response.text();
+            const conversationHistory = history || [];
+            let conversationContext = "";
+            if (conversationHistory.length > 0) {
+                conversationContext = "\n\nPrevious conversation:\n" + 
+                    conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
+            }
+
+            const prompt = TEST_PLAN_CHAT_PROMPT(pdf.filename, pdfContent, conversationContext, message);
+
+            const result = await model.generateContent(prompt);
+            response = result.response.text();
+        }
         
         console.log('[Chat Service] Raw LLM response from Gemini:', {
             responseLength: response.length,

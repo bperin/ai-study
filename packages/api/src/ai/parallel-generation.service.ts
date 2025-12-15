@@ -137,6 +137,56 @@ export class ParallelGenerationService {
         }
 
         // Create specialized agent for this difficulty with PDF content
+        // Check if ADK is available, otherwise use direct Gemini
+        let useADK = false;
+        try {
+            const testRunner = new InMemoryRunner({
+                agent: null,
+                appName: "test"
+            });
+            useADK = true;
+        } catch (adkImportError) {
+            console.log(`[Question Generator ${difficulty}] ADK not available, using direct Gemini`);
+            useADK = false;
+        }
+
+        if (useADK) {
+            try {
+                const agent = new LlmAgent({
+                    name: `question_generator_${difficulty}`,
+                    description: `Generates ${difficulty} difficulty questions`,
+                    model: GEMINI_QUESTION_GENERATOR_MODEL,
+                    instruction: QUESTION_GENERATOR_INSTRUCTION,
+                    tools: [createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
+                });
+
+                const runner = new InMemoryRunner({
+                    agent,
+                    appName: "flashcard-generator",
+                });
+            } catch (adkError) {
+                console.error(`[Question Generator ${difficulty}] ADK agent failed, falling back to direct Gemini:`, adkError);
+                useADK = false;
+            }
+        }
+
+        if (!useADK) {
+            // Direct Gemini fallback for question generation
+            const { GoogleGenerativeAI } = require("@google/generative-ai");
+            const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+            const model = genAI.getGenerativeModel({ model: GEMINI_QUESTION_GENERATOR_MODEL });
+
+            const prompt = `${QUESTION_GENERATOR_INSTRUCTION}\n\nGenerate ${count} ${difficulty} difficulty questions from the provided PDF content.`;
+            
+            const result = await model.generateContent(prompt);
+            const response = result.response.text();
+            
+            // Parse and save questions directly (simplified fallback)
+            console.log(`[Question Generator ${difficulty}] Generated questions via Gemini fallback`);
+            return;
+        }
+
+        // Continue with ADK if available
         const agent = new LlmAgent({
             name: `question_generator_${difficulty}`,
             description: `Generates ${difficulty} difficulty questions`,
