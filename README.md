@@ -57,10 +57,10 @@ AI Study leverages **Google's ADK (Agent Development Kit)** with multiple specia
 
 | Diagram Type | Visualization |
 |---|---|
-| **System Architecture** | ![System Architecture](docs/ai-study-architecture.svg) |
-| **Agent Details** | ![Agent Details](docs/ai-study-agent-details.svg) |
-| **Data Flow** | ![Data Flow](docs/ai-study-data-flow.svg) |
-| **Workflow Sequence** | ![Workflow Sequence](docs/ai-study-workflow.svg) |
+| **System Architecture** | ![System Architecture](docs/ai-study-architecture.png) |
+| **Agent Details** | ![Agent Details](docs/ai-study-agent-details.png) |
+| **Data Flow** | ![Data Flow](docs/ai-study-data-flow.png) |
+| **Workflow Sequence** | ![Workflow Sequence](docs/ai-study-workflow.png) |
 
 </details>
 
