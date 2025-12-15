@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { LlmAgent, InMemoryRunner, getFunctionCalls } from '@google/adk';
+import { InMemoryRunner, getFunctionCalls } from '@google/adk';
 import { PrismaService } from '../prisma/prisma.service';
 import { GcsService } from '../pdfs/gcs.service';
 import { PdfTextService } from '../pdfs/pdf-text.service';
-import { ROOT_AGENT_INSTRUCTION } from './prompts';
 import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from './tools';
-import { GEMINI_MODEL } from '../constants/models';
-
-// Model constant for orchestrator
-const GEMINI_ORCHESTRATOR_MODEL = GEMINI_MODEL;
+import { createFlashcardOrchestratorAgent } from './agents';
 
 @Injectable()
 export class GeminiService {
@@ -36,13 +32,7 @@ export class GeminiService {
     const tools = [createSaveObjectiveTool(this.prisma, pdfId), createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createCompletionTool()];
 
     // Create the root orchestrator agent
-    const orchestratorAgent = new LlmAgent({
-      name: 'flashcard_orchestrator',
-      description: 'Orchestrates the generation of educational flashcards from PDF content',
-      model: GEMINI_ORCHESTRATOR_MODEL,
-      instruction: ROOT_AGENT_INSTRUCTION,
-      tools,
-    });
+    const orchestratorAgent = createFlashcardOrchestratorAgent(tools);
 
     // Create runner
     const runner = new InMemoryRunner({

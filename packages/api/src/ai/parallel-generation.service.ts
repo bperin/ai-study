@@ -2,19 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GcsService } from '../pdfs/gcs.service';
 import { PdfTextService } from '../pdfs/pdf-text.service';
-import { LlmAgent, InMemoryRunner } from '@google/adk';
 import * as pdfParse from 'pdf-parse';
-import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANALYZER_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHENSIVE_ANALYSIS_PROMPT } from './prompts';
+import { QUESTION_GENERATOR_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHENSIVE_ANALYSIS_PROMPT } from './prompts';
 import { GEMINI_MODEL } from '../constants/models';
-// @ts-ignore
-import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from './tools';
 import { RetrieveService } from '../rag/services/retrieve.service';
+import { createAdkRunner, createAdkSession, isAdkAvailable } from './adk.helpers';
+import {
+  createQualityAnalyzerAgent,
+  createQuestionGeneratorAgentByDifficulty,
+  createTestAnalyzerAgent,
+} from './agents';
 
 // Model constants
 // @ts-ignore
 const GEMINI_QUESTION_GENERATOR_MODEL = GEMINI_MODEL;
-// @ts-ignore
-const GEMINI_QUALITY_ANALYZER_MODEL = GEMINI_MODEL;
 
 interface QuestionGenerationTask {
   difficulty: 'easy' | 'medium' | 'hard';
@@ -143,34 +144,22 @@ export class ParallelGenerationService {
     const contextSource = ragContext ? 'RAG chunks' : 'raw PDF text';
 
     // Create specialized agent for this difficulty with PDF content
-    // Check if ADK is available, otherwise use direct Gemini
-    let useADK = false;
-    try {
-      const testRunner = new InMemoryRunner({
-        agent: null,
-        appName: 'test',
-      });
-      useADK = true;
-      console.log(`[Question Generator ${difficulty}] ✅ ADK available - using ADK agent`);
-    } catch (adkImportError) {
-      console.log(`[Question Generator ${difficulty}] ❌ ADK not available - using direct Gemini fallback`);
-      useADK = false;
-    }
+    let useADK = isAdkAvailable();
+    console.log(
+      useADK
+        ? `[Question Generator ${difficulty}] ✅ ADK available - using ADK agent`
+        : `[Question Generator ${difficulty}] ❌ ADK not available - using direct Gemini fallback`,
+    );
 
     if (useADK) {
       try {
-        const agent = new LlmAgent({
-          name: `question_generator_${difficulty}`,
-          description: `Generates ${difficulty} difficulty questions`,
-          model: GEMINI_QUESTION_GENERATOR_MODEL,
-          instruction: QUESTION_GENERATOR_INSTRUCTION,
-          tools: [createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
-        });
+        const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId);
 
-        const runner = new InMemoryRunner({
-          agent,
-          appName: 'flashcard-generator',
-        });
+        const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
+        if (!runner) {
+          useADK = false;
+          console.error(`[Question Generator ${difficulty}] ❌ Failed to create ADK runner, falling back to direct Gemini.`);
+        }
       } catch (adkError) {
         console.error(`[Question Generator ${difficulty}] ❌ ADK agent failed, falling back to direct Gemini:`, adkError);
         useADK = false;
@@ -195,24 +184,18 @@ export class ParallelGenerationService {
     }
 
     // Continue with ADK if available
-    const agent = new LlmAgent({
-      name: `question_generator_${difficulty}`,
-      description: `Generates ${difficulty} difficulty questions`,
-      model: GEMINI_QUESTION_GENERATOR_MODEL,
-      instruction: QUESTION_GENERATOR_INSTRUCTION,
-      tools: [createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool()],
-    });
+    const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId);
 
-    const runner = new InMemoryRunner({
-      agent,
-      appName: 'flashcard-generator',
-    });
+    const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
+    if (!runner) {
+      console.error(`[Question Generator ${difficulty}] ❌ Could not create ADK runner after availability check.`);
+      return { objectivesCreated: 0, questionsCreated: 0 };
+    }
 
     const sessionId = `pdf-${pdfId}-${difficulty}-${Date.now()}`;
     const userId = 'system';
 
-    // Create session
-    await runner.sessionService.createSession({
+    await createAdkSession(runner, {
       appName: 'flashcard-generator',
       userId,
       sessionId,
@@ -292,22 +275,17 @@ ${ragContext || pdfContext}
     });
 
     // Create quality analyzer agent
-    const agent = new LlmAgent({
-      name: 'quality_analyzer',
-      description: 'Analyzes quality of generated flashcards',
-      model: GEMINI_QUALITY_ANALYZER_MODEL,
-      instruction: QUALITY_ANALYZER_INSTRUCTION,
-    });
+    const agent = createQualityAnalyzerAgent();
 
-    const runner = new InMemoryRunner({
-      agent,
-      appName: 'flashcard-generator',
-    });
+    const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
+    if (!runner) {
+      throw new Error('[Quality Analyzer] ADK not available');
+    }
 
     const sessionId = `quality-${pdfId}-${Date.now()}`;
     const userId = 'system';
 
-    await runner.sessionService.createSession({
+    await createAdkSession(runner, {
       appName: 'flashcard-generator',
       userId,
       sessionId,
@@ -416,26 +394,17 @@ ${ragContext || pdfContext}
     const gcsPath = pdf.gcsPath || pdf.content || '';
 
     // Create analyzer agent with web search capability
-    const agent = new LlmAgent({
-      name: 'test_analyzer',
-      description: 'Analyzes test results and suggests study strategies with web-enhanced resources',
-      model: GEMINI_QUALITY_ANALYZER_MODEL,
-      instruction: TEST_ANALYZER_INSTRUCTION,
-      tools: [
-        createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService),
-        createWebSearchTool(), // Enable web search for finding resources
-      ],
-    });
+    const agent = createTestAnalyzerAgent(pdfFilename, gcsPath, this.gcsService, this.pdfTextService);
 
-    const runner = new InMemoryRunner({
-      agent,
-      appName: 'flashcard-generator',
-    });
+    const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
+    if (!runner) {
+      throw new Error('[Test Analyzer] ADK not available');
+    }
 
     const sessionId = `analysis-${pdfId}-${Date.now()}`;
     const userId = 'system';
 
-    await runner.sessionService.createSession({
+    await createAdkSession(runner, {
       appName: 'flashcard-generator',
       userId,
       sessionId,
