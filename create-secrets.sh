@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to create Google Secret Manager secrets from environment variables
+# Script to create Google Secret Manager secrets from configuration files
 # Usage: ./create-secrets.sh
 
 PROJECT_ID="pro-pulsar-274402"
@@ -8,29 +8,46 @@ PREFIX="ai_study"
 
 echo "🔐 Creating secrets in Google Secret Manager with prefix: ${PREFIX}"
 
-# Check if required environment variables are set
-if [ -z "$DATABASE_URL" ]; then
-    echo "❌ DATABASE_URL environment variable not set"
+# Check if required files exist
+if [ ! -f "packages/api/.env" ]; then
+    echo "❌ packages/api/.env file not found"
     exit 1
 fi
 
-if [ -z "$GCP_SA_KEY" ]; then
-    echo "❌ GCP_SA_KEY environment variable not set"
+if [ ! -f "google_services.json" ]; then
+    echo "❌ google_services.json file not found"
+    exit 1
+fi
+
+# Extract values from .env file
+DATABASE_URL=$(grep "^DATABASE_URL=" packages/api/.env | cut -d'=' -f2- | tr -d '"')
+GCP_BUCKET_NAME=$(grep "^GCP_BUCKET_NAME=" packages/api/.env | cut -d'=' -f2- | tr -d '"')
+JWT_SECRET=$(grep "^JWT_SECRET=" packages/api/.env | cut -d'=' -f2- | tr -d '"')
+
+# Try to get GOOGLE_API_KEY from environment (fallback to GEMINI_API_KEY if not in .env)
+GOOGLE_API_KEY=$(grep "^GOOGLE_API_KEY=" packages/api/.env | cut -d'=' -f2- | tr -d '"')
+if [ -z "$GOOGLE_API_KEY" ]; then
+    GOOGLE_API_KEY="$GEMINI_API_KEY"
+fi
+
+# Validate extracted values
+if [ -z "$DATABASE_URL" ]; then
+    echo "❌ DATABASE_URL not found in .env file"
     exit 1
 fi
 
 if [ -z "$GCP_BUCKET_NAME" ]; then
-    echo "❌ GCP_BUCKET_NAME environment variable not set"
+    echo "❌ GCP_BUCKET_NAME not found in .env file"
     exit 1
 fi
 
 if [ -z "$JWT_SECRET" ]; then
-    echo "❌ JWT_SECRET environment variable not set"
+    echo "❌ JWT_SECRET not found in .env file"
     exit 1
 fi
 
 if [ -z "$GOOGLE_API_KEY" ]; then
-    echo "❌ GOOGLE_API_KEY environment variable not set"
+    echo "❌ GOOGLE_API_KEY not found in .env file"
     exit 1
 fi
 
@@ -40,10 +57,10 @@ echo "$DATABASE_URL" | gcloud secrets create ${PREFIX}_DATABASE_URL \
     --data-file=- \
     --project=$PROJECT_ID
 
-# Create GCP_SA_KEY secret
+# Create GCP_SA_KEY secret from google_services.json
 echo "Creating ${PREFIX}_GCP_SA_KEY..."
-echo "$GCP_SA_KEY" | gcloud secrets create ${PREFIX}_GCP_SA_KEY \
-    --data-file=- \
+gcloud secrets create ${PREFIX}_GCP_SA_KEY \
+    --data-file=google_services.json \
     --project=$PROJECT_ID
 
 # Create GCP_BUCKET_NAME secret
