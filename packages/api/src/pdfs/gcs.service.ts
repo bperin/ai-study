@@ -1,52 +1,47 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class GcsService {
   private storage: Storage;
   private bucketName: string;
 
-  constructor(private readonly configService: ConfigService) {
-    const serviceAccountKey = this.configService.get<string>('GCP_SA_KEY');
-
-    if (serviceAccountKey) {
-      // Parse the service account JSON key
-      try {
-        const credentials = JSON.parse(serviceAccountKey);
-        this.storage = new Storage({
-          projectId: credentials.project_id,
-          credentials: credentials,
-        });
-        this.bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
-        return;
-      } catch (error) {
-        console.error('Failed to parse GCP_SA_KEY:', error);
-        // Fall through to default authentication
-      }
+  constructor(private configService: ConfigService) {
+    this.bucketName = this.configService.get<string>('GCP_BUCKET_NAME');
+    if (!this.bucketName) {
+      throw new Error('GCP_BUCKET_NAME environment variable is not set.');
     }
 
-    // Use default service account authentication (for Cloud Run)
-    console.log('Using default service account authentication for GCS');
-    this.storage = new Storage({
-      projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'pro-pulsar-274402',
+    const gcpSaKeyJson = this.configService.get<string>('GCP_SA_KEY');
+    if (!gcpSaKeyJson) {
+      throw new Error('GCP_SA_KEY is required for Google Cloud Storage authentication.');
+    }
+
+    try {
+      const credentials = JSON.parse(gcpSaKeyJson);
+      this.storage = new Storage({ credentials });
+    } catch (error: unknown) {
+      const errorMessage = (error instanceof Error) ? error.message : String(error);
+      throw new Error(`Failed to parse GCP_SA_KEY JSON: ${errorMessage}`);
+    }
+  }
+
+  async createSignedUploadUrl(
+    fileName: string,
+    contentType: string,
+  ): Promise<{ url: string; signedUrl: string }> {
+    const bucket = this.storage.bucket(this.bucketName);
+    const file = bucket.file(fileName);
+
+    const [signedUrl] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      contentType: contentType,
     });
-    this.bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'ai-study-uploads';
-  }
 
-  /**
-   * Download a file from Google Cloud Storage
-   */
-  async downloadFile(filePath: string): Promise<Buffer> {
-    const file = this.storage.bucket(this.bucketName).file(filePath);
-    const [buffer] = await file.download();
-    return buffer;
-  }
-
-  /**
-   * Get the bucket name
-   */
-  getBucketName(): string {
-    return this.bucketName;
+    const url = `https://storage.googleapis.com/${this.bucketName}/${fileName}`;
+    return { url, signedUrl };
   }
 }
