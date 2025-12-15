@@ -1,105 +1,105 @@
-import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { LlmAgent, InMemoryRunner, getFunctionCalls } from "@google/adk";
-import { PrismaService } from "../prisma/prisma.service";
-import { GcsService } from "../pdfs/gcs.service";
-import { PdfTextService } from "../pdfs/pdf-text.service";
-import { ROOT_AGENT_INSTRUCTION } from "./prompts";
-import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from "./tools";
-import { GEMINI_MODEL } from "../constants/models";
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { LlmAgent, InMemoryRunner, getFunctionCalls } from '@google/adk';
+import { PrismaService } from '../prisma/prisma.service';
+import { GcsService } from '../pdfs/gcs.service';
+import { PdfTextService } from '../pdfs/pdf-text.service';
+import { ROOT_AGENT_INSTRUCTION } from './prompts';
+import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from './tools';
+import { GEMINI_MODEL } from '../constants/models';
 
 // Model constant for orchestrator
 const GEMINI_ORCHESTRATOR_MODEL = GEMINI_MODEL;
 
 @Injectable()
 export class GeminiService {
-    constructor(
-        private readonly configService: ConfigService,
-        private readonly prisma: PrismaService,
-        private readonly gcsService: GcsService,
-        private readonly pdfTextService: PdfTextService
-    ) {
-        const apiKey = this.configService.get<string>("GOOGLE_API_KEY");
-        if (!apiKey) {
-            throw new Error("GOOGLE_API_KEY is not set in environment variables");
-        }
-
-        // Set API key as environment variable for ADK
-        process.env.GOOGLE_GENAI_API_KEY = apiKey;
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly gcsService: GcsService,
+    private readonly pdfTextService: PdfTextService,
+  ) {
+    const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
+    if (!apiKey) {
+      throw new Error('GOOGLE_API_KEY is not set in environment variables');
     }
 
-    /**
-     * Generate flashcards using an agentic approach with tools
-     */
-    async generateFlashcards(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
-        // Create tools for this specific PDF - now with PdfTextService
-        const tools = [createSaveObjectiveTool(this.prisma, pdfId), createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createCompletionTool()];
+    // Set API key as environment variable for ADK
+    process.env.GOOGLE_GENAI_API_KEY = apiKey;
+  }
 
-        // Create the root orchestrator agent
-        const orchestratorAgent = new LlmAgent({
-            name: "flashcard_orchestrator",
-            description: "Orchestrates the generation of educational flashcards from PDF content",
-            model: GEMINI_ORCHESTRATOR_MODEL,
-            instruction: ROOT_AGENT_INSTRUCTION,
-            tools,
-        });
+  /**
+   * Generate flashcards using an agentic approach with tools
+   */
+  async generateFlashcards(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
+    // Create tools for this specific PDF - now with PdfTextService
+    const tools = [createSaveObjectiveTool(this.prisma, pdfId), createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createCompletionTool()];
 
-        // Create runner
-        const runner = new InMemoryRunner({
-            agent: orchestratorAgent,
-            appName: "flashcard-generator",
-        });
+    // Create the root orchestrator agent
+    const orchestratorAgent = new LlmAgent({
+      name: 'flashcard_orchestrator',
+      description: 'Orchestrates the generation of educational flashcards from PDF content',
+      model: GEMINI_ORCHESTRATOR_MODEL,
+      instruction: ROOT_AGENT_INSTRUCTION,
+      tools,
+    });
 
-        // Track completion data
-        let completionData: any = null;
-        let objectivesCreated = 0;
+    // Create runner
+    const runner = new InMemoryRunner({
+      agent: orchestratorAgent,
+      appName: 'flashcard-generator',
+    });
 
-        const sessionId = `pdf-${pdfId}-${Date.now()}`;
-        const userId = "system";
+    // Track completion data
+    let completionData: any = null;
+    let objectivesCreated = 0;
 
-        // Create the session first (matching Python ADK pattern)
-        const session = await runner.sessionService.createSession({
-            appName: "flashcard-generator",
-            userId,
-            sessionId,
-            state: {
-                pdfId,
-                pdfFilename,
-                gcsPath,
-                userPrompt,
-            },
-        });
+    const sessionId = `pdf-${pdfId}-${Date.now()}`;
+    const userId = 'system';
 
-        // Run the agent with the user's request
-        for await (const event of runner.runAsync({
-            userId,
-            sessionId: session.id,
-            newMessage: {
-                role: "user",
-                parts: [{ text: userPrompt }],
-            },
-        })) {
-            // Check for function calls in this event
-            const functionCalls = getFunctionCalls(event);
+    // Create the session first (matching Python ADK pattern)
+    const session = await runner.sessionService.createSession({
+      appName: 'flashcard-generator',
+      userId,
+      sessionId,
+      state: {
+        pdfId,
+        pdfFilename,
+        gcsPath,
+        userPrompt,
+      },
+    });
 
-            for (const call of functionCalls) {
-                console.log(`Agent called function: ${call.name}`);
+    // Run the agent with the user's request
+    for await (const event of runner.runAsync({
+      userId,
+      sessionId: session.id,
+      newMessage: {
+        role: 'user',
+        parts: [{ text: userPrompt }],
+      },
+    })) {
+      // Check for function calls in this event
+      const functionCalls = getFunctionCalls(event);
 
-                if (call.name === "save_objective") {
-                    objectivesCreated++;
-                }
+      for (const call of functionCalls) {
+        console.log(`Agent called function: ${call.name}`);
 
-                if (call.name === "complete_generation") {
-                    completionData = call.args;
-                }
-            }
+        if (call.name === 'save_objective') {
+          objectivesCreated++;
         }
 
-        // Return the completion data or defaults
-        return {
-            objectivesCount: completionData?.totalObjectives || objectivesCreated,
-            questionsCount: completionData?.totalQuestions || 0,
-            summary: completionData?.summary || "Flashcards generated successfully",
-        };
+        if (call.name === 'complete_generation') {
+          completionData = call.args;
+        }
+      }
     }
+
+    // Return the completion data or defaults
+    return {
+      objectivesCount: completionData?.totalObjectives || objectivesCreated,
+      questionsCount: completionData?.totalQuestions || 0,
+      summary: completionData?.summary || 'Flashcards generated successfully',
+    };
+  }
 }

@@ -1,23 +1,23 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { User } from "@prisma/client";
+import { ApiProperty } from '@nestjs/swagger';
+import { User } from '@prisma/client';
 
 export class UserResponseDto {
-    @ApiProperty()
-    id: string;
+  @ApiProperty()
+  id: string;
 
-    @ApiProperty()
-    email: string;
+  @ApiProperty()
+  email: string;
 
-    @ApiProperty()
-    isAdmin: boolean;
+  @ApiProperty()
+  isAdmin: boolean;
 
-    @ApiProperty()
-    createdAt: Date;
+  @ApiProperty()
+  createdAt: Date;
 
-    @ApiProperty()
-    updatedAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
 
-    constructor(partial: Partial<User>) {
-        Object.assign(this, partial);
-    }
+  constructor(partial: Partial<User>) {
+    Object.assign(this, partial);
+  }
 }
