@@ -54,6 +54,32 @@ export class PdfsController {
     @ApiOperation({ summary: "Chat with AI to plan test generation" })
     @ApiResponse({ status: 200, description: "AI response with test plan" })
     async chatPlan(@Body() dto: ChatMessageDto, @Request() req: any) {
-        return this.pdfsService.chatPlan(dto.message, dto.pdfId, req.user.userId, dto.conversationHistory);
+        try {
+            console.log('Chat request received:', { 
+                dto: JSON.stringify(dto), 
+                userId: req.user?.userId,
+                hasUser: !!req.user 
+            });
+            
+            if (!req.user?.userId) {
+                throw new Error('User not authenticated');
+            }
+            
+            if (!dto.message || !dto.pdfId) {
+                throw new Error('Missing required fields: message or pdfId');
+            }
+            
+            return await this.pdfsService.chatPlan(dto.message, dto.pdfId, req.user.userId, dto.conversationHistory);
+        } catch (error) {
+            console.error('Chat endpoint error:', error);
+            throw error;
+        }
+    }
+
+    @Post(":id/auto-generate-plan")
+    @ApiOperation({ summary: "Auto-generate initial test plan from PDF content" })
+    @ApiResponse({ status: 200, description: "Auto-generated test plan" })
+    async autoGenerateTestPlan(@Param("id") pdfId: string, @Request() req: any) {
+        return this.pdfsService.autoGenerateTestPlan(pdfId, req.user.userId);
     }
 }

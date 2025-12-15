@@ -6,9 +6,10 @@ import { GcsService } from "../pdfs/gcs.service";
 import { PdfTextService } from "../pdfs/pdf-text.service";
 import { ROOT_AGENT_INSTRUCTION } from "./prompts";
 import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from "./tools";
+import { GEMINI_MODEL } from "../constants/models";
 
 // Model constant for orchestrator
-const GEMINI_ORCHESTRATOR_MODEL = "gemini-2.5-pro";
+const GEMINI_ORCHESTRATOR_MODEL = GEMINI_MODEL;
 
 @Injectable()
 export class GeminiService {

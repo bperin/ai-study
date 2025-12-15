@@ -1,13 +1,20 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { IsString, IsNotEmpty, IsOptional, IsArray } from "class-validator";
 
 export class ChatMessageDto {
     @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
     message: string;
 
     @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
     pdfId: string;
 
     @ApiProperty({ required: false })
+    @IsOptional()
+    @IsArray()
     conversationHistory?: Array<{ role: string; content: string }>;
 }
 

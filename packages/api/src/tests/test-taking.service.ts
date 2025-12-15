@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
+import { GEMINI_MODEL } from "../constants/models";
 
 /**
  * In-memory state for active test sessions
@@ -446,7 +447,7 @@ export class TestTakingService {
             const { GoogleGenerativeAI } = require("@google/generative-ai");
             const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
             const model = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash",
+                model: GEMINI_MODEL,
                 tools: [{
                     googleSearchRetrieval: {
                         dynamicRetrievalConfig: {

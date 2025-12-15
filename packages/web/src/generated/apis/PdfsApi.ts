@@ -28,6 +28,10 @@ import {
     PaginatedPdfResponseDtoToJSON,
 } from '../models/index';
 
+export interface PdfsControllerAutoGenerateTestPlanRequest {
+    id: string;
+}
+
 export interface PdfsControllerChatPlanRequest {
     chatMessageDto: ChatMessageDto;
 }
@@ -59,6 +63,50 @@ export interface PdfsControllerListPdfsRequest {
  * 
  */
 export class PdfsApi extends runtime.BaseAPI {
+
+    /**
+     * Auto-generate initial test plan from PDF content
+     */
+    async pdfsControllerAutoGenerateTestPlanRaw(requestParameters: PdfsControllerAutoGenerateTestPlanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling pdfsControllerAutoGenerateTestPlan().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/pdfs/{id}/auto-generate-plan`;
+        urlPath = urlPath.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Auto-generate initial test plan from PDF content
+     */
+    async pdfsControllerAutoGenerateTestPlan(requestParameters: PdfsControllerAutoGenerateTestPlanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.pdfsControllerAutoGenerateTestPlanRaw(requestParameters, initOverrides);
+    }
 
     /**
      * Chat with AI to plan test generation

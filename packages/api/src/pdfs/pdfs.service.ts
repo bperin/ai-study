@@ -3,6 +3,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ParallelGenerationService } from "../ai/parallel-generation.service";
 import { GcsService } from "./gcs.service";
 import { PdfTextService } from "./pdf-text.service";
+import { GEMINI_MODEL } from "../constants/models";
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 @Injectable()
 export class PdfsService {
@@ -34,11 +39,25 @@ export class PdfsService {
         });
 
         // 2. Use parallel generation for faster results
+        console.log(`PDF record for generation:`, {
+            id: pdf.id,
+            filename: pdf.filename,
+            hasGcsPath: !!pdf.gcsPath,
+            gcsPath: pdf.gcsPath,
+            hasContent: !!pdf.content,
+            contentLength: pdf.content?.length || 0
+        });
+        
+        const gcsPathOrContent = pdf.gcsPath || pdf.content || "";
+        if (!gcsPathOrContent) {
+            throw new Error(`PDF ${pdf.filename} has no GCS path or content - cannot generate questions`);
+        }
+        
         const result = await this.parallelGenerationService.generateFlashcardsParallel(
             userPrompt,
             pdfId,
             pdf.filename,
-            pdf.gcsPath || pdf.content || "" // GCS path (fallback to content for old records)
+            gcsPathOrContent
         );
 
         // Update session as completed
@@ -268,63 +287,169 @@ export class PdfsService {
     }
 
     async chatPlan(message: string, pdfId: string, userId: string, history?: any[]) {
-        const { GoogleGenerativeAI } = require("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
         // Get PDF info
         const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
         if (!pdf) throw new NotFoundException("PDF not found");
 
-        // Fetch PDF content if not available in DB
-        let pdfContent = pdf.content || "";
-        if (!pdfContent && pdf.gcsPath) {
+        // Extract PDF text content for the agent
+        let pdfContent = "";
+        if (pdf.gcsPath) {
             try {
                 const buffer = await this.gcsService.downloadFile(pdf.gcsPath);
                 const extracted = await this.pdfTextService.extractText(buffer);
-                pdfContent = extracted.structuredText;
+                pdfContent = extracted.structuredText.substring(0, 50000); // Limit to 50k chars
             } catch (e) {
-                console.error(`Failed to load PDF content for chat plan (ID: ${pdfId}):`, e);
+                console.error(`Failed to extract PDF text (ID: ${pdfId}):`, e);
+                // Continue without content
             }
         }
 
-        // Build conversation history
-        const conversationHistory = history || [];
+        try {
+            // Create ADK-based test plan agent
+            const { createTestPlanChatAgent } = require("../ai/agents");
+            const { InMemoryRunner } = require("@google/adk");
+            
+            const agent = createTestPlanChatAgent(pdfContent);
+            const runner = new InMemoryRunner();
 
-        // Import prompt from prompts.ts
-        const { TEST_PLAN_CHAT_PROMPT } = require("../ai/prompts");
+            // Build conversation context for ADK
+            const conversationHistory = history || [];
+            let conversationContext = "";
+            if (conversationHistory.length > 0) {
+                conversationContext = "\n\nPrevious conversation:\n" + 
+                    conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
+            }
+
+            const fullMessage = message + conversationContext;
+            const result = await runner.run(agent, fullMessage);
+            const response = result.text;
+
+            // Try to parse JSON from response
+            try {
+                const jsonMatch = response.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                }
+            } catch (e) {
+                // If not JSON, return as plain message
+            }
+
+            return {
+                message: response,
+                testPlan: null,
+                shouldGenerate: false,
+            };
+        } catch (adkError) {
+            console.error("ADK agent failed, falling back to simple Gemini chat:", adkError);
+            
+            // Fallback to simple Gemini chat
+            const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+            const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
+            const conversationHistory = history || [];
+            let conversationContext = "";
+            if (conversationHistory.length > 0) {
+                conversationContext = "\n\nPrevious conversation:\n" + 
+                    conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n");
+            }
+
+            const prompt = `You are helping a student create a test plan from their PDF "${pdf.filename}".
+            
+${pdfContent ? `PDF CONTENT:\n${pdfContent.substring(0, 10000)}` : "No PDF content available."}
+
+${conversationContext}
+
+Student's message: ${message}
+
+Please help them create a comprehensive test plan. If they want to generate questions, respond with a JSON object containing a testPlan with objectives, each having title, difficulty, questionCount, and topics.`;
+
+            const result = await model.generateContent(prompt);
+            const response = result.response.text();
+
+            // Try to parse JSON from response
+            try {
+                const jsonMatch = response.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                }
+            } catch (e) {
+                // If not JSON, return as plain message
+            }
+
+            return {
+                message: response,
+                testPlan: null,
+                shouldGenerate: false,
+            };
+        }
+    }
+
+    async autoGenerateTestPlan(pdfId: string, userId: string) {
+        // Get PDF info
+        const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+        if (!pdf) throw new NotFoundException("PDF not found");
+
+        // Extract PDF text content
+        let pdfContent = "";
+        if (pdf.gcsPath) {
+            try {
+                const buffer = await this.gcsService.downloadFile(pdf.gcsPath);
+                const extracted = await this.pdfTextService.extractText(buffer);
+                pdfContent = extracted.structuredText.substring(0, 50000);
+            } catch (e) {
+                console.error(`Failed to extract PDF text (ID: ${pdfId}):`, e);
+            }
+        }
+
+        // Create ADK-based test plan agent for auto-generation
+        const { createTestPlanChatAgent } = require("../ai/agents");
+        const { InMemoryRunner } = require("@google/adk");
         
-        // Include PDF content in system prompt (truncated if too large)
-        // Note: TEST_PLAN_CHAT_PROMPT now accepts content as 2nd arg
-        const systemPrompt = TEST_PLAN_CHAT_PROMPT(pdf.filename, pdfContent);
+        const agent = createTestPlanChatAgent(pdfContent);
+        const runner = new InMemoryRunner();
 
-        const chat = model.startChat({
-            history: [
-                { role: "user", parts: [{ text: systemPrompt }] },
-                { role: "model", parts: [{ text: "I understand! I'll help create a test plan. What would you like to study?" }] },
-                ...conversationHistory.map((msg) => ({
-                    role: msg.role === "user" ? "user" : "model",
-                    parts: [{ text: msg.content }],
-                })),
-            ],
-        });
-
-        const result = await chat.sendMessage(message);
-        const response = result.response.text();
+        const autoGenPrompt = `Based on the PDF content, automatically generate a comprehensive test plan. Create a balanced mix of easy, medium, and hard questions covering the main topics. Respond with a complete test plan in JSON format.`;
+        
+        const result = await runner.run(agent, autoGenPrompt);
+        const response = result.text;
 
         // Try to parse JSON from response
         try {
             const jsonMatch = response.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
+                const parsed = JSON.parse(jsonMatch[0]);
+                return {
+                    message: "Auto-generated test plan based on PDF content",
+                    testPlan: parsed.testPlan,
+                    shouldGenerate: false,
+                };
             }
         } catch (e) {
-            // If not JSON, return as plain message
+            console.error("Failed to parse auto-generated test plan:", e);
         }
 
+        // Fallback: create a basic test plan structure
         return {
-            message: response,
-            testPlan: null,
+            message: "Auto-generated basic test plan",
+            testPlan: {
+                objectives: [
+                    {
+                        title: "Main Concepts",
+                        difficulty: "medium",
+                        questionCount: 10,
+                        topics: ["Key concepts from the study material"]
+                    },
+                    {
+                        title: "Application Questions", 
+                        difficulty: "hard",
+                        questionCount: 5,
+                        topics: ["Applied knowledge and critical thinking"]
+                    }
+                ],
+                totalQuestions: 15,
+                estimatedTime: "20-25 minutes",
+                summary: "Auto-generated test covering main concepts and applications"
+            },
             shouldGenerate: false,
         };
     }

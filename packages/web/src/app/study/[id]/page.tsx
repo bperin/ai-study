@@ -8,10 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { getPdfsApi } from "@/api-client";
 import { McqDto, ObjectiveResponseDto, TestAnalysisResponseDto } from "@/generated";
-import { getTestTakingApi } from "@/api-client";
+import { getTestTakingApi, getTestsApi, refreshApiConfig, testsControllerGetChatAssistance } from "@/api-client";
 import { Send, X } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { TEST_ASSISTANCE_CHAT_PROMPT } from "@/lib/prompts";
 
 interface ChatMessage {
     role: "user" | "assistant";
@@ -67,45 +65,25 @@ export default function StudyPage() {
         setIsChatLoading(true);
 
         try {
-            // Fetch API key securely
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            const token = localStorage.getItem("access_token");
-            let apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
-
-            try {
-                const keyResponse = await fetch(`${baseUrl}/auth/api-key`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (keyResponse.ok) {
-                    const keyData = await keyResponse.json();
-                    if (keyData.apiKey) apiKey = keyData.apiKey;
-                }
-            } catch (e) {
-                console.error("Failed to fetch API key, falling back to env var", e);
-            }
-
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-            const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(
-                currentQuestion.question,
-                currentQuestion.options,
-                "" // PDF context not available in client-side mode
-            );
-
-            const chat = model.startChat({
-                history: [
-                    { role: "user", parts: [{ text: systemPrompt }] },
-                    { role: "model", parts: [{ text: "I understand. I will help the student with this question without giving away the answer." }] },
-                    ...chatHistory.map((msg) => ({
-                        role: msg.role === "user" ? "user" : "model",
-                        parts: [{ text: msg.content }],
-                    })),
-                ],
+            const { testsApi } = refreshApiConfig();
+            const response = await fetch(`${testsApi.configuration?.basePath || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/tests/${id}/chat-assistance`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("access_token")}`
+                },
+                body: JSON.stringify({
+                    message: userMsg,
+                    questionId: currentQuestion.id
+                })
             });
 
-            const result = await chat.sendMessage(userMsg);
-            const responseText = result.response.text();
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const responseText = data.message;
 
             setChatHistory((prev) => [...prev, { role: "assistant", content: responseText }]);
         } catch (error) {
@@ -140,20 +118,10 @@ export default function StudyPage() {
 
     const handleStartTest = async () => {
         try {
-            const token = localStorage.getItem("access_token");
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-            const response = await fetch(`${baseUrl}/tests/taking/start/${id}`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
+            const api = getTestTakingApi();
+            const session = await api.testTakingControllerStartSession({
+                pdfId: id
             });
-
-            if (!response.ok) throw new Error("Failed to start session");
-
-            const session = await response.json();
             setAttemptId(session.attemptId);
             setHasStarted(true);
 
@@ -194,19 +162,14 @@ export default function StudyPage() {
         if (isCorrect || newAttemptCount >= 2) {
             if (attemptId) {
                 try {
-                    const token = localStorage.getItem("access_token");
-                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-                    await fetch(`${baseUrl}/tests/taking/${attemptId}/answer`, {
-                        method: "POST",
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
+                    const api = getTestTakingApi();
+                    await api.testTakingControllerRecordAnswer({
+                        attemptId: attemptId,
+                        recordAnswerDto: {
                             questionId: currentQuestion.id,
                             selectedAnswer: index,
                             timeSpent: 0, // TODO: Track time
-                        }),
+                        }
                     });
                 } catch (err) {
                     console.error("Failed to save answer", err);

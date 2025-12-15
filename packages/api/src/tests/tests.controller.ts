@@ -6,6 +6,7 @@ import { TestsService } from "./tests.service";
 import { LeaderboardService } from "./leaderboard.service";
 import { TestHistoryResponseDto, TestHistoryItemDto } from "./dto/test-results.dto";
 import { TestStatsDto } from "./dto/test-stats.dto";
+import { ChatAssistanceDto, ChatAssistanceResponseDto } from "./dto/chat-assistance.dto";
 
 @ApiTags("tests")
 @Controller("tests")
@@ -43,6 +44,15 @@ export class TestsController {
     async getPdfLeaderboard(@Param("pdfId") pdfId: string, @Query("limit") limit?: string) {
         const limitNum = limit ? parseInt(limit) : 10;
         return this.leaderboardService.getPdfLeaderboard(pdfId, limitNum);
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Post(":pdfId/chat-assistance")
+    @ApiOperation({ summary: "Get AI assistance during test taking" })
+    @ApiResponse({ status: 200, type: ChatAssistanceResponseDto, description: "AI assistance response" })
+    async getChatAssistance(@Param("pdfId") pdfId: string, @Body() dto: ChatAssistanceDto, @Request() req: any): Promise<ChatAssistanceResponseDto> {
+        return this.testsService.getChatAssistance(dto.message, dto.questionId, pdfId, req.user.userId);
     }
 
     @ApiBearerAuth()

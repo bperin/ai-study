@@ -15,12 +15,18 @@
 
 import * as runtime from '../runtime';
 import type {
+  ChatAssistanceDto,
+  ChatAssistanceResponseDto,
   SubmitTestDto,
   TestHistoryItemDto,
   TestHistoryResponseDto,
   TestStatsDto,
 } from '../models/index';
 import {
+    ChatAssistanceDtoFromJSON,
+    ChatAssistanceDtoToJSON,
+    ChatAssistanceResponseDtoFromJSON,
+    ChatAssistanceResponseDtoToJSON,
     SubmitTestDtoFromJSON,
     SubmitTestDtoToJSON,
     TestHistoryItemDtoFromJSON,
@@ -33,6 +39,11 @@ import {
 
 export interface TestsControllerGetAttemptDetailsRequest {
     id: string;
+}
+
+export interface TestsControllerGetChatAssistanceRequest {
+    pdfId: string;
+    chatAssistanceDto: ChatAssistanceDto;
 }
 
 export interface TestsControllerGetGlobalLeaderboardRequest {
@@ -172,6 +183,61 @@ export class TestsApi extends runtime.BaseAPI {
      */
     async testsControllerGetAttemptDetails(requestParameters: TestsControllerGetAttemptDetailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TestHistoryItemDto> {
         const response = await this.testsControllerGetAttemptDetailsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get AI assistance during test taking
+     */
+    async testsControllerGetChatAssistanceRaw(requestParameters: TestsControllerGetChatAssistanceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatAssistanceResponseDto>> {
+        if (requestParameters['pdfId'] == null) {
+            throw new runtime.RequiredError(
+                'pdfId',
+                'Required parameter "pdfId" was null or undefined when calling testsControllerGetChatAssistance().'
+            );
+        }
+
+        if (requestParameters['chatAssistanceDto'] == null) {
+            throw new runtime.RequiredError(
+                'chatAssistanceDto',
+                'Required parameter "chatAssistanceDto" was null or undefined when calling testsControllerGetChatAssistance().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/tests/{pdfId}/chat-assistance`;
+        urlPath = urlPath.replace(`{${"pdfId"}}`, encodeURIComponent(String(requestParameters['pdfId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChatAssistanceDtoToJSON(requestParameters['chatAssistanceDto']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatAssistanceResponseDtoFromJSON(jsonValue));
+    }
+
+    /**
+     * Get AI assistance during test taking
+     */
+    async testsControllerGetChatAssistance(requestParameters: TestsControllerGetChatAssistanceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatAssistanceResponseDto> {
+        const response = await this.testsControllerGetChatAssistanceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

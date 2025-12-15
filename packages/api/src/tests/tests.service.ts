@@ -3,6 +3,9 @@ import { Mcq } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SubmitTestDto } from "./dto/submit-test.dto";
 import { TestHistoryResponseDto, TestHistoryItemDto } from "./dto/test-results.dto";
+import { TestStatsDto } from "./dto/test-stats.dto";
+import { ChatAssistanceResponseDto } from "./dto/chat-assistance.dto";
+import { GEMINI_MODEL } from "../constants/models";
 
 @Injectable()
 export class TestsService {
@@ -156,7 +159,7 @@ export class TestsService {
     async chatAssist(message: string, questionId: string, history?: any[]) {
         const { GoogleGenerativeAI } = require("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
         const mcq = await this.prisma.mcq.findUnique({
             where: { id: questionId },
@@ -186,5 +189,61 @@ export class TestsService {
         return {
             message: response,
         };
+    }
+
+    async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
+        // Get the question and PDF info
+        const question = await this.prisma.mcq.findUnique({
+            where: { id: questionId },
+            include: { objective: true }
+        });
+
+        if (!question) {
+            throw new NotFoundException("Question not found");
+        }
+
+        const pdf = await this.prisma.pdf.findUnique({
+            where: { id: pdfId }
+        });
+
+        if (!pdf) {
+            throw new NotFoundException("PDF not found");
+        }
+
+        // Extract PDF content for context
+        let pdfContent = "";
+        if (pdf.gcsPath) {
+            try {
+                const { GcsService } = require("../pdfs/gcs.service");
+                const { PdfTextService } = require("../pdfs/pdf-text.service");
+                const gcsService = new GcsService();
+                const pdfTextService = new PdfTextService();
+                
+                const buffer = await gcsService.downloadFile(pdf.gcsPath);
+                const extracted = await pdfTextService.extractText(buffer);
+                pdfContent = extracted.structuredText.substring(0, 10000); // Limit for context
+            } catch (error) {
+                console.error("Failed to extract PDF content for chat assistance:", error);
+            }
+        }
+
+        // Create test assistance agent
+        const { createTestAssistanceAgent } = require("../ai/agents");
+        const { InMemoryRunner } = require("@google/adk");
+        
+        const agent = createTestAssistanceAgent(
+            question.question,
+            question.options,
+            pdfContent
+        );
+        const runner = new InMemoryRunner();
+
+        const result = await runner.run(agent, message);
+        
+        return {
+            message: result.text,
+            questionContext: question.question,
+            helpful: true
+        } as ChatAssistanceResponseDto;
     }
 }

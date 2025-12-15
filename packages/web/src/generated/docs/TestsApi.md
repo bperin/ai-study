@@ -7,6 +7,7 @@ All URIs are relative to *http://localhost*
 | [**testsControllerChatAssist**](TestsApi.md#testscontrollerchatassist) | **POST** /tests/chat | Chat with AI for help on a question |
 | [**testsControllerGetAllTestHistory**](TestsApi.md#testscontrollergetalltesthistory) | **GET** /tests/history/all | Get all users test history |
 | [**testsControllerGetAttemptDetails**](TestsApi.md#testscontrollergetattemptdetails) | **GET** /tests/attempt/{id} | Get detailed results for a specific test attempt |
+| [**testsControllerGetChatAssistance**](TestsApi.md#testscontrollergetchatassistance) | **POST** /tests/{pdfId}/chat-assistance | Get AI assistance during test taking |
 | [**testsControllerGetGlobalLeaderboard**](TestsApi.md#testscontrollergetgloballeaderboard) | **GET** /tests/leaderboard |  |
 | [**testsControllerGetMyRank**](TestsApi.md#testscontrollergetmyrank) | **GET** /tests/leaderboard/me |  |
 | [**testsControllerGetPdfLeaderboard**](TestsApi.md#testscontrollergetpdfleaderboard) | **GET** /tests/leaderboard/pdf/{pdfId} |  |
@@ -203,6 +204,78 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## testsControllerGetChatAssistance
+
+> ChatAssistanceResponseDto testsControllerGetChatAssistance(pdfId, chatAssistanceDto)
+
+Get AI assistance during test taking
+
+### Example
+
+```ts
+import {
+  Configuration,
+  TestsApi,
+} from '';
+import type { TestsControllerGetChatAssistanceRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new TestsApi(config);
+
+  const body = {
+    // string
+    pdfId: pdfId_example,
+    // ChatAssistanceDto
+    chatAssistanceDto: ...,
+  } satisfies TestsControllerGetChatAssistanceRequest;
+
+  try {
+    const data = await api.testsControllerGetChatAssistance(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **pdfId** | `string` |  | [Defaults to `undefined`] |
+| **chatAssistanceDto** | [ChatAssistanceDto](ChatAssistanceDto.md) |  | |
+
+### Return type
+
+[**ChatAssistanceResponseDto**](ChatAssistanceResponseDto.md)
+
+### Authorization
+
+[bearer](../README.md#bearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | AI assistance response |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
