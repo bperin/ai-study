@@ -240,15 +240,56 @@ export class TestsService {
                 console.log('[AI Tutor] Using PDF content from database, length:', pdfContent.length);
             }
 
-            // Use ADK agent as requested
-            const { createTestAssistanceAgent } = require("../ai/agents");
-            const { InMemoryRunner } = require("@google/adk");
+            // Check if ADK is available, otherwise use direct Gemini
+            let useADK = false;
+            try {
+                const { InMemoryRunner } = require("@google/adk");
+                const runner = new InMemoryRunner();
+                useADK = true;
+            } catch (adkImportError) {
+                console.log('[AI Tutor] ADK not available, using direct Gemini');
+                useADK = false;
+            }
+
+            if (useADK) {
+                try {
+                    const { createTestAssistanceAgent } = require("../ai/agents");
+                    const { InMemoryRunner } = require("@google/adk");
+                    
+                    const agent = createTestAssistanceAgent(question.question, question.options, pdfContent);
+                    const runner = new InMemoryRunner();
+                    
+                    const result = await runner.run(agent, message);
+                    const response = result.text;
+                    
+                    return {
+                        message: response,
+                        questionContext: question.question,
+                        helpful: true
+                    } as ChatAssistanceResponseDto;
+                } catch (adkError) {
+                    console.error('[AI Tutor] ADK agent failed, falling back to direct Gemini:', adkError);
+                }
+            }
             
-            const agent = createTestAssistanceAgent(question.question, question.options, pdfContent);
-            const runner = new InMemoryRunner();
+            // Direct Gemini fallback
+            const { GoogleGenerativeAI } = require("@google/generative-ai");
+            const { TEST_ASSISTANCE_CHAT_PROMPT } = require("../ai/prompts");
             
-            const result = await runner.run(agent, message);
-            const response = result.text;
+            const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+            const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+            
+            const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, pdfContent);
+            
+            const chat = model.startChat({
+                history: [
+                    { role: "user", parts: [{ text: systemPrompt }] },
+                    { role: "model", parts: [{ text: "I understand. I'll help with this question without giving away the answer." }] }
+                ]
+            });
+            
+            const result = await chat.sendMessage(message);
+            const response = result.response.text();
             
             return {
                 message: response,
