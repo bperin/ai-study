@@ -33,6 +33,10 @@ export interface UploadsControllerCreateSignedUploadUrlRequest {
     body: object;
 }
 
+export interface UploadsControllerTestSignRequest {
+    body: object;
+}
+
 /**
  * 
  */
@@ -110,6 +114,42 @@ export class UploadsApi extends runtime.BaseAPI {
     async uploadsControllerCreateSignedUploadUrl(requestParameters: UploadsControllerCreateSignedUploadUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UploadUrlResponseDto> {
         const response = await this.uploadsControllerCreateSignedUploadUrlRaw(requestParameters, initOverrides);
         return await response.value();
+    }
+
+    /**
+     */
+    async uploadsControllerTestSignRaw(requestParameters: UploadsControllerTestSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling uploadsControllerTestSign().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/uploads/test-sign`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['body'] as any,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async uploadsControllerTestSign(requestParameters: UploadsControllerTestSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.uploadsControllerTestSignRaw(requestParameters, initOverrides);
     }
 
 }
