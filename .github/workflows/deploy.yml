@@ -58,7 +58,7 @@ jobs:
                     --port 8080 \
                     --timeout 600 \
                     --allow-unauthenticated \
-                    --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},JWT_SECRET=${{ secrets.JWT_SECRET }},GCP_BUCKET_NAME=${{ secrets.GCP_BUCKET_NAME }},GOOGLE_CLOUD_PROJECT_ID=${{ env.GCP_PROJECT_ID }} \
+                    --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest,GCP_SA_KEY=ai_study_GCP_SA_KEY:latest,GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest,JWT_SECRET=ai_study_JWT_SECRET:latest,GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
                     --quiet \
                     --format='value(status.url)' > api_url.txt
                   echo "API_URL=$(cat api_url.txt)" >> $GITHUB_ENV
