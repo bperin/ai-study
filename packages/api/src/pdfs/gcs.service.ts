@@ -22,11 +22,16 @@ export class GcsService {
         return;
       } catch (error) {
         console.error('Failed to parse GCP_SA_KEY:', error);
-        throw new Error('Invalid GCP_SA_KEY format. Please provide a valid service account JSON key.');
+        // Fall through to default authentication
       }
     }
 
-    throw new Error('GCP_SA_KEY is required for Google Cloud Storage authentication.');
+    // Use default service account authentication (for Cloud Run)
+    console.log('Using default service account authentication for GCS');
+    this.storage = new Storage({
+      projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'pro-pulsar-274402',
+    });
+    this.bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'ai-study-uploads';
   }
 
   /**
