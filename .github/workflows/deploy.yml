@@ -59,7 +59,9 @@ jobs:
                   cd packages/api
                   npm install
                   export DATABASE_URL="${{ steps.secrets.outputs.DATABASE_URL }}"
+                  npx prisma migrate reset --force
                   npx prisma db push
+                  npx prisma generate
 
             - name: Build and Push API Image
               run: |
