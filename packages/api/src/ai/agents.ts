@@ -25,12 +25,18 @@ export function createContentAnalyzerAgent() {
  * Creates a question generator sub-agent
  * This agent generates high-quality multiple choice questions
  */
-export function createQuestionGeneratorAgent(pdfContent: string, userPrompt: string = "", difficulty: string = "", count: number = 0) {
+export function createQuestionGeneratorAgent(pdfFilename: string, gcsPath: string, gcsService: any, pdfTextService: any) {
+    const { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } = require("./tools");
+    
     return new LlmAgent({
         name: "question_generator",
         description: "Generates high-quality multiple choice questions for educational purposes",
         model: GEMINI_QUESTION_GENERATOR_MODEL,
-        instruction: QUESTION_GENERATOR_INSTRUCTION(pdfContent, userPrompt, difficulty, count),
+        instruction: QUESTION_GENERATOR_INSTRUCTION,
+        tools: [
+            createGetPdfInfoTool(pdfFilename, gcsPath, gcsService, pdfTextService),
+            createWebSearchTool()
+        ],
     });
 }
 
