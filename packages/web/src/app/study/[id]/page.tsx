@@ -66,24 +66,15 @@ export default function StudyPage() {
 
         try {
             const { testsApi } = refreshApiConfig();
-            const response = await fetch(`${testsApi.configuration?.basePath || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/tests/${id}/chat-assistance`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("access_token")}`
-                },
-                body: JSON.stringify({
+            const response = await testsApi.testsControllerGetChatAssistance({
+                pdfId: id,
+                chatAssistanceDto: {
                     message: userMsg,
                     questionId: currentQuestion.id
-                })
+                }
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            const responseText = data.message;
+            const responseText = response.message;
 
             setChatHistory((prev) => [...prev, { role: "assistant", content: responseText }]);
         } catch (error) {
