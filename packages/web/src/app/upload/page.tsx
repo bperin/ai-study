@@ -47,13 +47,7 @@ export default function UploadPage() {
         setError(null);
 
         try {
-            // Get JWT token from localStorage
-            const token = localStorage.getItem("access_token");
-            if (!token) {
-                throw new Error("Please log in to upload files");
-            }
-
-            // Step 1: Get signed URL from backend
+            // Step 1: Get signed URL from backend (requires auth)
             setProgress(10);
             const { uploadsApi } = refreshApiConfig();
 
@@ -104,7 +98,8 @@ export default function UploadPage() {
             // Step 3: Confirm upload with backend
             let confirmResponse;
             try {
-                confirmResponse = await uploadsApi.uploadsControllerConfirmUpload({
+                const { uploadsApi: confirmUploadsApi } = refreshApiConfig();
+                confirmResponse = await confirmUploadsApi.uploadsControllerConfirmUpload({
                     body: {
                         filePath,
                         fileName: file.name,

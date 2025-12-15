@@ -27,7 +27,11 @@ import type { UploadsControllerConfirmUploadRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
-  const api = new UploadsApi();
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new UploadsApi(config);
 
   const body = {
     // object
@@ -59,7 +63,7 @@ example().catch(console.error);
 
 ### Authorization
 
-No authorization required
+[bearer](../README.md#bearer)
 
 ### HTTP request headers
 
@@ -92,7 +96,11 @@ import type { UploadsControllerCreateSignedUploadUrlRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
-  const api = new UploadsApi();
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new UploadsApi(config);
 
   const body = {
     // object
@@ -124,7 +132,7 @@ example().catch(console.error);
 
 ### Authorization
 
-No authorization required
+[bearer](../README.md#bearer)
 
 ### HTTP request headers
 
@@ -157,7 +165,11 @@ import type { UploadsControllerTestSignRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
-  const api = new UploadsApi();
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: bearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new UploadsApi(config);
 
   const body = {
     // object
@@ -189,7 +201,7 @@ example().catch(console.error);
 
 ### Authorization
 
-No authorization required
+[bearer](../README.md#bearer)
 
 ### HTTP request headers
 

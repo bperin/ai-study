@@ -54,3 +54,12 @@ export const refreshApiConfig = () => {
         testsApi: new TestsApi(config),
     };
 };
+
+// Non-authenticated API instances for testing
+export const getNoAuthApiConfig = () => {
+    const noAuthConfig = new Configuration({ basePath: BASE_PATH });
+    return {
+        uploadsApi: new UploadsApi(noAuthConfig),
+        pdfsApi: new PdfsApi(noAuthConfig),
+    };
+};
