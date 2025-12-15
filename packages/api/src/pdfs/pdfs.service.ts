@@ -308,7 +308,7 @@ export class PdfsService {
     }
 
     const adkRunner = createAdkRunner();
-    const useADK = !!adkRunner;
+    let useADK = !!adkRunner;
     console.log(
       useADK
         ? '[Chat Service] ✅ ADK available - using ADK agent'

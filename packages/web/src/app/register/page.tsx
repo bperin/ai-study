@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { authApi } from "../../api-client";
 import Logo from "@/components/Logo";
+import { Button } from "@/components/ui/button";
 
 export default function RegisterPage() {
     const [email, setEmail] = useState("");
@@ -43,9 +44,9 @@ export default function RegisterPage() {
                 <form onSubmit={handleSubmit} className="mt-8 flex w-full max-w-md flex-col space-y-4">
                     <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded border p-2" required />
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded border p-2" required />
-                    <button type="submit" className="rounded bg-red-600 p-2 text-white hover:bg-red-700">
+                    <Button type="submit" variant="outline" className="w-full">
                         Sign Up
-                    </button>
+                    </Button>
                     {error && <p className="text-red-500">{error}</p>}
                 </form>
 
