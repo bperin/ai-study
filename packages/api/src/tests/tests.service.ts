@@ -12,7 +12,7 @@ import { GEMINI_MODEL } from '../constants/models';
 export class TestsService {
   constructor(
     private prisma: PrismaService,
-    private adkRunner: AdkRunnerService
+    private adkRunner?: AdkRunnerService
   ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
@@ -228,7 +228,7 @@ export class TestsService {
       }
 
       // Try using centralized ADK runner first
-      if (this.adkRunner.isAvailable()) {
+      if (this.adkRunner && this.adkRunner.isAvailable()) {
         try {
           console.log('[AI Tutor] ✅ Using centralized ADK runner');
           
