@@ -17,7 +17,7 @@ export class PdfsService {
     private readonly parallelGenerationService: ParallelGenerationService,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
-  ) {}
+  ) { }
 
   async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
     // 1. Get PDF from database
@@ -123,17 +123,20 @@ export class PdfsService {
 
     const dataWithStats = data.map((pdf) => {
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
-      if (pdfAttempts.length === 0) {
+      // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
+      const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
+
+      if (validAttempts.length === 0) {
         return { ...pdf, stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null } };
       }
 
-      const avgScore = Math.round(pdfAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / pdfAttempts.length);
-      const topAttempt = pdfAttempts.sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0];
+      const avgScore = Math.round(validAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / validAttempts.length);
+      const topAttempt = validAttempts.sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0];
 
       return {
         ...pdf,
         stats: {
-          attemptCount: pdfAttempts.length,
+          attemptCount: validAttempts.length,
           avgScore,
           topScorer: topAttempt.user.email.split('@')[0],
           topScore: Math.round(topAttempt.percentage || 0),
@@ -188,17 +191,20 @@ export class PdfsService {
 
     const dataWithStats = data.map((pdf) => {
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
-      if (pdfAttempts.length === 0) {
+      // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
+      const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
+
+      if (validAttempts.length === 0) {
         return { ...pdf, stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null } };
       }
 
-      const avgScore = Math.round(pdfAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / pdfAttempts.length);
-      const topAttempt = pdfAttempts.sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0];
+      const avgScore = Math.round(validAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / validAttempts.length);
+      const topAttempt = validAttempts.sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0];
 
       return {
         ...pdf,
         stats: {
-          attemptCount: pdfAttempts.length,
+          attemptCount: validAttempts.length,
           avgScore,
           topScorer: topAttempt.user.email.split('@')[0],
           topScore: Math.round(topAttempt.percentage || 0),

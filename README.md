@@ -6,6 +6,10 @@
 
 This project uses Google Gemini to help students review material. It breaks down PDFs into key concepts and generates multiple-choice questions for self-testing.
 
+**Important Note**: Currently, only text-based PDFs are supported for processing. PDFs consisting solely of images will not be processed correctly. Implementing support for image-based PDFs would require integration with an image analysis model.
+
+**Future Enhancements**: The next steps for this project involve generating embeddings for advanced search capabilities and building a true knowledge graph for more sophisticated concept relationships and personalized learning paths.
+
 The backend uses multiple AI agents to process the content:
 
 1.  **Analyzer**: Reads the PDF to find main topics.
