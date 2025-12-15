@@ -57,10 +57,10 @@ AI Study leverages **Google's ADK (Agent Development Kit)** with multiple specia
 
 | Diagram Type | Visualization |
 |---|---|
-| **System Architecture** | [![System Architecture](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-architecture-1.png)](./docs/ai-study-architecture.md) |
-| **Agent Details** | [![Agent Details](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-agent-details-1.png)](./docs/ai-study-agent-details.md) |
-| **Data Flow** | [![Data Flow](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-data-flow-1.png)](./docs/ai-study-data-flow.md) |
-| **Workflow Sequence** | [![Workflow Sequence](https://github.com/bperin/ai-study/blob/dev/docs/ai-study-workflow-1.png)](./docs/ai-study-workflow.md) |
+| **System Architecture** | [![System Architecture](https://github.com/bperin/ai-study/blob/main/docs/ai-study-architecture-1.png)](./docs/ai-study-architecture.md) |
+| **Agent Details** | [![Agent Details](https://github.com/bperin/ai-study/blob/main/docs/ai-study-agent-details-1.png)](./docs/ai-study-agent-details.md) |
+| **Data Flow** | [![Data Flow](https://github.com/bperin/ai-study/blob/main/docs/ai-study-data-flow-1.png)](./docs/ai-study-data-flow.md) |
+| **Workflow Sequence** | [![Workflow Sequence](https://github.com/bperin/ai-study/blob/main/docs/ai-study-workflow-1.png)](./docs/ai-study-workflow.md) |
 
 </details>
 
@@ -214,8 +214,12 @@ NODE_ENV=development
    - Vertex AI API
    - Cloud Storage API
 3. **Create a service account** with the following roles:
-   - Vertex AI User
-   - Storage Admin
+   - **Vertex AI User** (`roles/aiplatform.user`): For Gemini model access
+   - **Storage Admin** (`roles/storage.admin`): For managing PDF buckets
+   - **Service Account User** (`roles/iam.serviceAccountUser`): For service identity
+   - **Cloud Run Admin** (`roles/run.admin`): For deployment management
+   - **Artifact Registry Admin** (`roles/artifactregistry.admin`): For container image management
+   - **Service Usage Consumer** (`roles/serviceusage.serviceUsageConsumer`): To use enabled APIs
 4. **Download the service account key** and set it in `GCP_SA_KEY`
 5. **Create a Cloud Storage bucket** for PDF storage
 
