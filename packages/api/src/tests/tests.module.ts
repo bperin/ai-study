@@ -9,9 +9,10 @@ import { TestSessionsModule } from './test-sessions/test-sessions.module';
 import { TestAttemptsController } from './test-attempts.controller';
 import { TestAttemptsService } from './test-attempts.service';
 import { PdfsModule } from '../pdfs/pdfs.module';
+import { RagModule } from '../rag/rag.module';
 
 @Module({
-  imports: [PrismaModule, TestSessionsModule, PdfsModule],
+  imports: [PrismaModule, TestSessionsModule, PdfsModule, RagModule],
   controllers: [TestsController, TestTakingController, TestAttemptsController],
   providers: [TestsService, LeaderboardService, TestTakingService, TestAttemptsService],
 })
