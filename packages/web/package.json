@@ -7,6 +7,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
+        "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "codegen": "openapi-generator-cli generate -i ../../packages/api/openapi.json -g typescript-fetch -o src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec"
     },
     "dependencies": {

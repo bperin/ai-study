@@ -1,32 +1,32 @@
-import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi, PdfsApi, TestTakingApi, TestsApi, Middleware } from "./generated";
+import { Configuration, AuthApi, UsersApi, DefaultApi, UploadsApi, PdfsApi, TestTakingApi, TestsApi, Middleware } from './generated';
 
-const BASE_PATH = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const BASE_PATH = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 const authMiddleware: Middleware = {
-    post: async (context) => {
-        if (context.response.status === 401) {
-            if (typeof window !== "undefined") {
-                localStorage.removeItem("access_token");
-                window.location.href = "/login";
-            }
-        }
-        return context.response;
-    },
+  post: async (context) => {
+    if (context.response.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+      }
+    }
+    return context.response;
+  },
 };
 
 const getConfig = () => {
-    if (typeof window === "undefined") {
-        return new Configuration({ basePath: BASE_PATH });
-    }
+  if (typeof window === 'undefined') {
+    return new Configuration({ basePath: BASE_PATH });
+  }
 
-    const token = localStorage.getItem("access_token");
+  const token = localStorage.getItem('access_token');
 
-    return new Configuration({
-        basePath: BASE_PATH,
-        accessToken: token || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        middleware: [authMiddleware],
-    });
+  return new Configuration({
+    basePath: BASE_PATH,
+    accessToken: token || undefined,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    middleware: [authMiddleware],
+  });
 };
 
 export const authApi = new AuthApi(new Configuration({ basePath: BASE_PATH }));
@@ -43,29 +43,29 @@ export const getTestsApi = () => new TestsApi(getConfig());
 
 // Export the specific function that's being imported
 export const testsControllerGetChatAssistance = async (pdfId: string, chatAssistanceDto: any) => {
-    const testsApi = new TestsApi(getConfig());
-    return testsApi.testsControllerGetChatAssistance({ pdfId, chatAssistanceDto });
+  const testsApi = new TestsApi(getConfig());
+  return testsApi.testsControllerGetChatAssistance({ pdfId, chatAssistanceDto });
 };
 
 // Helper to refresh API instances when token changes (e.g. after login)
 export const refreshApiConfig = () => {
-    const config = getConfig();
-    return {
-        authApi: new AuthApi(new Configuration({ basePath: BASE_PATH })),
-        usersApi: new UsersApi(config),
-        defaultApi: new DefaultApi(config),
-        uploadsApi: new UploadsApi(config),
-        pdfsApi: new PdfsApi(config),
-        testTakingApi: new TestTakingApi(config),
-        testsApi: new TestsApi(config),
-    };
+  const config = getConfig();
+  return {
+    authApi: new AuthApi(new Configuration({ basePath: BASE_PATH })),
+    usersApi: new UsersApi(config),
+    defaultApi: new DefaultApi(config),
+    uploadsApi: new UploadsApi(config),
+    pdfsApi: new PdfsApi(config),
+    testTakingApi: new TestTakingApi(config),
+    testsApi: new TestsApi(config),
+  };
 };
 
 // Non-authenticated API instances for testing
 export const getNoAuthApiConfig = () => {
-    const noAuthConfig = new Configuration({ basePath: BASE_PATH });
-    return {
-        uploadsApi: new UploadsApi(noAuthConfig),
-        pdfsApi: new PdfsApi(noAuthConfig),
-    };
+  const noAuthConfig = new Configuration({ basePath: BASE_PATH });
+  return {
+    uploadsApi: new UploadsApi(noAuthConfig),
+    pdfsApi: new PdfsApi(noAuthConfig),
+  };
 };
