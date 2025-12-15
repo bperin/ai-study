@@ -43,13 +43,18 @@ jobs:
                   docker build -f packages/api/Dockerfile \
                     -t us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest .
                   docker push us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest
+            
+            - name: Make GCS Bucket Public (Workaround for GCP_SA_KEY issue)
+              run: |
+                  gsutil iam ch allUsers:objectViewer gs://ai-study-public-storage
+
             - name: Deploy API service
               id: deploy-api
               run: |
                   gcloud run deploy ${{ env.API_SERVICE_NAME }} \
                     --image us-central1-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ai-study/api:latest \
                     --project ${{ env.GCP_PROJECT_ID }} \
-                    --region ${{ env.GCP_REGION }} \ 
+                    --region ${{ env.GCP_REGION }} \
                     --port 8080 \
                     --timeout 600 \
                     --allow-unauthenticated \
