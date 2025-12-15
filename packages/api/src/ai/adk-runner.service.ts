@@ -1,9 +1,9 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { createAdkRunner, createAdkSession, isAdkAvailable } from './adk.helpers';
 
 @Injectable()
 export class AdkRunnerService implements OnModuleInit {
     private readonly logger = new Logger(AdkRunnerService.name);
-    private runner: any = null;
     private sessionService: any = null;
     private isAdkAvailable = false;
 
@@ -13,14 +13,15 @@ export class AdkRunnerService implements OnModuleInit {
 
     private async initializeAdkRunner() {
         try {
-            // Test ADK availability
-            const { InMemoryRunner, LlmAgent } = require('@google/adk');
-            const { InMemorySessionService } = require('@google/adk');
+            if (!isAdkAvailable()) {
+                this.isAdkAvailable = false;
+                this.logger.warn('❌ ADK not available - services will use Gemini fallback');
+                return;
+            }
 
-            // Initialize session service with Custom implementation
+            const { LlmAgent } = require('@google/adk');
             this.sessionService = new CustomSessionService();
 
-            // Create a dummy agent for testing
             const testAgent = new LlmAgent({
                 name: 'test_agent',
                 description: 'test',
@@ -28,12 +29,17 @@ export class AdkRunnerService implements OnModuleInit {
                 instruction: 'test'
             });
 
-            // Create a test runner to verify ADK works
-            const testRunner = new InMemoryRunner({
+            const testRunner = createAdkRunner({
                 agent: testAgent,
                 appName: 'ai-study-test',
                 sessionService: this.sessionService,
             });
+
+            if (!testRunner) {
+                this.isAdkAvailable = false;
+                this.logger.warn('❌ ADK initialization failed - services will use Gemini fallback');
+                return;
+            }
 
             this.isAdkAvailable = true;
             this.logger.log('✅ ADK Runner Service initialized successfully');
@@ -65,23 +71,22 @@ export class AdkRunnerService implements OnModuleInit {
         }
 
         try {
-            const { InMemoryRunner } = require('@google/adk');
-
-            // Create a fresh session service for this request (stateless/isolated per call)
             const localSessionService = new CustomSessionService();
             const sessionId = `session-${userId}-${Date.now()}`;
 
-            // Create session in our custom service
-            await localSessionService.createSession({
-                appName,
-                userId,
-                sessionId,
-            });
-
-            const runner = new InMemoryRunner({
+            const runner = createAdkRunner({
                 agent,
                 appName,
                 sessionService: localSessionService,
+            });
+            if (!runner) {
+                throw new Error('Failed to create ADK runner');
+            }
+
+            await createAdkSession(runner, {
+                appName,
+                userId,
+                sessionId,
             });
 
             this.logger.debug(`Running agent for user ${userId} in session ${sessionId}`);
@@ -129,19 +134,15 @@ export class AdkRunnerService implements OnModuleInit {
         }
 
         try {
-            const { InMemoryRunner } = require('@google/adk');
-
-            // Create runner for question generation
-            const runner = new InMemoryRunner({
-                agent,
-                appName,
-                sessionService: this.sessionService,
-            });
+            const runner = createAdkRunner({ agent, appName, sessionService: this.sessionService });
+            if (!runner) {
+                throw new Error('Failed to create ADK runner');
+            }
 
             const userId = 'system';
 
             // Create session for generation
-            await this.sessionService.createSession({
+            await createAdkSession(runner, {
                 appName,
                 userId,
                 sessionId,

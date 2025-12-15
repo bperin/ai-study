@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "scripts": {
         "prisma": "prisma db push && prisma generate",
-        "build": "nest build && npm run generate:openapi",
+        "build": "nest build",
         "build:watch": "nest build --watch",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "start": "nest start",
