@@ -43,6 +43,12 @@ export interface PdfResponseDto {
      * @memberof PdfResponseDto
      */
     objectives: Array<object>;
+    /**
+     * 
+     * @type {object}
+     * @memberof PdfResponseDto
+     */
+    stats?: object;
 }
 
 /**
@@ -70,6 +76,7 @@ export function PdfResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: bool
         'filename': json['filename'],
         'createdAt': (new Date(json['createdAt'])),
         'objectives': json['objectives'],
+        'stats': json['stats'] == null ? undefined : json['stats'],
     };
 }
 
@@ -88,6 +95,7 @@ export function PdfResponseDtoToJSONTyped(value?: PdfResponseDto | null, ignoreD
         'filename': value['filename'],
         'createdAt': value['createdAt'].toISOString(),
         'objectives': value['objectives'],
+        'stats': value['stats'],
     };
 }
 

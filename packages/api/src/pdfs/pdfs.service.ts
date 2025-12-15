@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ParallelGenerationService } from "../ai/parallel-generation.service";
+import { GcsService } from "./gcs.service";
+import { PdfTextService } from "./pdf-text.service";
 
 @Injectable()
 export class PdfsService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly parallelGenerationService: ParallelGenerationService
+        private readonly parallelGenerationService: ParallelGenerationService,
+        private readonly gcsService: GcsService,
+        private readonly pdfTextService: PdfTextService
     ) {}
 
     async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
@@ -272,12 +276,27 @@ export class PdfsService {
         const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
         if (!pdf) throw new NotFoundException("PDF not found");
 
+        // Fetch PDF content if not available in DB
+        let pdfContent = pdf.content || "";
+        if (!pdfContent && pdf.gcsPath) {
+            try {
+                const buffer = await this.gcsService.downloadFile(pdf.gcsPath);
+                const extracted = await this.pdfTextService.extractText(buffer);
+                pdfContent = extracted.structuredText;
+            } catch (e) {
+                console.error(`Failed to load PDF content for chat plan (ID: ${pdfId}):`, e);
+            }
+        }
+
         // Build conversation history
         const conversationHistory = history || [];
 
         // Import prompt from prompts.ts
         const { TEST_PLAN_CHAT_PROMPT } = require("../ai/prompts");
-        const systemPrompt = TEST_PLAN_CHAT_PROMPT(pdf.filename);
+        
+        // Include PDF content in system prompt (truncated if too large)
+        // Note: TEST_PLAN_CHAT_PROMPT now accepts content as 2nd arg
+        const systemPrompt = TEST_PLAN_CHAT_PROMPT(pdf.filename, pdfContent);
 
         const chat = model.startChat({
             history: [

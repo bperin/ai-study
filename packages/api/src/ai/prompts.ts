@@ -512,7 +512,10 @@ CRITICAL INSTRUCTIONS:
 - Balance constructive criticism with encouragement
 `;
 
-export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string) => `You are a helpful AI assistant helping a student create a test plan from their PDF "${pdfFilename}".
+export const TEST_PLAN_CHAT_PROMPT = (pdfFilename: string, pdfContent: string) => `You are a helpful AI assistant helping a student create a test plan from their PDF "${pdfFilename}".
+
+PDF CONTENT:
+${pdfContent ? pdfContent.substring(0, 50000) : "No text content available."} ... (truncated if too long)
 
 Your job is to:
 1. Understand what kind of test they want (difficulty, number of questions, topics)

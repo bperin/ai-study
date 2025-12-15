@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Storage } from "@google-cloud/storage";
 import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import { PdfTextService } from "../pdfs/pdf-text.service";
 
 @Injectable()
 export class UploadsService {
@@ -11,7 +12,8 @@ export class UploadsService {
 
     constructor(
         private readonly configService: ConfigService,
-        private readonly prisma: PrismaService
+        private readonly prisma: PrismaService,
+        private readonly pdfTextService: PdfTextService
     ) {
         const serviceAccountKey = this.configService.get<string>("GCP_SA_KEY");
         
