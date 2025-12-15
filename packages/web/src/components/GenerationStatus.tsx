@@ -34,6 +34,10 @@ export default function GenerationStatus({ userId }: GenerationStatusProps) {
     socket.on(`status:${userId}`, (data: { isGenerating: boolean }) => {
       console.log(`Received status update for ${userId}:`, data);
       setIsGenerating(data.isGenerating);
+      if (!data.isGenerating) {
+        // Refresh the page data when generation completes
+        window.location.reload();
+      }
     });
 
     socket.on("disconnect", () => {

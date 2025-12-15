@@ -85,7 +85,7 @@ export class PdfsService {
         console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
       } catch (e: any) {
         this.pdfStatusGateway.sendStatusUpdate(userId, false);
-        console.error(`[Background] Flashcard generation failed for PDF ${pdfId}: ${e.message}`);
+        console.error(`[Background] Flashcard generation failed for PDF ${pdfId}:`, e);
         try {
           // If we managed to generate some questions, mark as ready instead of failed
           const questionsCount = await this.prisma.mcq.count({
