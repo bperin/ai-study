@@ -47,6 +47,10 @@ async function bootstrap() {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  app.getHttpAdapter().get('/healthz', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   const port = process.env.PORT || 3000;
   console.log(`Starting server on port ${port} (from env: ${process.env.PORT})`);
   console.log(`Environment: NODE_ENV=${process.env.NODE_ENV}`);

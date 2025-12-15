@@ -84,7 +84,7 @@ model TestAttempt {
 
   // Detailed feedback (JSON)
   feedback Json? // Stores TestFeedback structure
-  
+
   // AI-generated summary report with links (markdown text)
   summary String? @db.Text // Stores AI summary with web links as markdown
 
@@ -138,4 +138,56 @@ model PdfSession {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  ownerId      String?
+  title        String?
+  sourceType   String
+  sourceUri    String?
+  mimeType     String?
+  status       String   @default("READY")
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  chunks   Chunk[]
+  queries  QueryLog[]
+}
+
+model Chunk {
+  id          String   @id @default(uuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  chunkIndex  Int
+  content     String
+  contentHash String
+  startChar   Int?
+  endChar     Int?
+
+  embeddingJson Json?
+  embeddingVec  Unsupported("vector")?
+
+  createdAt   DateTime @default(now())
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+}
+
+model QueryLog {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  question   String
+  answer     String?
+  model      String?
+  topK       Int?
+  usedChunks Json?
+  latencyMs  Int?
+  createdAt  DateTime @default(now())
+
+  @@index([documentId, createdAt])
 }
