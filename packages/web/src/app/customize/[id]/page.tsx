@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { getPdfsApi } from "@/api-client";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { TEST_PLAN_CHAT_PROMPT } from "@/lib/prompts";
 
 interface TestPlan {
     objectives: Array<{
@@ -75,23 +77,54 @@ export default function CustomizePage() {
         setChatting(true);
 
         try {
-            // SDK method is broken for this endpoint, falling back to fetch with env var
+            // Fetch API key securely
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
             const token = localStorage.getItem("access_token");
-            const response = await fetch(`${baseUrl}/pdfs/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    message: userMessage,
-                    pdfId,
-                    conversationHistory: messages,
-                }),
+            let apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
+
+            try {
+                const keyResponse = await fetch(`${baseUrl}/auth/api-key`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (keyResponse.ok) {
+                    const keyData = await keyResponse.json();
+                    if (keyData.apiKey) apiKey = keyData.apiKey;
+                }
+            } catch (e) {
+                console.error("Failed to fetch API key, falling back to env var", e);
+            }
+
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const systemPrompt = TEST_PLAN_CHAT_PROMPT(pdfInfo?.filename || "Study Guide");
+
+            const chat = model.startChat({
+                history: [
+                    { role: "user", parts: [{ text: systemPrompt }] },
+                    { role: "model", parts: [{ text: "I understand! I'll help create a test plan. What would you like to study?" }] },
+                    ...messages.map((msg) => ({
+                        role: msg.role === "user" ? "user" : "model",
+                        parts: [{ text: msg.content }],
+                    })),
+                ],
             });
 
-            const data = await response.json();
+            const result = await chat.sendMessage(userMessage);
+            const responseText = result.response.text();
+            
+            let data: any = { message: responseText, testPlan: null, shouldGenerate: false };
+
+            // Try to parse JSON from response
+            try {
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    data = JSON.parse(jsonMatch[0]);
+                }
+            } catch (e) {
+                // If not JSON, use the plain text as the message
+                data.message = responseText;
+            }
 
             setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
 
