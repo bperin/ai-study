@@ -91,8 +91,39 @@ export class PdfsService {
             this.prisma.pdf.count({ where: { userId } }),
         ]);
 
+        const pdfIds = data.map((p) => p.id);
+        const attempts = await this.prisma.testAttempt.findMany({
+            where: {
+                pdfId: { in: pdfIds },
+                completedAt: { not: null },
+            },
+            include: {
+                user: { select: { email: true } },
+            },
+        });
+
+        const dataWithStats = data.map((pdf) => {
+            const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
+            if (pdfAttempts.length === 0) {
+                return { ...pdf, stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null } };
+            }
+
+            const avgScore = Math.round(pdfAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / pdfAttempts.length);
+            const topAttempt = pdfAttempts.sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0];
+
+            return {
+                ...pdf,
+                stats: {
+                    attemptCount: pdfAttempts.length,
+                    avgScore,
+                    topScorer: topAttempt.user.email.split("@")[0],
+                    topScore: Math.round(topAttempt.percentage || 0),
+                },
+            };
+        });
+
         return {
-            data,
+            data: dataWithStats,
             total,
             page,
             limit,
@@ -125,8 +156,39 @@ export class PdfsService {
             this.prisma.pdf.count(),
         ]);
 
+        const pdfIds = data.map((p) => p.id);
+        const attempts = await this.prisma.testAttempt.findMany({
+            where: {
+                pdfId: { in: pdfIds },
+                completedAt: { not: null },
+            },
+            include: {
+                user: { select: { email: true } },
+            },
+        });
+
+        const dataWithStats = data.map((pdf) => {
+            const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
+            if (pdfAttempts.length === 0) {
+                return { ...pdf, stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null } };
+            }
+
+            const avgScore = Math.round(pdfAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / pdfAttempts.length);
+            const topAttempt = pdfAttempts.sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0];
+
+            return {
+                ...pdf,
+                stats: {
+                    attemptCount: pdfAttempts.length,
+                    avgScore,
+                    topScorer: topAttempt.user.email.split("@")[0],
+                    topScore: Math.round(topAttempt.percentage || 0),
+                },
+            };
+        });
+
         return {
-            data,
+            data: dataWithStats,
             total,
             page,
             limit,

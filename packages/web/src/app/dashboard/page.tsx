@@ -28,8 +28,6 @@ export default function DashboardPage() {
     const [history, setHistory] = useState<TestHistoryItemDto[]>([]);
     const [user, setUser] = useState<UserResponseDto | null>(null);
     const [pdfToDelete, setPdfToDelete] = useState<string | null>(null);
-    const [testStats, setTestStats] = useState<Record<string, { attemptCount: number; avgScore: number; topScorer: string | null; topScore: number | null }>>({});
-
     const handleLogout = useCallback(() => {
         localStorage.removeItem("access_token");
         router.push("/login");
@@ -67,26 +65,6 @@ export default function DashboardPage() {
                         const pdfList = Array.isArray(data?.data) ? data.data : [];
                         setPdfs(pdfList);
                         setTotalPages(data?.totalPages || 1);
-                        
-                        // Fetch stats for each PDF only if we have PDFs
-                        const stats: Record<string, any> = {};
-                        if (pdfList.length > 0) {
-                            await Promise.all(
-                                pdfList.map(async (pdf: any) => {
-                                    try {
-                                        const res = await fetch(`${baseUrl}/tests/stats/${pdf.id}`, {
-                                            headers: { Authorization: `Bearer ${token}` },
-                                        });
-                                        if (res.ok) {
-                                            stats[pdf.id] = await res.json();
-                                        }
-                                    } catch (e) {
-                                        console.error(`Failed to fetch stats for PDF ${pdf.id}`, e);
-                                    }
-                                })
-                            );
-                        }
-                        setTestStats(stats);
                     }),
                 usersApi.usersControllerGetMe().then((u) => setUser(u)),
                 fetch(`${baseUrl}/tests/history/all`, {
@@ -195,18 +173,23 @@ export default function DashboardPage() {
                                             </CardHeader>
                                             <CardContent className="flex-1">
                                                 <p className="mb-2 text-sm font-medium">{questionCount} Questions</p>
-                                                {testStats[pdf.id] && testStats[pdf.id].attemptCount > 0 && (
+                                                {(pdf as any).stats && (pdf as any).stats.attemptCount > 0 && (
                                                     <div className="mb-3 p-2 bg-muted/50 rounded-lg space-y-1">
-                                                        <div className="flex items-center gap-2 text-sm">
-                                                            <Users className="h-3 w-3" />
-                                                            <span>{testStats[pdf.id].attemptCount} attempts</span>
-                                                            <span className="text-muted-foreground">• avg {testStats[pdf.id].avgScore}%</span>
+                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                                                            <div className="flex items-center gap-1">
+                                                                <Users className="h-3 w-3" />
+                                                                <span>
+                                                                    {(pdf as any).stats.attemptCount} {(pdf as any).stats.attemptCount === 1 ? "attempt" : "attempts"}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-muted-foreground hidden sm:inline">•</span>
+                                                            <span className="text-muted-foreground">avg {(pdf as any).stats.avgScore}%</span>
                                                         </div>
-                                                        {testStats[pdf.id].topScorer && (
-                                                            <div className="flex items-center gap-1 text-sm text-amber-500">
+                                                        {(pdf as any).stats.topScorer && (
+                                                            <div className="flex items-center gap-1 text-sm text-amber-500 mt-1">
                                                                 <Crown className="h-3 w-3" />
-                                                                <span className="font-medium">{testStats[pdf.id].topScorer}</span>
-                                                                <span className="text-muted-foreground">({testStats[pdf.id].topScore}%)</span>
+                                                                <span className="font-medium">{(pdf as any).stats.topScorer}</span>
+                                                                <span className="text-muted-foreground">({(pdf as any).stats.topScore}%)</span>
                                                             </div>
                                                         )}
                                                     </div>
