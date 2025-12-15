@@ -41,6 +41,12 @@ export const getUsersApi = () => new UsersApi(getConfig());
 export const getTestTakingApi = () => new TestTakingApi(getConfig());
 export const getTestsApi = () => new TestsApi(getConfig());
 
+// Export the specific function that's being imported
+export const testsControllerGetChatAssistance = async (pdfId: string, chatAssistanceDto: any) => {
+    const testsApi = new TestsApi(getConfig());
+    return testsApi.testsControllerGetChatAssistance({ pdfId, chatAssistanceDto });
+};
+
 // Helper to refresh API instances when token changes (e.g. after login)
 export const refreshApiConfig = () => {
     const config = getConfig();
