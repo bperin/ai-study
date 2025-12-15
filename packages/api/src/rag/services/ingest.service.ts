@@ -236,40 +236,49 @@ export class IngestService {
     // Process in batches outside of a transaction to avoid Prisma Accelerate timeouts (15s limit)
     // Reduce batch size for better stability with Accelerate
     const BATCH_SIZE = 10;
+    const totalBatches = Math.ceil(chunkData.length / BATCH_SIZE);
+    
     for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
       const batch = chunkData.slice(i, i + BATCH_SIZE);
-      this.logger.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} chunks)`);
+      this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Processing ${batch.length} chunks for document ${documentId}`);
 
-      // Use a simpler approach without interactive transaction to avoid Accelerate timeouts
-      for (const data of batch) {
-        if (data.embeddingSql) {
-          await this.prisma.$executeRawUnsafe(
-            `INSERT INTO "Chunk" ("id", "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "embeddingVec")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector)`,
-            data.id,
-            data.documentId,
-            data.chunkIndex,
-            data.content,
-            data.contentHash,
-            data.startChar,
-            data.endChar,
-            JSON.stringify(data.embeddingJson),
-            data.embeddingSql,
-          );
-        } else {
-          await this.prisma.chunk.create({
-            data: {
-              id: data.id,
-              documentId: data.documentId,
-              chunkIndex: data.chunkIndex,
-              content: data.content,
-              contentHash: data.contentHash,
-              startChar: data.startChar,
-              endChar: data.endChar,
-              embeddingJson: data.embeddingJson as any,
-            },
-          });
+      try {
+        // Use a simpler approach without interactive transaction to avoid Accelerate timeouts
+        for (const data of batch) {
+          if (data.embeddingSql) {
+            await this.prisma.$executeRawUnsafe(
+              `INSERT INTO "Chunk" ("id", "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "embeddingVec")
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector)`,
+              data.id,
+              data.documentId,
+              data.chunkIndex,
+              data.content,
+              data.contentHash,
+              data.startChar,
+              data.endChar,
+              JSON.stringify(data.embeddingJson),
+              data.embeddingSql,
+            );
+          } else {
+            await this.prisma.chunk.create({
+              data: {
+                id: data.id,
+                documentId: data.documentId,
+                chunkIndex: data.chunkIndex,
+                content: data.content,
+                contentHash: data.contentHash,
+                startChar: data.startChar,
+                endChar: data.endChar,
+                embeddingJson: data.embeddingJson as any,
+              },
+            });
+          }
         }
+        this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
+      } catch (error: any) {
+        this.logger.error(`[Batch ${batchNumber}/${totalBatches}] Failed to save batch: ${error.message}`);
+        throw error; // Re-throw to fail the document status
       }
     }
 
