@@ -13,18 +13,29 @@ export class GcsService {
       throw new Error('GCP_BUCKET_NAME environment variable is not set.');
     }
 
-    const gcpSaKeyJson = this.configService.get<string>('GCP_SA_KEY');
-    if (!gcpSaKeyJson) {
-      throw new Error('GCP_SA_KEY is required for Google Cloud Storage authentication.');
+    // Use GOOGLE_APPLICATION_CREDENTIALS file path or default authentication
+    const credentialsPath = this.configService.get<string>('GOOGLE_APPLICATION_CREDENTIALS');
+    if (credentialsPath) {
+      console.log(`Using service account key from: ${credentialsPath}`);
+      this.storage = new Storage({
+        keyFilename: credentialsPath,
+        projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'pro-pulsar-274402',
+      });
+    } else {
+      console.log('Using default service account authentication for GCS');
+      this.storage = new Storage({
+        projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'pro-pulsar-274402',
+      });
     }
+  }
 
-    try {
-      const credentials = JSON.parse(gcpSaKeyJson);
-      this.storage = new Storage({ credentials });
-    } catch (error: unknown) {
-      const errorMessage = (error instanceof Error) ? error.message : String(error);
-      throw new Error(`Failed to parse GCP_SA_KEY JSON: ${errorMessage}`);
-    }
+  /**
+   * Download a file from Google Cloud Storage
+   */
+  async downloadFile(filePath: string): Promise<Buffer> {
+    const file = this.storage.bucket(this.bucketName).file(filePath);
+    const [buffer] = await file.download();
+    return buffer;
   }
 
   async createSignedUploadUrl(
@@ -43,5 +54,12 @@ export class GcsService {
 
     const url = `https://storage.googleapis.com/${this.bucketName}/${fileName}`;
     return { url, signedUrl };
+  }
+
+  /**
+   * Get the bucket name
+   */
+  getBucketName(): string {
+    return this.bucketName;
   }
 }
