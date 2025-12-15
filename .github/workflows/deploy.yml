@@ -47,6 +47,20 @@ jobs:
                   username: oauth2accesstoken
                   password: ${{ steps.auth.outputs.access_token }}
 
+            - name: Get Database Connection String
+              id: secrets
+              uses: google-github-actions/get-secretmanager-secrets@v2
+              with:
+                  secrets: |-
+                      DATABASE_URL:projects/${{ env.GCP_PROJECT_ID }}/secrets/ai_study_DATABASE_URL
+
+            - name: Run Database Migrations
+              run: |
+                  cd packages/api
+                  npm install -g prisma
+                  export DATABASE_URL="${{ steps.secrets.outputs.DATABASE_URL }}"
+                  npx prisma db push --accept-data-loss
+
             - name: Build and Push API Image
               run: |
                   docker buildx build \
