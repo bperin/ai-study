@@ -23,6 +23,9 @@ export class PdfResponseDto {
     topScorer: string | null;
     topScore: number | null;
   };
+
+  @ApiProperty({ required: false, description: 'The current RAG processing status of the document' })
+  status?: string;
 }
 
 export class PaginatedPdfResponseDto {

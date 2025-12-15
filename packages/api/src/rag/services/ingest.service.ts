@@ -33,7 +33,20 @@ export class IngestService {
       },
     });
 
-    return this.processDocument(document.id, text, 'text/plain');
+    // Run in background to avoid timeouts
+    (async () => {
+      try {
+        await this.processDocument(document.id, text, 'text/plain');
+      } catch (e: any) {
+        await this.prisma.document.update({
+          where: { id: document.id },
+          data: { status: 'FAILED', errorMessage: e.message },
+        });
+        this.logger.error(`Background ingestion failed for document ${document.id}: ${e.message}`);
+      }
+    })();
+
+    return { documentId: document.id, status: 'PROCESSING' };
   }
 
   async createFromUpload(title: string | undefined, file: Express.Multer.File) {
@@ -51,16 +64,21 @@ export class IngestService {
       },
     });
 
-    try {
-      const text = await this.pdfService.extractText(file.buffer);
-      return await this.processDocument(document.id, text, 'application/pdf');
-    } catch (error) {
-      await this.prisma.document.update({
-        where: { id: document.id },
-        data: { status: 'FAILED', errorMessage: (error as Error).message },
-      });
-      throw error;
-    }
+    // Run in background to avoid timeouts
+    (async () => {
+      try {
+        const text = await this.pdfService.extractText(file.buffer);
+        await this.processDocument(document.id, text, 'application/pdf');
+      } catch (error: any) {
+        await this.prisma.document.update({
+          where: { id: document.id },
+          data: { status: 'FAILED', errorMessage: error.message },
+        });
+        this.logger.error(`Background ingestion failed for upload ${document.id}: ${error.message}`);
+      }
+    })();
+
+    return { documentId: document.id, status: 'PROCESSING' };
   }
 
   async createFromGcs(title: string | undefined, gcsUri: string) {
@@ -78,19 +96,25 @@ export class IngestService {
       },
     });
 
-    try {
-      const { bucket: bucketName, path } = this.parseGcsUri(gcsUri);
-      const bucket = this.storage.bucket(bucketName);
-      const [buffer] = await bucket.file(path).download();
-      const text = await this.pdfService.extractText(buffer);
-      return await this.processDocument(document.id, text, 'application/pdf');
-    } catch (error) {
-      await this.prisma.document.update({
-        where: { id: document.id },
-        data: { status: 'FAILED', errorMessage: (error as Error).message },
-      });
-      throw error;
-    }
+    // Run in background to avoid timeouts
+    (async () => {
+      try {
+        const { bucket: bucketName, path } = this.parseGcsUri(gcsUri);
+        const bucket = this.storage.bucket(bucketName);
+        this.logger.log(`[Background] Downloading ${path} from ${bucketName}`);
+        const [buffer] = await bucket.file(path).download();
+        const text = await this.pdfService.extractText(buffer);
+        await this.processDocument(document.id, text, 'application/pdf');
+      } catch (error: any) {
+        await this.prisma.document.update({
+          where: { id: document.id },
+          data: { status: 'FAILED', errorMessage: error.message },
+        });
+        this.logger.error(`Background ingestion failed for GCS ${document.id}: ${error.message}`);
+      }
+    })();
+
+    return { documentId: document.id, status: 'PROCESSING' };
   }
 
   async reprocessDocument(documentId: string) {
@@ -118,19 +142,27 @@ export class IngestService {
       data: { status: 'PROCESSING', errorMessage: null },
     });
 
-    try {
-      const { bucket: bucketName, path } = this.parseGcsUri(document.sourceUri);
-      const bucket = this.storage.bucket(bucketName);
-      const [buffer] = await bucket.file(path).download();
-      const text = await this.pdfService.extractText(buffer);
-      return await this.processDocument(documentId, text, document.mimeType || 'application/pdf');
-    } catch (error) {
-      await this.prisma.document.update({
-        where: { id: documentId },
-        data: { status: 'FAILED', errorMessage: (error as Error).message },
-      });
-      throw error;
-    }
+    // Run in background to avoid dashboard timeouts
+    (async () => {
+      try {
+        const { bucket: bucketName, path } = this.parseGcsUri(document.sourceUri!);
+        const bucket = this.storage.bucket(bucketName);
+        this.logger.log(`[Reprocess] Downloading ${path} from ${bucketName}`);
+        const [buffer] = await bucket.file(path).download();
+        this.logger.log(`[Reprocess] Downloaded ${buffer.length} bytes, extracting text...`);
+        const text = await this.pdfService.extractText(buffer);
+        this.logger.log(`[Reprocess] Extracted ${text.length} chars, starting ingestion...`);
+        await this.processDocument(documentId, text, document.mimeType || 'application/pdf');
+      } catch (error: any) {
+        await this.prisma.document.update({
+          where: { id: documentId },
+          data: { status: 'FAILED', errorMessage: error.message },
+        });
+        this.logger.error(`Background reprocessing failed for document ${documentId}: ${error.message}`);
+      }
+    })();
+
+    return { message: 'Reprocessing started in background' };
   }
 
   async reprocessAllDocuments() {
@@ -199,14 +231,13 @@ export class IngestService {
       };
     });
 
-    this.logger.log(`Saving ${chunkData.length} chunks to database`);
     this.logger.log(`Saving ${chunkData.length} chunks to database in batches`);
 
     // Process in batches outside of a transaction to avoid Prisma Accelerate timeouts (15s limit)
     const BATCH_SIZE = 25;
     for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
       const batch = chunkData.slice(i, i + BATCH_SIZE);
-      this.logger.log(`Processing batch ${i / BATCH_SIZE + 1} (${batch.length} chunks)`);
+      this.logger.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} chunks)`);
 
       await this.prisma.$transaction(async (tx) => {
         for (const data of batch) {
@@ -247,9 +278,9 @@ export class IngestService {
 
     await this.prisma.document.update({
       where: { id: documentId },
-      data: { status: 'READY', mimeType, errorMessage: null },
+      data: { status: 'COMPLETED', mimeType, errorMessage: null },
     });
 
-    return { documentId, status: 'READY', chunks: chunks.length };
+    return { documentId, status: 'COMPLETED', chunks: chunks.length };
   }
 }

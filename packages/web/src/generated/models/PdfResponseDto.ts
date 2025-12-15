@@ -52,6 +52,12 @@ export interface PdfResponseDto {
    * @memberof PdfResponseDto
    */
   stats: PdfResponseDtoStats;
+  /**
+   * The current RAG processing status of the document
+   * @type {string}
+   * @memberof PdfResponseDto
+   */
+  status?: string;
 }
 
 /**
@@ -82,6 +88,7 @@ export function PdfResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: bool
     createdAt: new Date(json['createdAt']),
     objectives: json['objectives'],
     stats: PdfResponseDtoStatsFromJSON(json['stats']),
+    status: !exists(json, 'status') ? undefined : json['status'],
   };
 }
 
@@ -98,5 +105,6 @@ export function PdfResponseDtoToJSON(value?: PdfResponseDto | null): any {
     createdAt: value.createdAt.toISOString(),
     objectives: value.objectives,
     stats: PdfResponseDtoStatsToJSON(value.stats),
+    status: value.status,
   };
 }

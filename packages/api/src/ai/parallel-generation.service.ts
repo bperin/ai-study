@@ -40,19 +40,22 @@ export class ParallelGenerationService {
 
     // Step 1: Generate questions in parallel by difficulty
     // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
-    const CHUNK_SIZE = 5;
-    const chunkedTasks = tasks.flatMap((task) => {
-      const chunks: QuestionGenerationTask[] = [];
-      let remaining = task.count;
-      while (remaining > 0) {
-        const count = Math.min(remaining, CHUNK_SIZE);
-        chunks.push({ difficulty: task.difficulty, count });
-        remaining -= count;
-      }
-      return chunks;
-    });
-
-    const generationPromises = chunkedTasks.map((task) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt));
+    // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
+    // BUT we must preserve the original intent and counts.
+    // The previous implementation was creating multiple chunks but the prompt sent to each chunk
+    // still contained the FULL user instructions with the TOTAL count, confusing the agent.
+    
+    // Instead of complex chunking which confuses the agent with conflicting "global" vs "local" counts,
+    // we will run one agent per difficulty level as requested.
+    // The parallelism comes from running different difficulties at the same time.
+    
+    // If we really need chunking for > 5 questions of SAME difficulty, we would need to rewrite the
+    // user prompt for each chunk to only ask for that chunk's specific questions,
+    // which is complex to do reliably with natural language prompts.
+    
+    const generationPromises = tasks.map((task) =>
+      this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt)
+    );
 
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
@@ -78,7 +81,8 @@ export class ParallelGenerationService {
     const tasks: QuestionGenerationTask[] = [];
 
     // Extract total number of questions
-    const totalMatch = userPrompt.match(/(\d+)\s+questions?/i);
+    // Update to handle "questions", "cards", "flashcards" or just "items"
+    const totalMatch = userPrompt.match(/(\d+)\s+(questions?|cards?|flash\s*cards?|items?)/i) || userPrompt.match(/generate\s+(\d+)/i);
     const total = totalMatch ? parseInt(totalMatch[1]) : 20; // Default to 20 questions
 
     // Check for difficulty mentions
@@ -235,11 +239,16 @@ export class ParallelGenerationService {
     }
 
     const prompt = `
-Generate ${count} ${difficulty} difficulty questions.
+Generate exactly ${count} ${difficulty} difficulty questions.
 
-USER INSTRUCTIONS: "${userPrompt}"
+USER INSTRUCTIONS (Context only): "${userPrompt}"
 
-Please use the search_document tool to find relevant content from the document to generate these questions.
+IMPORTANT:
+1. Ignore any question counts in the "USER INSTRUCTIONS" above. ONLY generate ${count} questions as requested in the first line.
+2. Use the search_document tool to find relevant content from the document.
+3. Generate the questions based on the content found.
+4. YOU MUST save the generated questions to the database using the save_objective tool.
+5. Do NOT output the questions as text. Only use the tool to save them.
 `;
 
     // Run agent

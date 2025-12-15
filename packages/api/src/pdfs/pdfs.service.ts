@@ -58,26 +58,41 @@ export class PdfsService {
       throw new Error(`PDF ${pdf.filename} has no GCS path or content - cannot generate questions`);
     }
 
-    const result = await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, pdf.filename, gcsPathOrContent);
+    // Run in background to avoid dashboard timeouts
+    // We use setImmediate to detach execution from the request cycle
+    // to prevent cancellation if the request is aborted/refreshed
+    setImmediate(async () => {
+      try {
+        console.log(`[Background] Starting flashcard generation for PDF ${pdfId}`);
+        await this.parallelGenerationService.generateFlashcardsParallel(
+          userPrompt,
+          pdfId,
+          pdf.filename,
+          gcsPathOrContent,
+        );
 
-    // Update session as completed
-    await this.prisma.pdfSession.update({
-      where: { id: session.id },
-      data: { status: 'completed' },
-    });
-
-    // 3. Fetch the created objectives from database
-    const objectives = await this.prisma.objective.findMany({
-      where: { pdfId },
-      include: { mcqs: true },
+        // Update session as completed
+        await this.prisma.pdfSession.update({
+          where: { id: session.id },
+          data: { status: 'completed' },
+        });
+        console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
+      } catch (e: any) {
+        console.error(`[Background] Flashcard generation failed for PDF ${pdfId}: ${e.message}`);
+        try {
+          await this.prisma.pdfSession.update({
+            where: { id: session.id },
+            data: { status: 'failed' },
+          });
+        } catch (updateError: any) {
+          console.error(`[Background] Failed to update session status to failed: ${updateError.message}`);
+        }
+      }
     });
 
     return {
-      message: 'Flashcards generated successfully with parallel agents',
-      objectivesCount: result.objectivesCount,
-      questionsCount: result.questionsCount,
-      summary: result.summary,
-      objectives,
+      message: 'Flashcard generation started in background',
+      status: 'generating',
     };
   }
 
@@ -99,6 +114,7 @@ export class PdfsService {
         select: {
           id: true,
           filename: true,
+          gcsPath: true,
           createdAt: true,
           objectives: {
             select: {
@@ -113,6 +129,19 @@ export class PdfsService {
       }),
       this.prisma.pdf.count({ where: { userId } }),
     ]);
+
+    // Fetch related RAG document statuses
+    const bucketName = this.gcsService.getBucketName();
+    const gcsUris = data
+      .map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null))
+      .filter(Boolean) as string[];
+
+    const ragDocs = await this.prisma.document.findMany({
+      where: {
+        OR: [{ sourceUri: { in: gcsUris } }, { title: { in: data.map((p) => p.filename) } }],
+      },
+      select: { sourceUri: true, title: true, status: true },
+    });
 
     const pdfIds = data.map((p) => p.id);
     const attempts = await this.prisma.testAttempt.findMany({
@@ -130,8 +159,17 @@ export class PdfsService {
       // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
       const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
 
+      // Match RAG status
+      const fullGcsUri = pdf.gcsPath ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
+      const ragStatus =
+        ragDocs.find((d) => d.sourceUri === fullGcsUri || d.title === pdf.filename)?.status || 'UNKNOWN';
+
       if (validAttempts.length === 0) {
-        return { ...pdf, stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null } };
+        return {
+          ...pdf,
+          status: ragStatus as any,
+          stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null }
+        };
       }
 
       const avgScore = Math.round(validAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / validAttempts.length);
@@ -139,6 +177,7 @@ export class PdfsService {
 
       return {
         ...pdf,
+        status: ragStatus as any,
         stats: {
           attemptCount: validAttempts.length,
           avgScore,
@@ -167,6 +206,7 @@ export class PdfsService {
         select: {
           id: true,
           filename: true,
+          gcsPath: true,
           createdAt: true,
           objectives: {
             select: {
@@ -181,6 +221,19 @@ export class PdfsService {
       }),
       this.prisma.pdf.count(),
     ]);
+
+    // Fetch related RAG document statuses
+    const bucketName = this.gcsService.getBucketName();
+    const gcsUris = data
+      .map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null))
+      .filter(Boolean) as string[];
+
+    const ragDocs = await this.prisma.document.findMany({
+      where: {
+        OR: [{ sourceUri: { in: gcsUris } }, { title: { in: data.map((p) => p.filename) } }],
+      },
+      select: { sourceUri: true, title: true, status: true },
+    });
 
     const pdfIds = data.map((p) => p.id);
     const attempts = await this.prisma.testAttempt.findMany({
@@ -198,8 +251,17 @@ export class PdfsService {
       // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
       const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
 
+      // Match RAG status
+      const fullGcsUri = pdf.gcsPath ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
+      const ragStatus =
+        ragDocs.find((d) => d.sourceUri === fullGcsUri || d.title === pdf.filename)?.status || 'UNKNOWN';
+
       if (validAttempts.length === 0) {
-        return { ...pdf, stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null } };
+        return {
+          ...pdf,
+          status: ragStatus as any,
+          stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null }
+        };
       }
 
       const avgScore = Math.round(validAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / validAttempts.length);
@@ -207,6 +269,7 @@ export class PdfsService {
 
       return {
         ...pdf,
+        status: ragStatus as any,
         stats: {
           attemptCount: validAttempts.length,
           avgScore,

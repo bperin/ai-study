@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { FileText, Send, Sparkles, Loader2, BookOpen, Zap, Minus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -175,8 +176,11 @@ export default function CustomizePage() {
                 id: pdfId,
                 generateFlashcardsDto: { prompt }
             });
-            
-            router.push(`/study/${pdfId}`);
+
+            toast.success("Generation started in background! Redirecting to dashboard...");
+            setTimeout(() => {
+                router.push(`/dashboard`);
+            }, 1500);
         } catch (error: any) {
             console.error("Failed to generate flashcards:", error);
             alert(error.message || "Failed to generate flashcards. Please try again.");

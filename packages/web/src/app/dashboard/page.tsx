@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { getPdfsApi, getUsersApi, getTestsApi, defaultApi } from "@/api-client";
 import { PdfResponseDto, TestHistoryItemDto, UserResponseDto } from "@/generated";
 import { Info, Trash2, Crown, Users, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Logo from "@/components/Logo";
 
@@ -202,7 +203,17 @@ export default function DashboardPage() {
                                                 </div>
                                             </CardHeader>
                                             <CardContent className="flex-1">
-                                                <p className="mb-2 text-sm font-medium">{questionCount} Questions</p>
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <p className="text-sm font-medium">{questionCount} Questions</p>
+                                                    {(pdf as any).status && (
+                                                        <Badge
+                                                            variant={(pdf as any).status === 'COMPLETED' ? 'default' : (pdf as any).status === 'FAILED' ? 'destructive' : 'secondary'}
+                                                            className="text-[10px] h-5"
+                                                        >
+                                                            {(pdf as any).status}
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                                 {(pdf as any).stats && (pdf as any).stats.attemptCount > 0 && (
                                                     <div className="mb-3 p-2 bg-muted/50 rounded-lg space-y-1">
                                                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">

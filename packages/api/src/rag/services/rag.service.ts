@@ -39,7 +39,7 @@ export class RagService {
     if (!document) {
       throw new NotFoundException('Document not found');
     }
-    if (document.status !== 'READY') {
+    if (document.status !== 'COMPLETED' && document.status !== 'READY') {
       throw new BadRequestException(`Document is not ready (status=${document.status})`);
     }
 

@@ -21,7 +21,7 @@ export class AiStudyPlanService {
       return cardTarget;
     }
 
-    const match = description.match(/(\d+)\s+(cards|flash\s*cards|questions?)/i);
+    const match = description.match(/(\d+)\s+(cards?|flash\s*cards?|questions?|items?)/i) || description.match(/generate\s+(\d+)/i);
     if (match) {
       return parseInt(match[1], 10);
     }

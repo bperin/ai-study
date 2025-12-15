@@ -151,6 +151,12 @@ export function createDocumentSearchTool(retrieveService: RetrieveService, pdfFi
             },
           },
           orderBy: { chunkIndex: 'asc' },
+          select: {
+            id: true,
+            documentId: true,
+            chunkIndex: true,
+            content: true,
+          }
         });
 
         if (chunks.length === 0) {
