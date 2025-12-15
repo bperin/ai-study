@@ -20,6 +20,11 @@ interface QuestionGenerationTask {
   count: number;
 }
 
+interface ParsedGenerationTasks {
+  questionTasks: QuestionGenerationTask[];
+  pictureCardCount: number;
+}
+
 @Injectable()
 export class ParallelGenerationService {
   constructor(
@@ -33,12 +38,12 @@ export class ParallelGenerationService {
    */
   async generateFlashcardsParallel(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
     // Parse user prompt to determine distribution
-    const tasks = this.parseUserPrompt(userPrompt);
+    const { questionTasks, pictureCardCount } = this.parseUserPrompt(userPrompt);
 
     // Step 1: Generate questions in parallel by difficulty
     // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
     const CHUNK_SIZE = 5;
-    const chunkedTasks = tasks.flatMap((task) => {
+    const chunkedTasks = questionTasks.flatMap((task) => {
       const chunks: QuestionGenerationTask[] = [];
       let remaining = task.count;
       while (remaining > 0) {
@@ -54,9 +59,14 @@ export class ParallelGenerationService {
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
 
+    // Optional: generate picture cards if requested
+    const pictureResult = pictureCardCount > 0
+      ? await this.generatePictureCards(pictureCardCount, pdfId, pdfFilename, gcsPath, userPrompt)
+      : { objectivesCreated: 0, questionsCreated: 0 };
+
     // Step 2: Aggregate results
-    const totalObjectives = results.reduce((sum, r) => sum + r.objectivesCreated, 0);
-    const totalQuestions = results.reduce((sum, r) => sum + r.questionsCreated, 0);
+    const totalObjectives = results.reduce((sum, r) => sum + r.objectivesCreated, 0) + pictureResult.objectivesCreated;
+    const totalQuestions = results.reduce((sum, r) => sum + r.questionsCreated, 0) + pictureResult.questionsCreated;
 
     // Step 3: Quality analysis (after all questions are generated)
     const qualitySummary = await this.runQualityAnalysis(pdfId);
@@ -71,12 +81,21 @@ export class ParallelGenerationService {
   /**
    * Parse user prompt to determine question distribution
    */
-  private parseUserPrompt(userPrompt: string): QuestionGenerationTask[] {
+  private parseUserPrompt(userPrompt: string): ParsedGenerationTasks {
     const tasks: QuestionGenerationTask[] = [];
+    let pictureCardCount = 0;
 
     // Extract total number of questions
     const totalMatch = userPrompt.match(/(\d+)\s+questions?/i);
     const total = totalMatch ? parseInt(totalMatch[1]) : 20; // Default to 20 questions
+
+    // Detect picture-card requests ("add 2 images", "include pictures")
+    const pictureMatch = userPrompt.match(/(\d+)\s+(?:images?|pictures?)/i);
+    if (pictureMatch) {
+      pictureCardCount = parseInt(pictureMatch[1]);
+    } else if (/images?|pictures?|visuals?/i.test(userPrompt)) {
+      pictureCardCount = Math.min(2, total); // Default to 2 image-based cards when requested without a number
+    }
 
     // Check for difficulty mentions
     const hasEasy = /easy/i.test(userPrompt);
@@ -112,7 +131,57 @@ export class ParallelGenerationService {
       }
     }
 
-    return tasks;
+    return { questionTasks: tasks, pictureCardCount };
+  }
+
+  private async generatePictureCards(count: number, pdfId: string, pdfFilename: string, gcsPath: string, userPrompt: string) {
+    const beforeObjectives = await this.prisma.objective.count({ where: { pdfId } });
+    const beforeQuestions = await this.prisma.mcq.count({ where: { objective: { pdfId } } });
+
+    const agent = new LlmAgent({
+      name: 'picture_card_generator',
+      description: 'Creates picture-based flashcard questions with image prompts',
+      model: GEMINI_QUESTION_GENERATOR_MODEL,
+      instruction: `${QUESTION_GENERATOR_INSTRUCTION}\n\nFocus specifically on questions that benefit from visuals. For every question you save, set hasPicture to true and include a concise picturePrompt that describes the image to generate. Prefer clear, focused compositions suitable for study cards.`,
+      tools: [createSaveObjectiveTool(this.prisma, pdfId), createWebSearchTool(), createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService)],
+    });
+
+    const runner = new InMemoryRunner({
+      agent,
+      appName: 'flashcard-generator',
+    });
+
+    const sessionId = `picture-${pdfId}-${Date.now()}`;
+    const userId = 'system';
+
+    await runner.sessionService.createSession({
+      appName: 'flashcard-generator',
+      userId,
+      sessionId,
+      state: { pdfId, count, mode: 'picture' },
+    });
+
+    const prompt = `Generate ${count} picture-based flashcard questions that align with the user instructions: "${userPrompt}". Each question must set hasPicture to true and include a picturePrompt that a graphics model can use to render the image.`;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for await (const _event of runner.runAsync({
+      userId,
+      sessionId,
+      newMessage: {
+        role: 'user',
+        parts: [{ text: prompt }],
+      },
+    })) {
+      // Tool execution handled by runner
+    }
+
+    const afterObjectives = await this.prisma.objective.count({ where: { pdfId } });
+    const afterQuestions = await this.prisma.mcq.count({ where: { objective: { pdfId } } });
+
+    return {
+      objectivesCreated: Math.max(0, afterObjectives - beforeObjectives),
+      questionsCreated: Math.max(0, afterQuestions - beforeQuestions),
+    };
   }
 
   /**

@@ -55,6 +55,24 @@ export interface McqDto {
    * @memberof McqDto
    */
   hint?: string;
+  /**
+   *
+   * @type {boolean}
+   * @memberof McqDto
+   */
+  hasPicture?: boolean;
+  /**
+   *
+   * @type {string}
+   * @memberof McqDto
+   */
+  pictureUrl?: string;
+  /**
+   *
+   * @type {string}
+   * @memberof McqDto
+   */
+  picturePrompt?: string;
 }
 
 /**
@@ -83,6 +101,9 @@ export function McqDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): Mc
     correctIdx: json['correctIdx'],
     explanation: json['explanation'] == null ? undefined : json['explanation'],
     hint: json['hint'] == null ? undefined : json['hint'],
+    hasPicture: json['hasPicture'] == null ? undefined : json['hasPicture'],
+    pictureUrl: json['pictureUrl'] == null ? undefined : json['pictureUrl'],
+    picturePrompt: json['picturePrompt'] == null ? undefined : json['picturePrompt'],
   };
 }
 
@@ -102,5 +123,8 @@ export function McqDtoToJSONTyped(value?: McqDto | null, ignoreDiscriminator: bo
     correctIdx: value['correctIdx'],
     explanation: value['explanation'],
     hint: value['hint'],
+    hasPicture: value['hasPicture'],
+    pictureUrl: value['pictureUrl'],
+    picturePrompt: value['picturePrompt'],
   };
 }

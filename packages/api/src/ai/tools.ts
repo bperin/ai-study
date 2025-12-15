@@ -19,6 +19,9 @@ export function createSaveObjectiveTool(prisma: PrismaService, pdfId: string) {
           correctIndex: z.number().min(0).max(3).describe('Index of the correct answer (0-3)'),
           explanation: z.string().optional().describe('Explanation of the correct answer'),
           hint: z.string().optional().describe('A helpful hint for the question'),
+          hasPicture: z.boolean().optional().describe('Whether this question should include an AI-generated image'),
+          picturePrompt: z.string().optional().describe('A concise prompt describing the image to generate'),
+          pictureUrl: z.string().optional().describe('The generated image URL or data URI'),
         }),
       )
       .describe('Array of multiple choice questions for this objective'),
@@ -42,11 +45,32 @@ export function createSaveObjectiveTool(prisma: PrismaService, pdfId: string) {
               correctIdx: q.correctIndex,
               explanation: q.explanation || null,
               hint: q.hint || null,
+              hasPicture: q.hasPicture || !!q.picturePrompt,
+              picturePrompt: q.picturePrompt || null,
+              pictureUrl: q.pictureUrl || null,
             })),
           },
         },
         include: { mcqs: true },
       });
+
+      // Backfill images for any picture cards that were requested without a URL
+      for (const mcq of objective.mcqs) {
+        if (mcq.hasPicture && !mcq.pictureUrl && mcq.picturePrompt) {
+          try {
+            const generated = await generateInlineImage(mcq.picturePrompt);
+            if (generated) {
+              await prisma.mcq.update({
+                where: { id: mcq.id },
+                data: { pictureUrl: generated },
+              });
+              mcq.pictureUrl = generated;
+            }
+          } catch (error) {
+            console.error(`[AI Tool] Failed to generate image for question ${mcq.id}:`, error);
+          }
+        }
+      }
 
       console.log(`[AI Tool] Successfully saved objective ${objective.id} with ${objective.mcqs.length} questions`);
       return {
@@ -57,6 +81,32 @@ export function createSaveObjectiveTool(prisma: PrismaService, pdfId: string) {
       };
     },
   });
+}
+
+async function generateInlineImage(prompt: string): Promise<string | null> {
+  try {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'imagen-3.0-generate-002' });
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
+        },
+      ],
+    });
+
+    const part = result.response?.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+    if (!part?.inlineData?.data) return null;
+
+    const mimeType = part.inlineData.mimeType || 'image/png';
+    return `data:${mimeType};base64,${part.inlineData.data}`;
+  } catch (error) {
+    console.error('[AI Tool] Image generation failed:', error);
+    return null;
+  }
 }
 
 /**

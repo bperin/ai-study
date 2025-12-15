@@ -460,6 +460,26 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
                             </Button>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {currentQuestion.hasPicture && (
+                                <div className="rounded-lg border bg-muted/40 overflow-hidden">
+                                    {currentQuestion.pictureUrl ? (
+                                        <img
+                                            src={currentQuestion.pictureUrl}
+                                            alt={currentQuestion.picturePrompt || "Flashcard illustration"}
+                                            className="w-full object-cover max-h-96"
+                                        />
+                                    ) : (
+                                        <div className="p-4 text-sm text-muted-foreground">
+                                            Image coming soon. Prompt: {currentQuestion.picturePrompt}
+                                        </div>
+                                    )}
+                                    {currentQuestion.picturePrompt && (
+                                        <div className="px-4 py-2 text-xs text-muted-foreground border-t bg-background/70">
+                                            Image prompt: {currentQuestion.picturePrompt}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <div className="grid gap-3">
                                 {currentQuestion.options.map((option, index) => {
                                     let className = "justify-start text-left h-auto py-4 px-6 whitespace-normal";

@@ -18,6 +18,15 @@ export class McqDto {
 
   @ApiProperty({ required: false })
   hint?: string;
+
+  @ApiProperty({ required: false })
+  hasPicture?: boolean;
+
+  @ApiProperty({ required: false })
+  pictureUrl?: string;
+
+  @ApiProperty({ required: false })
+  picturePrompt?: string;
 }
 
 export class ObjectiveResponseDto {
