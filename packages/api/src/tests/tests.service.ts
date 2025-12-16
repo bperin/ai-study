@@ -220,10 +220,13 @@ export class TestsService {
     }
 
     try {
+      const bucketName = process.env.GCP_BUCKET_NAME;
+      const gcsUri = pdf.gcsPath && bucketName ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
+
       const documentIdentifiers = [
-        pdf.gcsPath ? { gcsPath: pdf.gcsPath } : null,
-        pdf.filename ? { filename: pdf.filename } : null,
-      ].filter(Boolean) as Array<Record<string, string>>;
+        gcsUri ? { sourceUri: gcsUri } : null,
+        pdf.filename ? { title: pdf.filename } : null,
+      ].filter(Boolean);
 
       if (!documentIdentifiers.length) {
         console.log('[AI Tutor][RAG] No identifiers available to look up document; falling back to PDF text');
@@ -232,7 +235,7 @@ export class TestsService {
 
       const document = await this.prisma.document.findFirst({
         where: {
-          OR: documentIdentifiers,
+          OR: documentIdentifiers as any,
         },
       });
 

@@ -8,7 +8,7 @@ This project uses Google Gemini to help students review material. It breaks down
 
 **Important Note**: Currently, only text-based PDFs are supported for processing. PDFs consisting solely of images will not be processed correctly. Implementing support for image-based PDFs would require integration with an image analysis model.
 
-**Future Enhancements**: The next steps for this project involve generating embeddings for advanced search capabilities and building a true knowledge graph for more sophisticated concept relationships and personalized learning paths.
+**Future Enhancements**: The next steps for this project involve building a true knowledge graph for more sophisticated concept relationships and personalized learning paths.
 
 The backend uses multiple AI agents to process the content:
 
@@ -55,6 +55,12 @@ Built with **Next.js** (App Router), focusing on a modern, responsive UI.
 ### 🤖 Multi-Agent AI Architecture
 
 AI Study leverages **Google's ADK (Agent Development Kit)** with multiple specialized AI agents powered by **Gemini 2.5 Flash** models. Each agent has specific responsibilities and tools to create a comprehensive learning experience.
+
+#### RAG Implementation (In Progress)
+- **Ingestion**: Uploaded PDFs are automatically chunked and embedded using Vertex AI `text-embedding-004`.
+- **Generation**: Currently falls back to injecting the full PDF text (up to 125k tokens / 500k chars) into the prompt context for Flashcard Generation and Test Planning.
+- **Chat Assistance**: Uses RAG retrieval to find relevant chunks for answering specific questions, falling back to PDF text if no chunks are found.
+- **Known Issues**: The ADK runner may occasionally error out due to session management, in which case the system gracefully falls back to direct Gemini API calls.
 
 <details open>
 <summary><b>System Architecture Diagrams</b></summary>
