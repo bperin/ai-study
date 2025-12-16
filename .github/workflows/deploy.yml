@@ -30,6 +30,7 @@ jobs:
               with:
                   workload_identity_provider: projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/slap-pool/providers/github-provider
                   service_account: ai-study-uploader@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+                  audience: //iam.googleapis.com/projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/slap-pool/providers/github-provider
 
             - name: Set up gcloud CLI
               uses: google-github-actions/setup-gcloud@v2
