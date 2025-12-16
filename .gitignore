@@ -58,3 +58,5 @@ packages/api/test-pdf-cards.js
 packages/api/test-pdf-generation.js
 gcp-sa-key.json
 google_services.json
+google-services.json
+packages/api/ai-study-uploader-key.json
