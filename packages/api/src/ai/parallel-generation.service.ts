@@ -8,6 +8,7 @@ import { QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, TEST_ANAL
 import { GEMINI_MODEL } from '../constants/models';
 // @ts-ignore
 import { createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from './tools';
+import { RetrieveService } from '../rag/services/retrieve.service';
 
 // Model constants
 // @ts-ignore
@@ -26,6 +27,7 @@ export class ParallelGenerationService {
     private readonly prisma: PrismaService,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
+    private readonly retrieveService: RetrieveService,
   ) {}
 
   /**
@@ -136,6 +138,10 @@ export class ParallelGenerationService {
       console.log('PDF content is empty - agents will have no context');
     }
 
+    // Build RAG context (preferred) and fall back to raw PDF content
+    const ragContext = await this.buildRagContext(userPrompt, difficulty, pdfFilename, gcsPath);
+    const contextSource = ragContext ? 'RAG chunks' : 'raw PDF text';
+
     // Create specialized agent for this difficulty with PDF content
     // Check if ADK is available, otherwise use direct Gemini
     let useADK = false;
@@ -178,7 +184,7 @@ export class ParallelGenerationService {
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_QUESTION_GENERATOR_MODEL });
 
-      const prompt = `${QUESTION_GENERATOR_INSTRUCTION}\n\nGenerate ${count} ${difficulty} difficulty questions from the provided PDF content.`;
+      const prompt = `${QUESTION_GENERATOR_INSTRUCTION}\n\nGenerate ${count} ${difficulty} difficulty questions from the provided PDF content.\n\nSOURCE MATERIAL (${contextSource}):\n${ragContext || pdfContent}`;
 
       const result = await model.generateContent(prompt);
       const response = result.response.text();
@@ -235,8 +241,8 @@ Generate ${count} ${difficulty} difficulty questions.
 
 USER INSTRUCTIONS: "${userPrompt}"
 
-SOURCE MATERIAL:
-${pdfContext}
+SOURCE MATERIAL (${contextSource}):
+${ragContext || pdfContext}
 `;
 
     // Run agent
@@ -329,6 +335,67 @@ ${pdfContext}
     }
 
     return qualitySummary;
+  }
+
+  /**
+   * Look up a RAG document that matches this PDF by GCS path or filename
+   */
+  private async findRagDocumentId(pdfFilename: string, gcsPath: string): Promise<string | null> {
+    const normalizedPath = gcsPath.replace('gcs://', '');
+
+    const document = await this.prisma.document.findFirst({
+      where: {
+        status: 'READY',
+        OR: [
+          { sourceUri: { contains: gcsPath } },
+          { sourceUri: { contains: normalizedPath } },
+          { title: { equals: pdfFilename, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+
+    return document?.id || null;
+  }
+
+  /**
+   * Build a contextual RAG snippet for the generator using top-ranked chunks
+   */
+  private async buildRagContext(
+    userPrompt: string,
+    difficulty: string,
+    pdfFilename: string,
+    gcsPath: string,
+  ): Promise<string> {
+    try {
+      const documentId = await this.findRagDocumentId(pdfFilename, gcsPath);
+      if (!documentId) {
+        console.log('[RAG] No matching document found for PDF; falling back to raw text');
+        return '';
+      }
+
+      const chunks = await this.prisma.chunk.findMany({
+        where: { documentId },
+        orderBy: { chunkIndex: 'asc' },
+      });
+
+      const ranked = await this.retrieveService.rankChunks(`${userPrompt} Difficulty: ${difficulty}`, chunks, 8);
+      if (!ranked.length) {
+        console.log('[RAG] Document has no ranked chunks; falling back to raw text');
+        return '';
+      }
+
+      const context = ranked
+        .map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`)
+        .join('\n\n');
+
+      console.log(`[RAG] Using ${ranked.length} ranked chunks for context (document ${documentId})`);
+      return context;
+    } catch (error) {
+      console.error('[RAG] Failed to build context, using raw PDF text instead:', error);
+      return '';
+    }
   }
 
   /**

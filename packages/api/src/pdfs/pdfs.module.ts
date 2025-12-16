@@ -6,9 +6,10 @@ import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { PdfTextService } from './pdf-text.service';
 import { GcsService } from './gcs.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { RagModule } from '../rag/rag.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, RagModule],
   controllers: [PdfsController],
   providers: [PdfsService, GeminiService, ParallelGenerationService, PdfTextService, GcsService],
   exports: [PdfsService, GcsService, PdfTextService, ParallelGenerationService],
