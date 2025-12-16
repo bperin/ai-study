@@ -15,27 +15,15 @@ export class UploadsService {
     private readonly prisma: PrismaService,
     private readonly pdfTextService: PdfTextService,
   ) {
-    const serviceAccountKey = this.configService.get<string>('GCP_SA_KEY');
-
-    if (serviceAccountKey) {
-      // Parse the service account JSON key
-      try {
-        const credentials = JSON.parse(serviceAccountKey);
-        this.storage = new Storage({
-          projectId: credentials.project_id,
-          credentials: credentials,
-        });
-        const bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
-        // Clean up bucket name in case of copy-paste errors (e.g. " -n bucket-name")
-        this.bucketName = bucketName.replace(/^-n\s+/, '').trim();
-        return;
-      } catch (error) {
-        console.error('Failed to parse GCP_SA_KEY:', error);
-        throw new Error('Invalid GCP_SA_KEY format. Please provide a valid service account JSON key.');
-      }
-    }
-
-    throw new Error('GCP_SA_KEY is required for Google Cloud Storage authentication.');
+    this.storage = new Storage({
+      projectId:
+        this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') ||
+        'pro-pulsar-274402',
+    });
+    const bucketName =
+      this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
+    // Clean up bucket name in case of copy-paste errors (e.g. " -n bucket-name")
+    this.bucketName = bucketName.replace(/^-n\s+/, '').trim();
   }
 
   async generateUploadUrl(fileName: string, contentType: string, userId: string) {

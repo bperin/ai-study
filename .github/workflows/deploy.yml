@@ -66,8 +66,8 @@ jobs:
                     --port 8080 \
                     --timeout 600 \
                     --allow-unauthenticated \
+                    --service-account ai-study-uploader@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
                     --set-secrets=DATABASE_URL=ai_study_DATABASE_URL:latest \
-                    --set-secrets=GCP_SA_KEY=ai_study_GCP_SA_KEY:latest \
                     --set-secrets=GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest \
                     --set-secrets=JWT_SECRET=ai_study_JWT_SECRET:latest \
                     --set-secrets=GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
