@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 import type { PdfResponseDto } from './PdfResponseDto';
-import { PdfResponseDtoFromJSON, PdfResponseDtoFromJSONTyped, PdfResponseDtoToJSON, PdfResponseDtoToJSONTyped } from './PdfResponseDto';
+import { PdfResponseDtoFromJSON, PdfResponseDtoFromJSONTyped, PdfResponseDtoToJSON } from './PdfResponseDto';
 
 /**
  *
@@ -57,13 +57,15 @@ export interface PaginatedPdfResponseDto {
 /**
  * Check if a given object implements the PaginatedPdfResponseDto interface.
  */
-export function instanceOfPaginatedPdfResponseDto(value: object): value is PaginatedPdfResponseDto {
-  if (!('data' in value) || value['data'] === undefined) return false;
-  if (!('total' in value) || value['total'] === undefined) return false;
-  if (!('page' in value) || value['page'] === undefined) return false;
-  if (!('limit' in value) || value['limit'] === undefined) return false;
-  if (!('totalPages' in value) || value['totalPages'] === undefined) return false;
-  return true;
+export function instanceOfPaginatedPdfResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'data' in value;
+  isInstance = isInstance && 'total' in value;
+  isInstance = isInstance && 'page' in value;
+  isInstance = isInstance && 'limit' in value;
+  isInstance = isInstance && 'totalPages' in value;
+
+  return isInstance;
 }
 
 export function PaginatedPdfResponseDtoFromJSON(json: any): PaginatedPdfResponseDto {
@@ -71,7 +73,7 @@ export function PaginatedPdfResponseDtoFromJSON(json: any): PaginatedPdfResponse
 }
 
 export function PaginatedPdfResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): PaginatedPdfResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -83,20 +85,18 @@ export function PaginatedPdfResponseDtoFromJSONTyped(json: any, ignoreDiscrimina
   };
 }
 
-export function PaginatedPdfResponseDtoToJSON(json: any): PaginatedPdfResponseDto {
-  return PaginatedPdfResponseDtoToJSONTyped(json, false);
-}
-
-export function PaginatedPdfResponseDtoToJSONTyped(value?: PaginatedPdfResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function PaginatedPdfResponseDtoToJSON(value?: PaginatedPdfResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    data: (value['data'] as Array<any>).map(PdfResponseDtoToJSON),
-    total: value['total'],
-    page: value['page'],
-    limit: value['limit'],
-    totalPages: value['totalPages'],
+    data: (value.data as Array<any>).map(PdfResponseDtoToJSON),
+    total: value.total,
+    page: value.page,
+    limit: value.limit,
+    totalPages: value.totalPages,
   };
 }

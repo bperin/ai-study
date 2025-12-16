@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -42,10 +42,12 @@ export interface ChatMessageDto {
 /**
  * Check if a given object implements the ChatMessageDto interface.
  */
-export function instanceOfChatMessageDto(value: object): value is ChatMessageDto {
-  if (!('message' in value) || value['message'] === undefined) return false;
-  if (!('pdfId' in value) || value['pdfId'] === undefined) return false;
-  return true;
+export function instanceOfChatMessageDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'message' in value;
+  isInstance = isInstance && 'pdfId' in value;
+
+  return isInstance;
 }
 
 export function ChatMessageDtoFromJSON(json: any): ChatMessageDto {
@@ -53,28 +55,26 @@ export function ChatMessageDtoFromJSON(json: any): ChatMessageDto {
 }
 
 export function ChatMessageDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): ChatMessageDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
     message: json['message'],
     pdfId: json['pdfId'],
-    conversationHistory: json['conversationHistory'] == null ? undefined : json['conversationHistory'],
+    conversationHistory: !exists(json, 'conversationHistory') ? undefined : json['conversationHistory'],
   };
 }
 
-export function ChatMessageDtoToJSON(json: any): ChatMessageDto {
-  return ChatMessageDtoToJSONTyped(json, false);
-}
-
-export function ChatMessageDtoToJSONTyped(value?: ChatMessageDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function ChatMessageDtoToJSON(value?: ChatMessageDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    message: value['message'],
-    pdfId: value['pdfId'],
-    conversationHistory: value['conversationHistory'],
+    message: value.message,
+    pdfId: value.pdfId,
+    conversationHistory: value.conversationHistory,
   };
 }

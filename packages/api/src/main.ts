@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
+import { createSwaggerDocument } from './swagger-config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -36,9 +37,7 @@ async function bootstrap() {
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
 
-  const config = new DocumentBuilder().setTitle('Dash AI API').setDescription('The Dash AI API description').setVersion('1.0').addBearerAuth().build();
-  const document = SwaggerModule.createDocument(app, config);
-
+  const document = createSwaggerDocument(app);
   fs.writeFileSync('./openapi.json', JSON.stringify(document));
   SwaggerModule.setup('api', app, document);
 

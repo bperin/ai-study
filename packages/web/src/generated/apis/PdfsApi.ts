@@ -13,8 +13,8 @@
  */
 
 import * as runtime from '../runtime';
-import type { ChatMessageDto, ObjectiveResponseDto, PaginatedPdfResponseDto } from '../models/index';
-import { ChatMessageDtoFromJSON, ChatMessageDtoToJSON, ObjectiveResponseDtoFromJSON, ObjectiveResponseDtoToJSON, PaginatedPdfResponseDtoFromJSON, PaginatedPdfResponseDtoToJSON } from '../models/index';
+import type { ChatMessageDto, GenerateFlashcardsDto, ObjectiveResponseDto, PaginatedPdfResponseDto } from '../models/index';
+import { ChatMessageDtoFromJSON, ChatMessageDtoToJSON, GenerateFlashcardsDtoFromJSON, GenerateFlashcardsDtoToJSON, ObjectiveResponseDtoFromJSON, ObjectiveResponseDtoToJSON, PaginatedPdfResponseDtoFromJSON, PaginatedPdfResponseDtoToJSON } from '../models/index';
 
 export interface PdfsControllerAutoGenerateTestPlanRequest {
   id: string;
@@ -30,7 +30,7 @@ export interface PdfsControllerDeletePdfRequest {
 
 export interface PdfsControllerGenerateFlashcardsRequest {
   id: string;
-  body: object;
+  generateFlashcardsDto: GenerateFlashcardsDto;
 }
 
 export interface PdfsControllerGetObjectivesRequest {
@@ -55,8 +55,8 @@ export class PdfsApi extends runtime.BaseAPI {
    * Auto-generate initial test plan from PDF content
    */
   async pdfsControllerAutoGenerateTestPlanRaw(requestParameters: PdfsControllerAutoGenerateTestPlanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['id'] == null) {
-      throw new runtime.RequiredError('id', 'Required parameter "id" was null or undefined when calling pdfsControllerAutoGenerateTestPlan().');
+    if (requestParameters.id === null || requestParameters.id === undefined) {
+      throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling pdfsControllerAutoGenerateTestPlan.');
     }
 
     const queryParameters: any = {};
@@ -71,13 +71,9 @@ export class PdfsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/pdfs/{id}/auto-generate-plan`;
-    urlPath = urlPath.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/pdfs/{id}/auto-generate-plan`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters.id))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
@@ -99,8 +95,8 @@ export class PdfsApi extends runtime.BaseAPI {
    * Chat with AI to plan test generation
    */
   async pdfsControllerChatPlanRaw(requestParameters: PdfsControllerChatPlanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['chatMessageDto'] == null) {
-      throw new runtime.RequiredError('chatMessageDto', 'Required parameter "chatMessageDto" was null or undefined when calling pdfsControllerChatPlan().');
+    if (requestParameters.chatMessageDto === null || requestParameters.chatMessageDto === undefined) {
+      throw new runtime.RequiredError('chatMessageDto', 'Required parameter requestParameters.chatMessageDto was null or undefined when calling pdfsControllerChatPlan.');
     }
 
     const queryParameters: any = {};
@@ -117,16 +113,13 @@ export class PdfsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/pdfs/chat`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/pdfs/chat`,
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: ChatMessageDtoToJSON(requestParameters['chatMessageDto']),
+        body: ChatMessageDtoToJSON(requestParameters.chatMessageDto),
       },
       initOverrides,
     );
@@ -145,8 +138,8 @@ export class PdfsApi extends runtime.BaseAPI {
    * Delete a PDF and all associated data (Admin only)
    */
   async pdfsControllerDeletePdfRaw(requestParameters: PdfsControllerDeletePdfRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['id'] == null) {
-      throw new runtime.RequiredError('id', 'Required parameter "id" was null or undefined when calling pdfsControllerDeletePdf().');
+    if (requestParameters.id === null || requestParameters.id === undefined) {
+      throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling pdfsControllerDeletePdf.');
     }
 
     const queryParameters: any = {};
@@ -161,13 +154,9 @@ export class PdfsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/pdfs/{id}`;
-    urlPath = urlPath.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/pdfs/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters.id))),
         method: 'DELETE',
         headers: headerParameters,
         query: queryParameters,
@@ -189,12 +178,12 @@ export class PdfsApi extends runtime.BaseAPI {
    * Generate flashcards from a PDF
    */
   async pdfsControllerGenerateFlashcardsRaw(requestParameters: PdfsControllerGenerateFlashcardsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters['id'] == null) {
-      throw new runtime.RequiredError('id', 'Required parameter "id" was null or undefined when calling pdfsControllerGenerateFlashcards().');
+    if (requestParameters.id === null || requestParameters.id === undefined) {
+      throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling pdfsControllerGenerateFlashcards.');
     }
 
-    if (requestParameters['body'] == null) {
-      throw new runtime.RequiredError('body', 'Required parameter "body" was null or undefined when calling pdfsControllerGenerateFlashcards().');
+    if (requestParameters.generateFlashcardsDto === null || requestParameters.generateFlashcardsDto === undefined) {
+      throw new runtime.RequiredError('generateFlashcardsDto', 'Required parameter requestParameters.generateFlashcardsDto was null or undefined when calling pdfsControllerGenerateFlashcards.');
     }
 
     const queryParameters: any = {};
@@ -211,17 +200,13 @@ export class PdfsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/pdfs/{id}/generate`;
-    urlPath = urlPath.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/pdfs/{id}/generate`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters.id))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: requestParameters['body'] as any,
+        body: GenerateFlashcardsDtoToJSON(requestParameters.generateFlashcardsDto),
       },
       initOverrides,
     );
@@ -240,8 +225,8 @@ export class PdfsApi extends runtime.BaseAPI {
    * Get generated objectives and questions for a PDF
    */
   async pdfsControllerGetObjectivesRaw(requestParameters: PdfsControllerGetObjectivesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ObjectiveResponseDto>>> {
-    if (requestParameters['id'] == null) {
-      throw new runtime.RequiredError('id', 'Required parameter "id" was null or undefined when calling pdfsControllerGetObjectives().');
+    if (requestParameters.id === null || requestParameters.id === undefined) {
+      throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling pdfsControllerGetObjectives.');
     }
 
     const queryParameters: any = {};
@@ -256,13 +241,9 @@ export class PdfsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/pdfs/{id}/objectives`;
-    urlPath = urlPath.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/pdfs/{id}/objectives`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters.id))),
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -285,22 +266,22 @@ export class PdfsApi extends runtime.BaseAPI {
    * List all PDFs from all users (for taking tests)
    */
   async pdfsControllerListAllPdfsRaw(requestParameters: PdfsControllerListAllPdfsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PaginatedPdfResponseDto>> {
-    if (requestParameters['page'] == null) {
-      throw new runtime.RequiredError('page', 'Required parameter "page" was null or undefined when calling pdfsControllerListAllPdfs().');
+    if (requestParameters.page === null || requestParameters.page === undefined) {
+      throw new runtime.RequiredError('page', 'Required parameter requestParameters.page was null or undefined when calling pdfsControllerListAllPdfs.');
     }
 
-    if (requestParameters['limit'] == null) {
-      throw new runtime.RequiredError('limit', 'Required parameter "limit" was null or undefined when calling pdfsControllerListAllPdfs().');
+    if (requestParameters.limit === null || requestParameters.limit === undefined) {
+      throw new runtime.RequiredError('limit', 'Required parameter requestParameters.limit was null or undefined when calling pdfsControllerListAllPdfs.');
     }
 
     const queryParameters: any = {};
 
-    if (requestParameters['page'] != null) {
-      queryParameters['page'] = requestParameters['page'];
+    if (requestParameters.page !== undefined) {
+      queryParameters['page'] = requestParameters.page;
     }
 
-    if (requestParameters['limit'] != null) {
-      queryParameters['limit'] = requestParameters['limit'];
+    if (requestParameters.limit !== undefined) {
+      queryParameters['limit'] = requestParameters.limit;
     }
 
     const headerParameters: runtime.HTTPHeaders = {};
@@ -313,12 +294,9 @@ export class PdfsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/pdfs/all`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/pdfs/all`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -341,22 +319,22 @@ export class PdfsApi extends runtime.BaseAPI {
    * List all PDFs for the user with pagination
    */
   async pdfsControllerListPdfsRaw(requestParameters: PdfsControllerListPdfsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PaginatedPdfResponseDto>> {
-    if (requestParameters['page'] == null) {
-      throw new runtime.RequiredError('page', 'Required parameter "page" was null or undefined when calling pdfsControllerListPdfs().');
+    if (requestParameters.page === null || requestParameters.page === undefined) {
+      throw new runtime.RequiredError('page', 'Required parameter requestParameters.page was null or undefined when calling pdfsControllerListPdfs.');
     }
 
-    if (requestParameters['limit'] == null) {
-      throw new runtime.RequiredError('limit', 'Required parameter "limit" was null or undefined when calling pdfsControllerListPdfs().');
+    if (requestParameters.limit === null || requestParameters.limit === undefined) {
+      throw new runtime.RequiredError('limit', 'Required parameter requestParameters.limit was null or undefined when calling pdfsControllerListPdfs.');
     }
 
     const queryParameters: any = {};
 
-    if (requestParameters['page'] != null) {
-      queryParameters['page'] = requestParameters['page'];
+    if (requestParameters.page !== undefined) {
+      queryParameters['page'] = requestParameters.page;
     }
 
-    if (requestParameters['limit'] != null) {
-      queryParameters['limit'] = requestParameters['limit'];
+    if (requestParameters.limit !== undefined) {
+      queryParameters['limit'] = requestParameters.limit;
     }
 
     const headerParameters: runtime.HTTPHeaders = {};
@@ -369,12 +347,9 @@ export class PdfsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/pdfs`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/pdfs`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,

@@ -32,8 +32,8 @@ export class TestAttemptsApi extends runtime.BaseAPI {
    * Start a new test attempt
    */
   async testAttemptsControllerStartAttemptRaw(requestParameters: TestAttemptsControllerStartAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StartAttemptResponseDto>> {
-    if (requestParameters['pdfId'] == null) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter "pdfId" was null or undefined when calling testAttemptsControllerStartAttempt().');
+    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
+      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testAttemptsControllerStartAttempt.');
     }
 
     const queryParameters: any = {};
@@ -48,13 +48,9 @@ export class TestAttemptsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/attempts/{pdfId}/start`;
-    urlPath = urlPath.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters['pdfId'])));
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/attempts/{pdfId}/start`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
@@ -77,8 +73,8 @@ export class TestAttemptsApi extends runtime.BaseAPI {
    * Submit a test attempt and get analysis
    */
   async testAttemptsControllerSubmitAttemptRaw(requestParameters: TestAttemptsControllerSubmitAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestAnalysisResponseDto>> {
-    if (requestParameters['submitTestResultsDto'] == null) {
-      throw new runtime.RequiredError('submitTestResultsDto', 'Required parameter "submitTestResultsDto" was null or undefined when calling testAttemptsControllerSubmitAttempt().');
+    if (requestParameters.submitTestResultsDto === null || requestParameters.submitTestResultsDto === undefined) {
+      throw new runtime.RequiredError('submitTestResultsDto', 'Required parameter requestParameters.submitTestResultsDto was null or undefined when calling testAttemptsControllerSubmitAttempt.');
     }
 
     const queryParameters: any = {};
@@ -95,16 +91,13 @@ export class TestAttemptsApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/tests/attempts/submit`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/tests/attempts/submit`,
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: SubmitTestResultsDtoToJSON(requestParameters['submitTestResultsDto']),
+        body: SubmitTestResultsDtoToJSON(requestParameters.submitTestResultsDto),
       },
       initOverrides,
     );

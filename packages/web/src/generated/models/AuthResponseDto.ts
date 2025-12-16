@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -30,9 +30,11 @@ export interface AuthResponseDto {
 /**
  * Check if a given object implements the AuthResponseDto interface.
  */
-export function instanceOfAuthResponseDto(value: object): value is AuthResponseDto {
-  if (!('accessToken' in value) || value['accessToken'] === undefined) return false;
-  return true;
+export function instanceOfAuthResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'accessToken' in value;
+
+  return isInstance;
 }
 
 export function AuthResponseDtoFromJSON(json: any): AuthResponseDto {
@@ -40,7 +42,7 @@ export function AuthResponseDtoFromJSON(json: any): AuthResponseDto {
 }
 
 export function AuthResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): AuthResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -48,16 +50,14 @@ export function AuthResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boo
   };
 }
 
-export function AuthResponseDtoToJSON(json: any): AuthResponseDto {
-  return AuthResponseDtoToJSONTyped(json, false);
-}
-
-export function AuthResponseDtoToJSONTyped(value?: AuthResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function AuthResponseDtoToJSON(value?: AuthResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    access_token: value['accessToken'],
+    access_token: value.accessToken,
   };
 }

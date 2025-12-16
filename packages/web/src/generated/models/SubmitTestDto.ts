@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 import type { AnswerDto } from './AnswerDto';
-import { AnswerDtoFromJSON, AnswerDtoFromJSONTyped, AnswerDtoToJSON, AnswerDtoToJSONTyped } from './AnswerDto';
+import { AnswerDtoFromJSON, AnswerDtoFromJSONTyped, AnswerDtoToJSON } from './AnswerDto';
 
 /**
  *
@@ -39,10 +39,12 @@ export interface SubmitTestDto {
 /**
  * Check if a given object implements the SubmitTestDto interface.
  */
-export function instanceOfSubmitTestDto(value: object): value is SubmitTestDto {
-  if (!('pdfId' in value) || value['pdfId'] === undefined) return false;
-  if (!('answers' in value) || value['answers'] === undefined) return false;
-  return true;
+export function instanceOfSubmitTestDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'pdfId' in value;
+  isInstance = isInstance && 'answers' in value;
+
+  return isInstance;
 }
 
 export function SubmitTestDtoFromJSON(json: any): SubmitTestDto {
@@ -50,7 +52,7 @@ export function SubmitTestDtoFromJSON(json: any): SubmitTestDto {
 }
 
 export function SubmitTestDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): SubmitTestDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -59,17 +61,15 @@ export function SubmitTestDtoFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function SubmitTestDtoToJSON(json: any): SubmitTestDto {
-  return SubmitTestDtoToJSONTyped(json, false);
-}
-
-export function SubmitTestDtoToJSONTyped(value?: SubmitTestDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function SubmitTestDtoToJSON(value?: SubmitTestDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    pdfId: value['pdfId'],
-    answers: (value['answers'] as Array<any>).map(AnswerDtoToJSON),
+    pdfId: value.pdfId,
+    answers: (value.answers as Array<any>).map(AnswerDtoToJSON),
   };
 }

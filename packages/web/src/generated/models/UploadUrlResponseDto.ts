@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -48,12 +48,14 @@ export interface UploadUrlResponseDto {
 /**
  * Check if a given object implements the UploadUrlResponseDto interface.
  */
-export function instanceOfUploadUrlResponseDto(value: object): value is UploadUrlResponseDto {
-  if (!('uploadUrl' in value) || value['uploadUrl'] === undefined) return false;
-  if (!('filePath' in value) || value['filePath'] === undefined) return false;
-  if (!('expiresAt' in value) || value['expiresAt'] === undefined) return false;
-  if (!('maxSizeBytes' in value) || value['maxSizeBytes'] === undefined) return false;
-  return true;
+export function instanceOfUploadUrlResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'uploadUrl' in value;
+  isInstance = isInstance && 'filePath' in value;
+  isInstance = isInstance && 'expiresAt' in value;
+  isInstance = isInstance && 'maxSizeBytes' in value;
+
+  return isInstance;
 }
 
 export function UploadUrlResponseDtoFromJSON(json: any): UploadUrlResponseDto {
@@ -61,7 +63,7 @@ export function UploadUrlResponseDtoFromJSON(json: any): UploadUrlResponseDto {
 }
 
 export function UploadUrlResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): UploadUrlResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -72,19 +74,17 @@ export function UploadUrlResponseDtoFromJSONTyped(json: any, ignoreDiscriminator
   };
 }
 
-export function UploadUrlResponseDtoToJSON(json: any): UploadUrlResponseDto {
-  return UploadUrlResponseDtoToJSONTyped(json, false);
-}
-
-export function UploadUrlResponseDtoToJSONTyped(value?: UploadUrlResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function UploadUrlResponseDtoToJSON(value?: UploadUrlResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    uploadUrl: value['uploadUrl'],
-    filePath: value['filePath'],
-    expiresAt: value['expiresAt'],
-    maxSizeBytes: value['maxSizeBytes'],
+    uploadUrl: value.uploadUrl,
+    filePath: value.filePath,
+    expiresAt: value.expiresAt,
+    maxSizeBytes: value.maxSizeBytes,
   };
 }

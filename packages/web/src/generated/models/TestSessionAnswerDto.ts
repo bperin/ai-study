@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -72,16 +72,18 @@ export interface TestSessionAnswerDto {
 /**
  * Check if a given object implements the TestSessionAnswerDto interface.
  */
-export function instanceOfTestSessionAnswerDto(value: object): value is TestSessionAnswerDto {
-  if (!('questionId' in value) || value['questionId'] === undefined) return false;
-  if (!('questionNumber' in value) || value['questionNumber'] === undefined) return false;
-  if (!('questionText' in value) || value['questionText'] === undefined) return false;
-  if (!('selectedAnswer' in value) || value['selectedAnswer'] === undefined) return false;
-  if (!('correctAnswer' in value) || value['correctAnswer'] === undefined) return false;
-  if (!('isCorrect' in value) || value['isCorrect'] === undefined) return false;
-  if (!('timeSpent' in value) || value['timeSpent'] === undefined) return false;
-  if (!('hintsUsed' in value) || value['hintsUsed'] === undefined) return false;
-  return true;
+export function instanceOfTestSessionAnswerDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'questionId' in value;
+  isInstance = isInstance && 'questionNumber' in value;
+  isInstance = isInstance && 'questionText' in value;
+  isInstance = isInstance && 'selectedAnswer' in value;
+  isInstance = isInstance && 'correctAnswer' in value;
+  isInstance = isInstance && 'isCorrect' in value;
+  isInstance = isInstance && 'timeSpent' in value;
+  isInstance = isInstance && 'hintsUsed' in value;
+
+  return isInstance;
 }
 
 export function TestSessionAnswerDtoFromJSON(json: any): TestSessionAnswerDto {
@@ -89,7 +91,7 @@ export function TestSessionAnswerDtoFromJSON(json: any): TestSessionAnswerDto {
 }
 
 export function TestSessionAnswerDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): TestSessionAnswerDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -104,23 +106,21 @@ export function TestSessionAnswerDtoFromJSONTyped(json: any, ignoreDiscriminator
   };
 }
 
-export function TestSessionAnswerDtoToJSON(json: any): TestSessionAnswerDto {
-  return TestSessionAnswerDtoToJSONTyped(json, false);
-}
-
-export function TestSessionAnswerDtoToJSONTyped(value?: TestSessionAnswerDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function TestSessionAnswerDtoToJSON(value?: TestSessionAnswerDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    questionId: value['questionId'],
-    questionNumber: value['questionNumber'],
-    questionText: value['questionText'],
-    selectedAnswer: value['selectedAnswer'],
-    correctAnswer: value['correctAnswer'],
-    isCorrect: value['isCorrect'],
-    timeSpent: value['timeSpent'],
-    hintsUsed: value['hintsUsed'],
+    questionId: value.questionId,
+    questionNumber: value.questionNumber,
+    questionText: value.questionText,
+    selectedAnswer: value.selectedAnswer,
+    correctAnswer: value.correctAnswer,
+    isCorrect: value.isCorrect,
+    timeSpent: value.timeSpent,
+    hintsUsed: value.hintsUsed,
   };
 }

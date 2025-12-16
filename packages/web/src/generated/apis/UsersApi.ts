@@ -35,12 +35,9 @@ export class UsersApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/users`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/users`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,
@@ -73,12 +70,9 @@ export class UsersApi extends runtime.BaseAPI {
         headerParameters['Authorization'] = `Bearer ${tokenString}`;
       }
     }
-
-    let urlPath = `/users/me`;
-
     const response = await this.request(
       {
-        path: urlPath,
+        path: `/users/me`,
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,

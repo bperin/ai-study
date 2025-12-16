@@ -16,63 +16,61 @@ import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
- * @interface TestStatsDto
+ * @interface PdfResponseDtoStats
  */
-export interface TestStatsDto {
+export interface PdfResponseDtoStats {
   /**
    *
    * @type {number}
-   * @memberof TestStatsDto
+   * @memberof PdfResponseDtoStats
    */
-  attemptCount: number;
+  attemptCount?: number;
   /**
    *
    * @type {number}
-   * @memberof TestStatsDto
+   * @memberof PdfResponseDtoStats
    */
-  avgScore: number;
+  avgScore?: number;
   /**
    *
    * @type {string}
-   * @memberof TestStatsDto
+   * @memberof PdfResponseDtoStats
    */
   topScorer?: string | null;
   /**
    *
    * @type {number}
-   * @memberof TestStatsDto
+   * @memberof PdfResponseDtoStats
    */
   topScore?: number | null;
 }
 
 /**
- * Check if a given object implements the TestStatsDto interface.
+ * Check if a given object implements the PdfResponseDtoStats interface.
  */
-export function instanceOfTestStatsDto(value: object): boolean {
+export function instanceOfPdfResponseDtoStats(value: object): boolean {
   let isInstance = true;
-  isInstance = isInstance && 'attemptCount' in value;
-  isInstance = isInstance && 'avgScore' in value;
 
   return isInstance;
 }
 
-export function TestStatsDtoFromJSON(json: any): TestStatsDto {
-  return TestStatsDtoFromJSONTyped(json, false);
+export function PdfResponseDtoStatsFromJSON(json: any): PdfResponseDtoStats {
+  return PdfResponseDtoStatsFromJSONTyped(json, false);
 }
 
-export function TestStatsDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): TestStatsDto {
+export function PdfResponseDtoStatsFromJSONTyped(json: any, ignoreDiscriminator: boolean): PdfResponseDtoStats {
   if (json === undefined || json === null) {
     return json;
   }
   return {
-    attemptCount: json['attemptCount'],
-    avgScore: json['avgScore'],
+    attemptCount: !exists(json, 'attemptCount') ? undefined : json['attemptCount'],
+    avgScore: !exists(json, 'avgScore') ? undefined : json['avgScore'],
     topScorer: !exists(json, 'topScorer') ? undefined : json['topScorer'],
     topScore: !exists(json, 'topScore') ? undefined : json['topScore'],
   };
 }
 
-export function TestStatsDtoToJSON(value?: TestStatsDto | null): any {
+export function PdfResponseDtoStatsToJSON(value?: PdfResponseDtoStats | null): any {
   if (value === undefined) {
     return undefined;
   }

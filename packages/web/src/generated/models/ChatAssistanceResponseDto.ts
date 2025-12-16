@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -42,11 +42,13 @@ export interface ChatAssistanceResponseDto {
 /**
  * Check if a given object implements the ChatAssistanceResponseDto interface.
  */
-export function instanceOfChatAssistanceResponseDto(value: object): value is ChatAssistanceResponseDto {
-  if (!('message' in value) || value['message'] === undefined) return false;
-  if (!('questionContext' in value) || value['questionContext'] === undefined) return false;
-  if (!('helpful' in value) || value['helpful'] === undefined) return false;
-  return true;
+export function instanceOfChatAssistanceResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'message' in value;
+  isInstance = isInstance && 'questionContext' in value;
+  isInstance = isInstance && 'helpful' in value;
+
+  return isInstance;
 }
 
 export function ChatAssistanceResponseDtoFromJSON(json: any): ChatAssistanceResponseDto {
@@ -54,7 +56,7 @@ export function ChatAssistanceResponseDtoFromJSON(json: any): ChatAssistanceResp
 }
 
 export function ChatAssistanceResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): ChatAssistanceResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -64,18 +66,16 @@ export function ChatAssistanceResponseDtoFromJSONTyped(json: any, ignoreDiscrimi
   };
 }
 
-export function ChatAssistanceResponseDtoToJSON(json: any): ChatAssistanceResponseDto {
-  return ChatAssistanceResponseDtoToJSONTyped(json, false);
-}
-
-export function ChatAssistanceResponseDtoToJSONTyped(value?: ChatAssistanceResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function ChatAssistanceResponseDtoToJSON(value?: ChatAssistanceResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    message: value['message'],
-    questionContext: value['questionContext'],
-    helpful: value['helpful'],
+    message: value.message,
+    questionContext: value.questionContext,
+    helpful: value.helpful,
   };
 }

@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 import type { TestSessionAnswerDto } from './TestSessionAnswerDto';
-import { TestSessionAnswerDtoFromJSON, TestSessionAnswerDtoFromJSONTyped, TestSessionAnswerDtoToJSON, TestSessionAnswerDtoToJSONTyped } from './TestSessionAnswerDto';
+import { TestSessionAnswerDtoFromJSON, TestSessionAnswerDtoFromJSONTyped, TestSessionAnswerDtoToJSON } from './TestSessionAnswerDto';
 
 /**
  *
@@ -93,19 +93,21 @@ export interface TestSessionStateDto {
 /**
  * Check if a given object implements the TestSessionStateDto interface.
  */
-export function instanceOfTestSessionStateDto(value: object): value is TestSessionStateDto {
-  if (!('attemptId' in value) || value['attemptId'] === undefined) return false;
-  if (!('userId' in value) || value['userId'] === undefined) return false;
-  if (!('currentQuestionIndex' in value) || value['currentQuestionIndex'] === undefined) return false;
-  if (!('totalQuestions' in value) || value['totalQuestions'] === undefined) return false;
-  if (!('answers' in value) || value['answers'] === undefined) return false;
-  if (!('correctCount' in value) || value['correctCount'] === undefined) return false;
-  if (!('incorrectCount' in value) || value['incorrectCount'] === undefined) return false;
-  if (!('currentStreak' in value) || value['currentStreak'] === undefined) return false;
-  if (!('longestStreak' in value) || value['longestStreak'] === undefined) return false;
-  if (!('startTime' in value) || value['startTime'] === undefined) return false;
-  if (!('totalTimeSpent' in value) || value['totalTimeSpent'] === undefined) return false;
-  return true;
+export function instanceOfTestSessionStateDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'attemptId' in value;
+  isInstance = isInstance && 'userId' in value;
+  isInstance = isInstance && 'currentQuestionIndex' in value;
+  isInstance = isInstance && 'totalQuestions' in value;
+  isInstance = isInstance && 'answers' in value;
+  isInstance = isInstance && 'correctCount' in value;
+  isInstance = isInstance && 'incorrectCount' in value;
+  isInstance = isInstance && 'currentStreak' in value;
+  isInstance = isInstance && 'longestStreak' in value;
+  isInstance = isInstance && 'startTime' in value;
+  isInstance = isInstance && 'totalTimeSpent' in value;
+
+  return isInstance;
 }
 
 export function TestSessionStateDtoFromJSON(json: any): TestSessionStateDto {
@@ -113,7 +115,7 @@ export function TestSessionStateDtoFromJSON(json: any): TestSessionStateDto {
 }
 
 export function TestSessionStateDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): TestSessionStateDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -131,26 +133,24 @@ export function TestSessionStateDtoFromJSONTyped(json: any, ignoreDiscriminator:
   };
 }
 
-export function TestSessionStateDtoToJSON(json: any): TestSessionStateDto {
-  return TestSessionStateDtoToJSONTyped(json, false);
-}
-
-export function TestSessionStateDtoToJSONTyped(value?: TestSessionStateDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function TestSessionStateDtoToJSON(value?: TestSessionStateDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    attemptId: value['attemptId'],
-    userId: value['userId'],
-    currentQuestionIndex: value['currentQuestionIndex'],
-    totalQuestions: value['totalQuestions'],
-    answers: (value['answers'] as Array<any>).map(TestSessionAnswerDtoToJSON),
-    correctCount: value['correctCount'],
-    incorrectCount: value['incorrectCount'],
-    currentStreak: value['currentStreak'],
-    longestStreak: value['longestStreak'],
-    startTime: value['startTime'].toISOString(),
-    totalTimeSpent: value['totalTimeSpent'],
+    attemptId: value.attemptId,
+    userId: value.userId,
+    currentQuestionIndex: value.currentQuestionIndex,
+    totalQuestions: value.totalQuestions,
+    answers: (value.answers as Array<any>).map(TestSessionAnswerDtoToJSON),
+    correctCount: value.correctCount,
+    incorrectCount: value.incorrectCount,
+    currentStreak: value.currentStreak,
+    longestStreak: value.longestStreak,
+    startTime: value.startTime.toISOString(),
+    totalTimeSpent: value.totalTimeSpent,
   };
 }

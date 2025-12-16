@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -48,12 +48,14 @@ export interface MissedQuestionDto {
 /**
  * Check if a given object implements the MissedQuestionDto interface.
  */
-export function instanceOfMissedQuestionDto(value: object): value is MissedQuestionDto {
-  if (!('questionId' in value) || value['questionId'] === undefined) return false;
-  if (!('questionText' in value) || value['questionText'] === undefined) return false;
-  if (!('selectedAnswer' in value) || value['selectedAnswer'] === undefined) return false;
-  if (!('correctAnswer' in value) || value['correctAnswer'] === undefined) return false;
-  return true;
+export function instanceOfMissedQuestionDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'questionId' in value;
+  isInstance = isInstance && 'questionText' in value;
+  isInstance = isInstance && 'selectedAnswer' in value;
+  isInstance = isInstance && 'correctAnswer' in value;
+
+  return isInstance;
 }
 
 export function MissedQuestionDtoFromJSON(json: any): MissedQuestionDto {
@@ -61,7 +63,7 @@ export function MissedQuestionDtoFromJSON(json: any): MissedQuestionDto {
 }
 
 export function MissedQuestionDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): MissedQuestionDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -72,19 +74,17 @@ export function MissedQuestionDtoFromJSONTyped(json: any, ignoreDiscriminator: b
   };
 }
 
-export function MissedQuestionDtoToJSON(json: any): MissedQuestionDto {
-  return MissedQuestionDtoToJSONTyped(json, false);
-}
-
-export function MissedQuestionDtoToJSONTyped(value?: MissedQuestionDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function MissedQuestionDtoToJSON(value?: MissedQuestionDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    questionId: value['questionId'],
-    questionText: value['questionText'],
-    selectedAnswer: value['selectedAnswer'],
-    correctAnswer: value['correctAnswer'],
+    questionId: value.questionId,
+    questionText: value.questionText,
+    selectedAnswer: value.selectedAnswer,
+    correctAnswer: value.correctAnswer,
   };
 }

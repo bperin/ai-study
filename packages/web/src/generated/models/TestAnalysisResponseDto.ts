@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { exists, mapValues } from '../runtime';
 /**
  *
  * @export
@@ -30,9 +30,11 @@ export interface TestAnalysisResponseDto {
 /**
  * Check if a given object implements the TestAnalysisResponseDto interface.
  */
-export function instanceOfTestAnalysisResponseDto(value: object): value is TestAnalysisResponseDto {
-  if (!('report' in value) || value['report'] === undefined) return false;
-  return true;
+export function instanceOfTestAnalysisResponseDto(value: object): boolean {
+  let isInstance = true;
+  isInstance = isInstance && 'report' in value;
+
+  return isInstance;
 }
 
 export function TestAnalysisResponseDtoFromJSON(json: any): TestAnalysisResponseDto {
@@ -40,7 +42,7 @@ export function TestAnalysisResponseDtoFromJSON(json: any): TestAnalysisResponse
 }
 
 export function TestAnalysisResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean): TestAnalysisResponseDto {
-  if (json == null) {
+  if (json === undefined || json === null) {
     return json;
   }
   return {
@@ -48,16 +50,14 @@ export function TestAnalysisResponseDtoFromJSONTyped(json: any, ignoreDiscrimina
   };
 }
 
-export function TestAnalysisResponseDtoToJSON(json: any): TestAnalysisResponseDto {
-  return TestAnalysisResponseDtoToJSONTyped(json, false);
-}
-
-export function TestAnalysisResponseDtoToJSONTyped(value?: TestAnalysisResponseDto | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
+export function TestAnalysisResponseDtoToJSON(value?: TestAnalysisResponseDto | null): any {
+  if (value === undefined) {
+    return undefined;
   }
-
+  if (value === null) {
+    return null;
+  }
   return {
-    report: value['report'],
+    report: value.report,
   };
 }
