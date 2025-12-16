@@ -60,3 +60,4 @@ gcp-sa-key.json
 google_services.json
 google-services.json
 packages/api/ai-study-uploader-key.json
+packages/api/service-account.json
