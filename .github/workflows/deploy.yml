@@ -9,6 +9,7 @@ on:
 
 env:
     GCP_PROJECT_ID: pro-pulsar-274402
+    GCP_PROJECT_NUMBER: '764479694122'
     GCP_REGION: us-central1
     API_SERVICE_NAME: ai-study-api
     WEB_SERVICE_NAME: ai-study-web
@@ -22,19 +23,15 @@ jobs:
             contents: read
             id-token: write
         steps:
-            - name: Get Project Number
-              id: get-project-number
-              run: echo "project_number=$(gcloud projects describe ${{ env.GCP_PROJECT_ID }} --format='value(projectNumber)')" >> $GITHUB_OUTPUT
-
             - name: Checkout repository
               uses: actions/checkout@v4
 
             - name: Authenticate to Google Cloud
               uses: google-github-actions/auth@v2
               with:
-                  workload_identity_provider: projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/slap-pool/providers/github-provider
+                  workload_identity_provider: projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-deploy-pool/providers/github-provider
                   service_account: ai-study-uploader@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
-                  audience: //iam.googleapis.com/projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/slap-pool/providers/github-provider
+                  audience: //iam.googleapis.com/projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-deploy-pool/providers/github-provider
 
             - name: Set up gcloud CLI
               uses: google-github-actions/setup-gcloud@v2
