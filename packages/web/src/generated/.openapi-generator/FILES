@@ -1,3 +1,4 @@
+.openapi-generator-ignore
 apis/AuthApi.ts
 apis/DefaultApi.ts
 apis/PdfsApi.ts
