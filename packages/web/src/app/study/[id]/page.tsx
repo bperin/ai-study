@@ -121,7 +121,7 @@ export default function StudyPage() {
                 setCurrentQuestionIndex(session.currentQuestionIndex);
 
                 // Map existing answers to our format
-                const restoredAnswers = session.answers.map((a: any) => ({
+                const restoredAnswers = session.userAnswers.map((a: any) => ({
                     questionId: a.questionId,
                     questionText: a.questionText,
                     selectedAnswer: "Resumed", // We don't store the exact option text in session state, just index
