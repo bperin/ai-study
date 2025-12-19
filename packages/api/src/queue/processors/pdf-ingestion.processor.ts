@@ -7,6 +7,7 @@ import { EmbedService } from '../../rag/services/embed.service';
 import { PdfService } from '../../rag/services/pdf.service';
 import { Storage } from '@google-cloud/storage';
 import { PdfIngestionJobData } from '../queue.service';
+import { PdfStatusGateway } from '../../pdf-status.gateway';
 import * as crypto from 'crypto';
 
 @Processor('pdf-ingestion')
@@ -19,13 +20,22 @@ export class PdfIngestionProcessor extends WorkerHost {
     private readonly chunkService: ChunkService,
     private readonly embedService: EmbedService,
     private readonly pdfService: PdfService,
+    private readonly pdfStatusGateway: PdfStatusGateway,
   ) {
     super();
   }
 
   async process(job: Job<PdfIngestionJobData>): Promise<any> {
-    const { documentId, gcsUri, title, pdfId } = job.data;
+    const { documentId, gcsUri, title, pdfId, userId } = job.data;
     this.logger.log(`Processing PDF ingestion job ${job.id} for document ${documentId}`);
+
+    if (userId) {
+      this.pdfStatusGateway.sendStatusUpdate(userId, {
+        isGenerating: true,
+        type: 'ingestion',
+        message: 'Downloading and extracting text...'
+      });
+    }
 
     try {
       await job.updateProgress(10);
@@ -55,8 +65,14 @@ export class PdfIngestionProcessor extends WorkerHost {
       }
 
       await job.updateProgress(100);
+      if (userId) {
+        this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'ingestion' });
+      }
       return result;
     } catch (error: any) {
+      if (userId) {
+        this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'ingestion' });
+      }
       await this.prisma.document.update({
         where: { id: documentId },
         data: { status: 'FAILED', errorMessage: error.message },
@@ -88,49 +104,57 @@ export class PdfIngestionProcessor extends WorkerHost {
       throw new Error('No extractable text');
     }
 
-    await job.updateProgress(60);
-
-    this.logger.log(`Computing embeddings for ${chunks.length} chunks`);
-    const embeddings = await Promise.all(chunks.map((chunk) => this.embedService.embedText(chunk.content)));
-
-    await job.updateProgress(70);
-
-    const chunkData = chunks.map((chunk, idx) => {
-      const embedding = embeddings[idx];
-      const embeddingSql = embedding ? `[${embedding.join(',')}]` : null;
-
-      return {
-        id: crypto.randomUUID(),
-        documentId,
-        chunkIndex: chunk.chunkIndex,
-        content: chunk.content,
-        contentHash: chunk.contentHash,
-        startChar: chunk.startChar,
-        endChar: chunk.endChar,
-        embeddingJson: embedding || null,
-        embeddingSql,
-      };
-    });
-
-    this.logger.log(`Saving ${chunkData.length} chunks to database in batches`);
-
+    const userId = job.data.userId;
+    
+    // Process in larger batches to parallelize embedding and saving
+    const PROCESS_BATCH_SIZE = 20;
+    
     // Clear existing chunks to ensure idempotency (fixes duplicate key error on retries)
     await this.prisma.chunk.deleteMany({
       where: { documentId },
     });
+    
+    let processedCount = 0;
+    
+    for (let i = 0; i < chunks.length; i += PROCESS_BATCH_SIZE) {
+      const chunkBatch = chunks.slice(i, i + PROCESS_BATCH_SIZE);
+      
+      if (userId) {
+        this.pdfStatusGateway.sendStatusUpdate(userId, {
+          isGenerating: true,
+          type: 'ingestion',
+          message: `Processing batch ${Math.ceil(i/PROCESS_BATCH_SIZE) + 1}/${Math.ceil(chunks.length/PROCESS_BATCH_SIZE)} (Embedding & Saving)...`,
+          progress: { current: processedCount, total: chunks.length }
+        });
+      }
 
-    const BATCH_SIZE = 10;
-    const totalBatches = Math.ceil(chunkData.length / BATCH_SIZE);
+      this.logger.log(`Computing embeddings for batch of ${chunkBatch.length} chunks`);
+      const embeddings = await this.embedService.embedTextBatch(chunkBatch.map(c => c.content));
 
-    for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
-      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      const batch = chunkData.slice(i, i + BATCH_SIZE);
-      this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Processing ${batch.length} chunks`);
+      const chunkData = chunkBatch.map((chunk, idx) => {
+        const embedding = embeddings[idx];
+        const embeddingSql = embedding ? `[${embedding.join(',')}]` : null;
 
+        return {
+          id: crypto.randomUUID(),
+          documentId,
+          chunkIndex: chunk.chunkIndex,
+          content: chunk.content,
+          contentHash: chunk.contentHash,
+          startChar: chunk.startChar,
+          endChar: chunk.endChar,
+          embeddingJson: embedding || null,
+          embeddingSql,
+        };
+      });
+      
+      this.logger.log(`Saving ${chunkData.length} chunks to database`);
+      
       try {
-        for (const data of batch) {
+        // Parallelize inserts within the batch
+        await Promise.all(chunkData.map(data => {
           if (data.embeddingSql) {
-            await this.prisma.$executeRawUnsafe(
+            return this.prisma.$executeRawUnsafe(
               `INSERT INTO "Chunk" ("id", "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "embeddingVec")
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector)`,
               data.id,
@@ -144,7 +168,7 @@ export class PdfIngestionProcessor extends WorkerHost {
               data.embeddingSql,
             );
           } else {
-            await this.prisma.chunk.create({
+            return this.prisma.chunk.create({
               data: {
                 id: data.id,
                 documentId: data.documentId,
@@ -157,14 +181,14 @@ export class PdfIngestionProcessor extends WorkerHost {
               },
             });
           }
-        }
+        }));
 
-        const progress = 70 + Math.floor((batchNumber / totalBatches) * 25);
+        processedCount += chunkBatch.length;
+        const progress = 60 + Math.floor((processedCount / chunks.length) * 35);
         await job.updateProgress(progress);
-
-        this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
+        
       } catch (error: any) {
-        this.logger.error(`[Batch ${batchNumber}/${totalBatches}] Failed to save batch: ${error.message}`);
+        this.logger.error(`Failed to save batch: ${error.message}`);
         throw error;
       }
     }

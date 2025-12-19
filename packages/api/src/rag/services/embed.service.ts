@@ -67,6 +67,29 @@ export class EmbedService {
     return this.fallbackEmbedding(text);
   }
 
+  async embedTextBatch(texts: string[]): Promise<number[][]> {
+    if (!this.enabled || !this.vertexAi) {
+      return texts.map(t => this.fallbackEmbedding(t));
+    }
+
+    // Process in smaller sub-batches to avoid API limits (e.g. 5 requests at a time)
+    // Vertex AI quota limits parallel requests
+    const BATCH_SIZE = 5;
+    const results: number[][] = new Array(texts.length);
+    
+    for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+      const batch = texts.slice(i, i + BATCH_SIZE);
+      const batchPromises = batch.map(text => this.embedText(text));
+      
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach((res, idx) => {
+        results[i + idx] = res;
+      });
+    }
+
+    return results;
+  }
+
   private fallbackEmbedding(text: string): number[] {
     const digest = createHash('sha256').update(text, 'utf8').digest();
     const values: number[] = [];

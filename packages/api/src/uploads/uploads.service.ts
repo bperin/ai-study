@@ -83,11 +83,18 @@ export class UploadsService {
 
     // Queue PDF ingestion job
     const gcsUri = `gcs://${this.bucketName}/${filePath}`;
-    await this.queueService.addPdfIngestionJob({
+    const job = await this.queueService.addPdfIngestionJob({
       documentId: document.id,
       gcsUri,
       title: fileName,
       pdfId: pdf.id,
+      userId,
+    });
+
+    // Store job ID on the PDF record for potential cancellation
+    // @ts-ignore
+    await this.pdfRepository.update(pdf.id, {
+      ingestionJobId: job.id,
     });
 
     // Link PDF to document

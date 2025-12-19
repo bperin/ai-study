@@ -73,7 +73,11 @@ export class PdfsService {
     // Skip session creation for now - not implemented in repository
 
     // Notify client that generation has started
-    this.pdfStatusGateway.sendStatusUpdate(userId, true);
+    this.pdfStatusGateway.sendStatusUpdate(userId, {
+      isGenerating: true,
+      type: 'flashcards',
+      message: 'Initializing generation agents...'
+    });
 
     // 2. Use parallel generation for faster results
     this.logger.info('PDF record for generation', {
@@ -303,6 +307,13 @@ export class PdfsService {
 
     if (!pdf) {
       throw new NotFoundException('PDF not found');
+    }
+
+    // Attempt to cancel any background ingestion job
+    // @ts-ignore - ingestionJobId might not be in the type definition yet if generated types are stale
+    if (pdf.ingestionJobId) {
+      // @ts-ignore
+      await this.queueService.removeJob('pdf-ingestion', pdf.ingestionJobId);
     }
 
     // Delete in correct order due to foreign key constraints

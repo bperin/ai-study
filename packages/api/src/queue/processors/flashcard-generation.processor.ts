@@ -26,7 +26,7 @@ export class FlashcardGenerationProcessor extends WorkerHost {
     try {
       await job.updateProgress(10);
 
-      await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, filename, gcsPathOrContent);
+      await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, filename, gcsPathOrContent, userId);
 
       await job.updateProgress(90);
 
@@ -41,7 +41,7 @@ export class FlashcardGenerationProcessor extends WorkerHost {
         }
       }
 
-      this.pdfStatusGateway.sendStatusUpdate(userId, false);
+      this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'flashcards' });
 
       await job.updateProgress(100);
 
@@ -49,7 +49,7 @@ export class FlashcardGenerationProcessor extends WorkerHost {
 
       return { pdfId, status: 'completed' };
     } catch (error: any) {
-      this.pdfStatusGateway.sendStatusUpdate(userId, false);
+      this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'flashcards' });
       this.logger.error(`Flashcard generation failed for PDF ${pdfId}: ${error.message}`);
 
       try {

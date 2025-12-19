@@ -7,6 +7,7 @@ export interface PdfIngestionJobData {
   gcsUri: string;
   title?: string;
   pdfId?: string;
+  userId: string;
 }
 
 export interface FlashcardGenerationJobData {
@@ -128,5 +129,22 @@ export class QueueService {
       attemptsMade: job.attemptsMade,
       data: job.data,
     };
+  }
+
+  async removeJob(queueName: string, jobId: string) {
+    try {
+      const job = await this.getJob(queueName, jobId);
+      if (job) {
+        // Remove from queue completely (waiting, active, delayed, etc.)
+        await job.remove();
+        this.logger.log(`Removed job ${jobId} from queue ${queueName}`);
+        return true;
+      }
+      this.logger.warn(`Job ${jobId} not found in queue ${queueName} for removal`);
+      return false;
+    } catch (error: any) {
+      this.logger.error(`Failed to remove job ${jobId} from queue ${queueName}: ${error.message}`);
+      return false;
+    }
   }
 }

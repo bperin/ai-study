@@ -24,8 +24,16 @@ export class PdfStatusGateway implements OnGatewayConnection, OnGatewayDisconnec
     return { event: 'pong', data };
   }
 
-  sendStatusUpdate(userId: string, isGenerating: boolean) {
-    console.log(`Sending status update for user ${userId}: ${isGenerating}`);
-    this.server.emit(`status:${userId}`, { isGenerating });
+  sendStatusUpdate(userId: string, status: {
+    isGenerating: boolean;
+    type?: 'flashcards' | 'ingestion';
+    message?: string;
+    progress?: {
+      current: number;
+      total: number;
+    }
+  }) {
+    console.log(`Sending status update for user ${userId}:`, status);
+    this.server.emit(`status:${userId}`, status);
   }
 }

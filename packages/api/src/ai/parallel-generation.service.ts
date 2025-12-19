@@ -8,6 +8,7 @@ import { GEMINI_MODEL } from '../constants/models';
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { createAdkRunner, createAdkSession, isAdkAvailable } from './adk.helpers';
 import { createQualityAnalyzerAgent, createQuestionGeneratorAgentByDifficulty, createTestAnalyzerAgent } from './agents';
+import { PdfStatusGateway } from '../pdf-status.gateway';
 
 // Model constants
 // @ts-ignore
@@ -25,14 +26,24 @@ export class ParallelGenerationService {
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
+    private readonly pdfStatusGateway: PdfStatusGateway,
   ) {}
 
   /**
    * Generate flashcards using parallel agent execution
    */
-  async generateFlashcardsParallel(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
+  async generateFlashcardsParallel(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string, userId?: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
     // Parse user prompt to determine distribution
     const tasks = this.parseUserPrompt(userPrompt);
+
+    if (userId) {
+      this.pdfStatusGateway.sendStatusUpdate(userId, {
+        isGenerating: true,
+        type: 'flashcards',
+        message: 'Starting parallel generation agents...',
+        progress: { current: 0, total: tasks.length }
+      });
+    }
 
     // Step 1: Generate questions in parallel by difficulty
     // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
@@ -49,7 +60,20 @@ export class ParallelGenerationService {
     // user prompt for each chunk to only ask for that chunk's specific questions,
     // which is complex to do reliably with natural language prompts.
 
-    const generationPromises = tasks.map((task) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt));
+    let completedTasks = 0;
+    const generationPromises = tasks.map(async (task) => {
+      const result = await this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt);
+      completedTasks++;
+      if (userId) {
+        this.pdfStatusGateway.sendStatusUpdate(userId, {
+          isGenerating: true,
+          type: 'flashcards',
+          message: `Generated ${task.difficulty} questions...`,
+          progress: { current: completedTasks, total: tasks.length }
+        });
+      }
+      return result;
+    });
 
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
@@ -59,6 +83,15 @@ export class ParallelGenerationService {
     const totalQuestions = results.reduce((sum, r) => sum + r.questionsCreated, 0);
 
     // Step 3: Quality analysis (after all questions are generated)
+    if (userId) {
+      this.pdfStatusGateway.sendStatusUpdate(userId, {
+        isGenerating: true,
+        type: 'flashcards',
+        message: 'Running quality assurance on generated cards...',
+        progress: { current: tasks.length, total: tasks.length }
+      });
+    }
+
     const qualitySummary = await this.runQualityAnalysis(pdfId);
 
     return {

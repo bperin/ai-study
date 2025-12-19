@@ -33,6 +33,7 @@ model Pdf {
   user        User          @relation(fields: [userId], references: [id])
   documentId  String?       @unique
   document    Document?     @relation(fields: [documentId], references: [id])
+  ingestionJobId String?    // Stores BullMQ job ID for ingestion tracking/cancellation
   createdAt   DateTime      @default(now())
   objectives  Objective[]
   attempts    TestAttempt[]
