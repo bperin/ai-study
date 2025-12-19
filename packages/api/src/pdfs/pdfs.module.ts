@@ -7,9 +7,11 @@ import { GcsService } from './gcs.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RagModule } from '../rag/rag.module';
 import { PdfStatusModule } from '../pdf-status.module';
+import { SharedModule } from '../shared/shared.module';
+import { QueueModule } from '../queue/queue.module';
 
 @Module({
-  imports: [PrismaModule, RagModule, PdfStatusModule],
+  imports: [PrismaModule, RagModule, PdfStatusModule, SharedModule, forwardRef(() => QueueModule)],
   controllers: [PdfsController],
   providers: [PdfsService, GeminiService, ParallelGenerationService, GcsService],
   exports: [PdfsService, GcsService, ParallelGenerationService],

@@ -13,6 +13,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [RagController],
   providers: [IngestService, PdfService, ChunkService, EmbedService, RetrieveService, RagService, GeminiService],
-  exports: [IngestService, RetrieveService, RagService],
+  exports: [IngestService, RetrieveService, RagService, ChunkService, EmbedService, PdfService],
 })
 export class RagModule {}

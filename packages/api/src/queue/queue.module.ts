@@ -1,4 +1,4 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { QueueService } from './queue.service';
 import { QueueController } from './queue.controller';
@@ -7,29 +7,20 @@ import { FlashcardGenerationProcessor } from './processors/flashcard-generation.
 import { TestAnalysisProcessor } from './processors/test-analysis.processor';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RagModule } from '../rag/rag.module';
-import { AiModule } from '../ai/ai.module';
+import { PdfsModule } from '../pdfs/pdfs.module';
 import { PdfStatusModule } from '../pdf-status.module';
 
-@Global()
 @Module({
   imports: [
-    PrismaModule,
-    RagModule,
-    AiModule,
-    PdfStatusModule,
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        password: process.env.REDIS_PASSWORD,
-        maxRetriesPerRequest: null,
-      },
-    }),
     BullModule.registerQueue(
       { name: 'pdf-ingestion' },
       { name: 'flashcard-generation' },
       { name: 'test-analysis' },
     ),
+    PrismaModule,
+    RagModule,
+    forwardRef(() => PdfsModule),
+    PdfStatusModule,
   ],
   controllers: [QueueController],
   providers: [

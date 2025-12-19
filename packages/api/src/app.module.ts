@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SharedModule } from './shared/shared.module';
@@ -19,7 +20,14 @@ import { QueueModule } from './queue/queue.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    QueueModule,
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD,
+        maxRetriesPerRequest: null,
+      },
+    }),
     SharedModule,
     PdfStatusModule,
     PrismaModule,
@@ -30,6 +38,7 @@ import { QueueModule } from './queue/queue.module';
     PdfsModule,
     AiModule,
     RagModule,
+    QueueModule,
   ],
   controllers: [AppController],
   providers: [AppService],
