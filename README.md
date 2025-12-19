@@ -44,17 +44,31 @@ The core of AI Study is its RAG pipeline, ensuring accuracy and relevance:
 -   **Question Generator**: Creates questions targeting those objectives, referencing specific content.
 -   **Quality Analyzer**: Validates the educational value and accuracy of generated cards.
 
+### Background Job Processing
+
+AI Study uses **BullMQ** with Redis for reliable background processing:
+
+-   **PDF Ingestion**: Asynchronous processing of uploaded PDFs (text extraction, chunking, embedding)
+-   **Flashcard Generation**: Background generation of questions with progress tracking
+-   **Job Monitoring**: Track job status via `/queue/:queueName/jobs/:jobId` endpoint
+-   **Automatic Retries**: Failed jobs retry with exponential backoff (3 attempts)
+-   **WebSocket Updates**: Real-time progress notifications to frontend
+
+**Production**: Uses Upstash Redis (serverless) for zero-maintenance job queues.  
+**Local Dev**: Connects to local Redis instance for testing.
+
 ## Tech Stack
 
--   **Backend**: NestJS, Prisma, PostgreSQL (with Vector support), Google Vertex AI.
+-   **Backend**: NestJS, Prisma, PostgreSQL (with pgvector), Google Vertex AI, BullMQ + Redis.
 -   **Frontend**: Next.js, TypeScript, Radix UI.
--   **Infrastructure**: Google Cloud Run, Cloud Storage, Cloud Build.
+-   **Infrastructure**: Google Cloud Run, Cloud Storage, Cloud Build, Upstash Redis.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 -   Node.js 18+ & npm
 -   PostgreSQL (local or cloud)
+-   Redis (local or Upstash for production)
 -   Google Cloud Project (Vertex AI, Storage, Cloud Build enabled)
 
 ### Installation
@@ -75,7 +89,18 @@ The core of AI Study is its RAG pipeline, ensuring accuracy and relevance:
     npx prisma migrate dev
     ```
 
-4.  **Run**:
+4.  **Redis Setup** (Local Development):
+    ```bash
+    # Install Redis
+    brew install redis
+    
+    # Start Redis
+    brew services start redis
+    ```
+    
+    For production, configure Upstash Redis credentials in GCP Secret Manager (see deployment section).
+
+5.  **Run**:
     ```bash
     ./run.sh
     ```
@@ -85,6 +110,20 @@ The core of AI Study is its RAG pipeline, ensuring accuracy and relevance:
 
 -   **API Swagger**: `http://localhost:3000/api`
 -   **Database Studio**: `npm run start:studio`
+-   **Job Queue Monitoring**: Check job status at `GET /queue/:queueName/jobs/:jobId`
+-   **Implementation Details**: See `PHASE_5_IMPLEMENTATION.md` for background processing architecture
+
+## 🚢 Deployment
+
+Automated CI/CD via **GitHub Actions** with Google Cloud integration:
+
+- **Workload Identity Federation** for secure authentication
+- **Google Cloud Secrets** for environment variables and credentials
+- **Docker** multi-platform builds pushed to Artifact Registry
+- **Cloud Run** for serverless API and frontend hosting
+- **Automatic database migrations** with Prisma on deploy
+
+Push to `main` branch to trigger deployment.
 
 ## 📝 License
 
