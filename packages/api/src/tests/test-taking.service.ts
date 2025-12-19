@@ -28,6 +28,18 @@ export interface TestSessionState {
     timeSpent: number;
     hintsUsed: number;
   }[];
+  
+  // Alias for frontend compatibility
+  answers?: {
+    questionId: string;
+    questionNumber: number;
+    questionText: string;
+    selectedAnswer: number;
+    correctAnswer: number;
+    isCorrect: boolean;
+    timeSpent: number;
+    hintsUsed: number;
+  }[];
 
   // Real-time performance metrics
   correctCount: number;
@@ -186,6 +198,7 @@ export class TestTakingService {
       currentQuestionIndex: processedAnswers.length,
       totalQuestions: questions.length, // Or attempt.total if fixed
       userAnswers: processedAnswers,
+      answers: processedAnswers, // Alias for frontend compatibility
       correctCount,
       incorrectCount,
       currentStreak,
