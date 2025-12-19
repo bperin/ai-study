@@ -12,12 +12,14 @@ import { UploadsModule } from './uploads/uploads.module';
 import { PdfsModule } from './pdfs/pdfs.module';
 import { AiModule } from './ai/ai.module';
 import { RagModule } from './rag/rag.module';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    QueueModule,
     SharedModule,
     PdfStatusModule,
     PrismaModule,

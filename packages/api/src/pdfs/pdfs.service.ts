@@ -13,6 +13,7 @@ const os = require('os');
 
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { PdfStatusGateway } from '../pdf-status.gateway';
+import { QueueService } from '../queue/queue.service';
 
 @Injectable()
 export class PdfsService {
@@ -23,6 +24,7 @@ export class PdfsService {
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
     private readonly pdfStatusGateway: PdfStatusGateway,
+    private readonly queueService: QueueService,
   ) { }
 
   async getRagStatus(pdfId: string) {
@@ -103,45 +105,14 @@ export class PdfsService {
       throw new Error(`PDF ${pdf.filename} has no GCS path or content - cannot generate questions`);
     }
 
-    // Run in background to avoid dashboard timeouts
-    // We use setImmediate to detach execution from the request cycle
-    // to prevent cancellation if the request is aborted/refreshed
-    setImmediate(async () => {
-      try {
-        console.log(`[Background] Starting flashcard generation for PDF ${pdfId}`);
-        await this.parallelGenerationService.generateFlashcardsParallel(
-          userPrompt,
-          pdfId,
-          pdf.filename,
-          gcsPathOrContent,
-        );
-
-        // Update session as completed
-        await this.prisma.pdfSession.update({
-          where: { id: session.id },
-          data: { status: 'completed' },
-        });
-        this.pdfStatusGateway.sendStatusUpdate(userId, false);
-        console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
-      } catch (e: any) {
-        this.pdfStatusGateway.sendStatusUpdate(userId, false);
-        console.error(`[Background] Flashcard generation failed for PDF ${pdfId}:`, e);
-        try {
-          // If we managed to generate some questions, mark as ready instead of failed
-          const questionsCount = await this.prisma.mcq.count({
-            where: { objective: { pdfId } }
-          });
-
-          await this.prisma.pdfSession.update({
-            where: { id: session.id },
-            data: {
-              status: questionsCount > 0 ? 'completed' : 'failed',
-            },
-          });
-        } catch (updateError: any) {
-          console.error(`[Background] Failed to update session status to failed: ${updateError.message}`);
-        }
-      }
+    // Queue flashcard generation job
+    await this.queueService.addFlashcardGenerationJob({
+      pdfId,
+      sessionId: session.id,
+      userId,
+      userPrompt,
+      filename: pdf.filename,
+      gcsPathOrContent,
     });
 
     return {
