@@ -42,9 +42,6 @@ export class TestSessionStateDto {
   @ApiProperty({ type: [TestSessionAnswerDto] })
   userAnswers: TestSessionAnswerDto[];
 
-  @ApiProperty({ type: [TestSessionAnswerDto] })
-  answers: TestSessionAnswerDto[];
-
   @ApiProperty()
   correctCount: number;
 

@@ -17,43 +17,12 @@ import { Logger } from 'winston';
 /**
  * In-memory state for active test sessions
  */
-export interface TestSessionState {
-  attemptId: string;
-  userId: string;
-  currentQuestionIndex: number;
-  totalQuestions: number;
+import { TestSessionStateDto, TestSessionAnswerDto } from './dto/test-session.dto';
 
-  // Answer tracking
-  userAnswers: {
-    questionId: string;
-    questionNumber: number;
-    questionText: string;
-    selectedAnswer: number;
-    correctAnswer: number;
-    isCorrect: boolean;
-    timeSpent: number;
-    hintsUsed: number;
-  }[];
-  
-  // Alias for frontend compatibility
-  answers?: {
-    questionId: string;
-    questionNumber: number;
-    questionText: string;
-    selectedAnswer: number;
-    correctAnswer: number;
-    isCorrect: boolean;
-    timeSpent: number;
-    hintsUsed: number;
-  }[];
-
-  // Real-time performance metrics
-  correctCount: number;
-  incorrectCount: number;
-  currentStreak: number;
-  longestStreak: number;
-
-  // Topic performance (live tracking)
+// Extended internal state that includes non-DTO fields if needed,
+// but primarily implements the DTO structure for consistency
+export interface TestSessionState extends Omit<TestSessionStateDto, 'topicScores'> {
+  // Topic performance (live tracking) - internal only, not in DTO yet
   topicScores: Map<
     string,
     {
@@ -62,11 +31,7 @@ export interface TestSessionState {
       objectiveTitle: string;
     }
   >;
-
-  // Timing
-  startTime: Date;
-  totalTimeSpent: number; // seconds
-
+  
   // Engagement
   totalHintsUsed: number;
   questionsSkipped: number;
@@ -145,7 +110,14 @@ export class TestTakingService {
     // Support both `answers` (legacy alias) and `userAnswers` (standard prisma relation)
     const answers = attempt.userAnswers || attempt.answers || [];
 
-    const processedAnswers = answers.map((a: any, index: number) => {
+    // Ensure answers is an array before mapping
+    if (!Array.isArray(answers)) {
+      this.logger.warn(`Attempt ${attempt.id} has invalid answers format:`, answers);
+      // Fallback to empty array if something is wrong
+    }
+    const safeAnswers = Array.isArray(answers) ? answers : [];
+
+    const processedAnswers = safeAnswers.map((a: any, index: number) => {
       const isCorrect = a.isCorrect;
       if (isCorrect) {
         correctCount++;
@@ -172,8 +144,8 @@ export class TestTakingService {
         correctAnswer: a.mcq.correctIdx,
         isCorrect,
         timeSpent: a.timeSpent,
-        hintsUsed: a.hintsUsed,
-      };
+        hintsUsed: a.hintsUsed || 0,
+      } as TestSessionAnswerDto;
     });
 
     return {
@@ -187,7 +159,7 @@ export class TestTakingService {
       currentStreak,
       longestStreak,
       topicScores,
-      startTime: attempt.startedAt,
+      startTime: attempt.createdAt, // Use createdAt as start time fallback
       totalTimeSpent,
       totalHintsUsed: 0, // Need to track this in DB if we want to restore it
       questionsSkipped: 0,
@@ -271,7 +243,7 @@ export class TestTakingService {
       isCorrect,
       timeSpent,
       hintsUsed: 0,
-    });
+    } as TestSessionAnswerDto);
 
     if (isCorrect) {
       state.correctCount++;
