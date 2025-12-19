@@ -30,10 +30,16 @@ export class FlashcardGenerationProcessor extends WorkerHost {
 
       await job.updateProgress(90);
 
-      await this.prisma.pdfSession.update({
-        where: { id: sessionId },
-        data: { status: 'completed' },
-      });
+      if (sessionId && sessionId !== 'temp-session') {
+        try {
+          await this.prisma.pdfSession.update({
+            where: { id: sessionId },
+            data: { status: 'completed' },
+          });
+        } catch (updateError: any) {
+          this.logger.warn(`Could not update session ${sessionId}: ${updateError.message}`);
+        }
+      }
 
       this.pdfStatusGateway.sendStatusUpdate(userId, false);
 
@@ -51,12 +57,14 @@ export class FlashcardGenerationProcessor extends WorkerHost {
           where: { objective: { pdfId } },
         });
 
-        await this.prisma.pdfSession.update({
-          where: { id: sessionId },
-          data: {
-            status: questionsCount > 0 ? 'completed' : 'failed',
-          },
-        });
+        if (sessionId && sessionId !== 'temp-session') {
+          await this.prisma.pdfSession.update({
+            where: { id: sessionId },
+            data: {
+              status: questionsCount > 0 ? 'completed' : 'failed',
+            },
+          });
+        }
       } catch (updateError: any) {
         this.logger.error(`Failed to update session status: ${updateError.message}`);
       }

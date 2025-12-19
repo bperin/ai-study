@@ -21,6 +21,15 @@ export class RetrieveService {
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
 
+  async retrieveChunks(pdfFilename: string, gcsPath: string): Promise<Chunk[]> {
+    const document = await this.documentRepository.findByGcsUrisOrTitles([gcsPath], [pdfFilename]);
+    if (!document || document.length === 0) {
+      return [];
+    }
+    const docId = document[0].id;
+    return this.documentRepository.findChunksByDocumentId(docId) as Promise<Chunk[]>;
+  }
+
   async rankChunks(question: string, chunks: Chunk[], requestedTopK?: number): Promise<ScoredChunk[]> {
     const topK = requestedTopK ?? this.defaultTopK;
     if (!chunks.length) {

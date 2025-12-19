@@ -4,6 +4,7 @@ import { TestAttemptRepository } from '../shared/repositories/test-attempt.repos
 import { McqRepository } from '../shared/repositories/mcq.repository';
 import { UserAnswerRepository } from '../shared/repositories/user-answer.repository';
 import { RetrieveService } from '../rag/services/retrieve.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { createAdkRunner, isAdkAvailable } from '../ai/adk.helpers';
 import { createTestAssistanceAgent } from '../ai/agents';
 import { QueueService } from '../queue/queue.service';
@@ -82,6 +83,7 @@ export class TestTakingService {
     private readonly mcqRepository: McqRepository,
     private readonly userAnswerRepository: UserAnswerRepository,
     private readonly retrieveService: RetrieveService,
+    private readonly prisma: PrismaService,
     private readonly pdfTextService: PdfTextService,
     private readonly gcsService: GcsService,
     private readonly queueService: QueueService,
@@ -140,7 +142,10 @@ export class TestTakingService {
     let totalTimeSpent = 0;
     const topicScores = new Map<string, { correct: number; total: number; objectiveTitle: string }>();
 
-    const processedAnswers = attempt.answers.map((a: any, index: number) => {
+    // Support both `answers` (legacy alias) and `userAnswers` (standard prisma relation)
+    const answers = attempt.userAnswers || attempt.answers || [];
+
+    const processedAnswers = answers.map((a: any, index: number) => {
       const isCorrect = a.isCorrect;
       if (isCorrect) {
         correctCount++;
@@ -220,7 +225,13 @@ export class TestTakingService {
       return 'AI assistance is currently unavailable.';
     }
 
-    const agent = createTestAssistanceAgent(question.question, question.options, this.retrieveService, attempt.pdf.filename, attempt.pdf.gcsPath || '');
+    const agent = createTestAssistanceAgent(
+      question.question,
+      question.options,
+      this.retrieveService,
+      attempt.pdf.filename,
+      attempt.pdf.gcsPath || '',
+    );
 
     const runner = createAdkRunner({ agent, appName: 'test-assistant' });
     if (!runner) return 'Failed to initialize AI assistant.';

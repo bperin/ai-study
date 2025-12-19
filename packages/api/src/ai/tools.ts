@@ -126,7 +126,11 @@ export function createGetPdfInfoTool(pdfFilename: string, gcsPath: string, gcsSe
 /**
  * Tool for semantic search within the document
  */
-export function createDocumentSearchTool(retrieveService: RetrieveService, pdfFilename: string, gcsPath: string) {
+export function createDocumentSearchTool(
+  retrieveService: RetrieveService,
+  pdfFilename: string,
+  gcsPath: string,
+) {
   const parametersSchema = z.object({
     query: z.string().describe('The search query to find relevant parts of the document'),
   });
@@ -138,23 +142,7 @@ export function createDocumentSearchTool(retrieveService: RetrieveService, pdfFi
     execute: async ({ query }) => {
       console.log(`[AI Tool] search_document called with query: ${query}`);
       try {
-        // Find document chunks for this file
-        // We'll use a hacky but effective way to find the documentId by scanning Chunks for the gcsPath or filename
-        // A better way would be passing documentId directly if we had it in the agent context
-        const chunks = await (retrieveService as any).prisma.chunk.findMany({
-          where: {
-            document: {
-              OR: [{ sourceUri: { contains: gcsPath } }, { title: { equals: pdfFilename, mode: 'insensitive' } }],
-            },
-          },
-          orderBy: { chunkIndex: 'asc' },
-          select: {
-            id: true,
-            documentId: true,
-            chunkIndex: true,
-            content: true,
-          },
-        });
+        const chunks = await retrieveService.retrieveChunks(pdfFilename, gcsPath);
 
         if (chunks.length === 0) {
           return { error: 'Document not indexed for search yet.' };

@@ -114,6 +114,11 @@ export class PdfIngestionProcessor extends WorkerHost {
 
     this.logger.log(`Saving ${chunkData.length} chunks to database in batches`);
 
+    // Clear existing chunks to ensure idempotency (fixes duplicate key error on retries)
+    await this.prisma.chunk.deleteMany({
+      where: { documentId },
+    });
+
     const BATCH_SIZE = 10;
     const totalBatches = Math.ceil(chunkData.length / BATCH_SIZE);
 

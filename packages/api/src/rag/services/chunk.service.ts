@@ -57,7 +57,9 @@ export class ChunkService {
         break;
       }
 
-      start = Math.max(end - this.overlap, start + 1);
+      const nextStart = Math.max(end - this.overlap, start + 1);
+      // Safety check: always move forward
+      start = nextStart > start ? nextStart : start + 1;
       chunkIndex += 1;
     }
 
