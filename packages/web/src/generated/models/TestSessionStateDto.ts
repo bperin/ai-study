@@ -51,7 +51,7 @@ export interface TestSessionStateDto {
    * @type {Array<TestSessionAnswerDto>}
    * @memberof TestSessionStateDto
    */
-  answers: Array<TestSessionAnswerDto>;
+  userAnswers: Array<TestSessionAnswerDto>;
   /**
    *
    * @type {number}
@@ -99,7 +99,7 @@ export function instanceOfTestSessionStateDto(value: object): boolean {
   isInstance = isInstance && 'userId' in value;
   isInstance = isInstance && 'currentQuestionIndex' in value;
   isInstance = isInstance && 'totalQuestions' in value;
-  isInstance = isInstance && 'answers' in value;
+  isInstance = isInstance && 'userAnswers' in value;
   isInstance = isInstance && 'correctCount' in value;
   isInstance = isInstance && 'incorrectCount' in value;
   isInstance = isInstance && 'currentStreak' in value;
@@ -123,7 +123,7 @@ export function TestSessionStateDtoFromJSONTyped(json: any, ignoreDiscriminator:
     userId: json['userId'],
     currentQuestionIndex: json['currentQuestionIndex'],
     totalQuestions: json['totalQuestions'],
-    answers: (json['answers'] as Array<any>).map(TestSessionAnswerDtoFromJSON),
+    userAnswers: (json['userAnswers'] as Array<any>).map(TestSessionAnswerDtoFromJSON),
     correctCount: json['correctCount'],
     incorrectCount: json['incorrectCount'],
     currentStreak: json['currentStreak'],
@@ -145,7 +145,7 @@ export function TestSessionStateDtoToJSON(value?: TestSessionStateDto | null): a
     userId: value.userId,
     currentQuestionIndex: value.currentQuestionIndex,
     totalQuestions: value.totalQuestions,
-    answers: (value.answers as Array<any>).map(TestSessionAnswerDtoToJSON),
+    userAnswers: (value.userAnswers as Array<any>).map(TestSessionAnswerDtoToJSON),
     correctCount: value.correctCount,
     incorrectCount: value.incorrectCount,
     currentStreak: value.currentStreak,

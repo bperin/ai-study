@@ -16,6 +16,11 @@ import * as runtime from '../runtime';
 import type { CreateGcsDocumentDto, CreateTextDocumentDto, QueryDocumentDto, StartSessionDto } from '../models/index';
 import { CreateGcsDocumentDtoFromJSON, CreateGcsDocumentDtoToJSON, CreateTextDocumentDtoFromJSON, CreateTextDocumentDtoToJSON, QueryDocumentDtoFromJSON, QueryDocumentDtoToJSON, StartSessionDtoFromJSON, StartSessionDtoToJSON } from '../models/index';
 
+export interface QueueControllerGetJobStatusRequest {
+  queueName: string;
+  jobId: string;
+}
+
 export interface RagControllerCreateFromTextRequest {
   createTextDocumentDto: CreateTextDocumentDto;
 }
@@ -55,6 +60,58 @@ export interface TestSessionsControllerGetSessionRequest {
 export class DefaultApi extends runtime.BaseAPI {
   /**
    */
+  async appControllerCheckAdkHealthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/health/adk`,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async appControllerCheckAdkHealth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.appControllerCheckAdkHealthRaw(initOverrides);
+  }
+
+  /**
+   */
+  async appControllerGetHealthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/health`,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async appControllerGetHealth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.appControllerGetHealthRaw(initOverrides);
+  }
+
+  /**
+   */
   async appControllerGetHelloRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
     const queryParameters: any = {};
 
@@ -82,6 +139,40 @@ export class DefaultApi extends runtime.BaseAPI {
   async appControllerGetHello(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
     const response = await this.appControllerGetHelloRaw(initOverrides);
     return await response.value();
+  }
+
+  /**
+   */
+  async queueControllerGetJobStatusRaw(requestParameters: QueueControllerGetJobStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.queueName === null || requestParameters.queueName === undefined) {
+      throw new runtime.RequiredError('queueName', 'Required parameter requestParameters.queueName was null or undefined when calling queueControllerGetJobStatus.');
+    }
+
+    if (requestParameters.jobId === null || requestParameters.jobId === undefined) {
+      throw new runtime.RequiredError('jobId', 'Required parameter requestParameters.jobId was null or undefined when calling queueControllerGetJobStatus.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/queue/{queueName}/jobs/{jobId}`.replace(`{${'queueName'}}`, encodeURIComponent(String(requestParameters.queueName))).replace(`{${'jobId'}}`, encodeURIComponent(String(requestParameters.jobId))),
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async queueControllerGetJobStatus(requestParameters: QueueControllerGetJobStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.queueControllerGetJobStatusRaw(requestParameters, initOverrides);
   }
 
   /**

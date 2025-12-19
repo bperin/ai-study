@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GcsService } from '../pdfs/gcs.service';
-import { PdfTextService } from '../pdfs/pdf-text.service';
+import { PdfTextService } from '../shared/services/pdf-text.service';
 import * as pdfParse from 'pdf-parse';
 import { QUESTION_GENERATOR_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHENSIVE_ANALYSIS_PROMPT } from './prompts';
 import { GEMINI_MODEL } from '../constants/models';

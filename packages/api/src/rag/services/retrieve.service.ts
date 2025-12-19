@@ -29,27 +29,47 @@ export class RetrieveService {
     const questionEmbedding = await this.embedService.embedText(question);
 
     try {
-      const vectorSql = `[${questionEmbedding.join(',')}]`;
-      const results: any[] = await this.embedService.isEnabled()
-        ? await this.prisma.$queryRawUnsafe(
-            `SELECT id, "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "createdAt",
-             (1 - ("embeddingVec" <=> $1::vector)) as score
-             FROM "Chunk"
-             WHERE "documentId" = $2
-             ORDER BY score DESC
-             LIMIT $3`,
-            vectorSql,
-            chunks[0].documentId,
-            topK * 2 // Fetch more to allow for limitContextByLength
-          )
-        : [];
-
-      if (results.length > 0) {
-        scored = results.map(r => ({ ...r, score: Number(r.score) } as ScoredChunk));
+      if (await this.embedService.isEnabled()) {
+        const { Prisma } = require('@prisma/client');
+        const vectorString = `[${questionEmbedding.join(',')}]`;
+        
+        const results = await this.prisma.$queryRaw<Array<{
+          id: string;
+          documentId: string;
+          chunkIndex: number;
+          content: string;
+          contentHash: string;
+          startChar: number | null;
+          endChar: number | null;
+          embeddingJson: any;
+          createdAt: Date;
+          score: number;
+        }>>`
+          SELECT 
+            id, 
+            "documentId", 
+            "chunkIndex", 
+            "content", 
+            "contentHash", 
+            "startChar", 
+            "endChar", 
+            "embeddingJson", 
+            "createdAt",
+            (1 - ("embeddingVec" <=> ${Prisma.raw(`'${vectorString}'`)}::vector)) as score
+          FROM "Chunk"
+          WHERE "documentId" = ${chunks[0].documentId}
+          ORDER BY score DESC
+          LIMIT ${topK * 2}
+        `;
+        
+        if (results.length > 0) {
+          scored = results.map(r => ({ ...r, score: Number(r.score) }));
+          console.log(`[RetrieveService] Vector search found ${scored.length} chunks`);
+        }
       }
     } catch (e) {
-      // Fallback to in-memory cosine similarity or keyword search if raw SQL fails
-      console.error('[RetrieveService] Vector SQL search failed, falling back:', e);
+      console.error('[RetrieveService] Vector SQL search failed:', e);
+      console.error('[RetrieveService] Falling back to in-memory search');
     }
 
     if (scored.length === 0) {

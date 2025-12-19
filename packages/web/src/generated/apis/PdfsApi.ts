@@ -37,6 +37,10 @@ export interface PdfsControllerGetObjectivesRequest {
   id: string;
 }
 
+export interface PdfsControllerGetRagStatusRequest {
+  id: string;
+}
+
 export interface PdfsControllerListAllPdfsRequest {
   page: number;
   limit: number;
@@ -259,6 +263,47 @@ export class PdfsApi extends runtime.BaseAPI {
    */
   async pdfsControllerGetObjectives(requestParameters: PdfsControllerGetObjectivesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ObjectiveResponseDto>> {
     const response = await this.pdfsControllerGetObjectivesRaw(requestParameters, initOverrides);
+    return await response.value();
+  }
+
+  /**
+   * Check RAG ingestion status for a PDF
+   */
+  async pdfsControllerGetRagStatusRaw(requestParameters: PdfsControllerGetRagStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
+    if (requestParameters.id === null || requestParameters.id === undefined) {
+      throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling pdfsControllerGetRagStatus.');
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      const token = this.configuration.accessToken;
+      const tokenString = await token('bearer', []);
+
+      if (tokenString) {
+        headerParameters['Authorization'] = `Bearer ${tokenString}`;
+      }
+    }
+    const response = await this.request(
+      {
+        path: `/pdfs/{id}/rag-status`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters.id))),
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse<any>(response);
+  }
+
+  /**
+   * Check RAG ingestion status for a PDF
+   */
+  async pdfsControllerGetRagStatus(requestParameters: PdfsControllerGetRagStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
+    const response = await this.pdfsControllerGetRagStatusRaw(requestParameters, initOverrides);
     return await response.value();
   }
 

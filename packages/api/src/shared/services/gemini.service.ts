@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InMemoryRunner, getFunctionCalls } from '@google/adk';
-import { PrismaService } from '../prisma/prisma.service';
-import { GcsService } from '../pdfs/gcs.service';
-import { PdfTextService } from '../shared/services/pdf-text.service';
-import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from './tools';
-import { createFlashcardOrchestratorAgent } from './agents';
+import { PrismaService } from '../../prisma/prisma.service';
+import { GcsService } from '../../pdfs/gcs.service';
+import { PdfTextService } from './pdf-text.service';
+import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from '../../ai/tools';
+import { createFlashcardOrchestratorAgent } from '../../ai/agents';
 
 @Injectable()
 export class GeminiService {

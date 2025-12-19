@@ -8,7 +8,7 @@ import { TestStatsDto } from './dto/test-stats.dto';
 import { ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
 import { GEMINI_MODEL } from '../constants/models';
 import { GcsService } from '../pdfs/gcs.service';
-import { PdfTextService } from '../pdfs/pdf-text.service';
+import { PdfTextService } from '../shared/services/pdf-text.service';
 import { RetrieveService } from '../rag/services/retrieve.service';
 import * as pdfParse from 'pdf-parse';
 
@@ -23,22 +23,20 @@ export class TestsService {
   ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
-    // 1. Fetch MCQs to check answers
-    const mcqIds = dto.answers.map((a) => a.mcqId);
+    // 1. Validate all MCQs exist
+    const mcqIds = dto.userAnswers.map((a) => a.mcqId);
     const mcqs = await this.prisma.mcq.findMany({
       where: { id: { in: mcqIds } },
     });
-    const mcqMap = new Map<string, Mcq>(mcqs.map((m) => [m.id, m]));
 
-    // 2. Calculate score and prepare answers
-    let score = 0;
-    const answerData = dto.answers.map((answer) => {
-      const mcq = mcqMap.get(answer.mcqId);
-      if (!mcq) throw new Error(`MCQ not found: ${answer.mcqId}`);
+    if (mcqs.length !== mcqIds.length) {
+      throw new Error('Some MCQs not found');
+    }
 
-      const isCorrect = mcq.correctIdx === answer.selectedIdx;
-      if (isCorrect) score++;
-
+    // 2. Create answer data
+    const answerData = dto.userAnswers.map((answer) => {
+      const mcq = mcqs.find((m) => m.id === answer.mcqId);
+      const isCorrect = mcq ? mcq.correctIdx === answer.selectedIdx : false;
       return {
         mcqId: answer.mcqId,
         selectedIdx: answer.selectedIdx,
@@ -46,24 +44,25 @@ export class TestsService {
       };
     });
 
+    const score = answerData.filter((a) => a.isCorrect).length;
+
     // 3. Create Attempt
-    const total = dto.answers.length;
+    const total = dto.userAnswers.length;
     const percentage = total > 0 ? (score / total) * 100 : 0;
 
     return this.prisma.testAttempt.create({
       data: {
         userId,
         pdfId: dto.pdfId,
-        score,
-        total,
+        totalQuestions: total,
         percentage,
         completedAt: new Date(),
-        answers: {
+        userAnswers: {
           create: answerData,
         },
       },
       include: {
-        answers: true,
+        userAnswers: true,
       },
     });
   }
@@ -73,13 +72,13 @@ export class TestsService {
       where: { userId },
       include: {
         pdf: true,
-        answers: {
+        userAnswers: {
           include: {
             mcq: true,
           },
         },
       },
-      orderBy: [{ completedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }],
+      orderBy: { completedAt: { sort: 'desc', nulls: 'last' } },
     });
 
     return TestHistoryResponseDto.fromEntities(attempts);
@@ -95,13 +94,13 @@ export class TestsService {
             email: true,
           },
         },
-        answers: {
+        userAnswers: {
           include: {
             mcq: true,
           },
         },
       },
-      orderBy: [{ completedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }],
+      orderBy: { completedAt: { sort: 'desc', nulls: 'last' } },
     });
 
     return TestHistoryResponseDto.fromEntities(attempts);
@@ -144,7 +143,7 @@ export class TestsService {
       where: { id: attemptId },
       include: {
         pdf: true,
-        answers: {
+        userAnswers: {
           include: {
             mcq: true,
           },

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { GcsService } from './gcs.service';
-import { PdfTextService } from './pdf-text.service';
+import { PdfTextService } from '../shared/services/pdf-text.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TEST_PLAN_CHAT_PROMPT } from '../ai/prompts';
 import { createAdkRunner } from '../ai/adk.helpers';
@@ -13,6 +13,7 @@ const os = require('os');
 
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { PdfStatusGateway } from '../pdf-status.gateway';
+import { QueueService } from '../queue/queue.service';
 
 @Injectable()
 export class PdfsService {
@@ -23,7 +24,48 @@ export class PdfsService {
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
     private readonly pdfStatusGateway: PdfStatusGateway,
+    private readonly queueService: QueueService,
   ) { }
+
+  async getRagStatus(pdfId: string) {
+    const pdf = await this.prisma.pdf.findUnique({
+      where: { id: pdfId },
+      include: {
+        document: {
+          select: {
+            id: true,
+            status: true,
+            errorMessage: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: { chunks: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!pdf) {
+      throw new NotFoundException('PDF not found');
+    }
+
+    if (!pdf.document) {
+      return {
+        status: 'not_started',
+        message: 'RAG ingestion has not been triggered',
+      };
+    }
+
+    return {
+      status: pdf.document.status.toLowerCase(),
+      documentId: pdf.document.id,
+      chunkCount: pdf.document._count.chunks,
+      errorMessage: pdf.document.errorMessage,
+      createdAt: pdf.document.createdAt,
+      updatedAt: pdf.document.updatedAt,
+    };
+  }
 
   async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
     // 1. Get PDF from database
@@ -63,45 +105,14 @@ export class PdfsService {
       throw new Error(`PDF ${pdf.filename} has no GCS path or content - cannot generate questions`);
     }
 
-    // Run in background to avoid dashboard timeouts
-    // We use setImmediate to detach execution from the request cycle
-    // to prevent cancellation if the request is aborted/refreshed
-    setImmediate(async () => {
-      try {
-        console.log(`[Background] Starting flashcard generation for PDF ${pdfId}`);
-        await this.parallelGenerationService.generateFlashcardsParallel(
-          userPrompt,
-          pdfId,
-          pdf.filename,
-          gcsPathOrContent,
-        );
-
-        // Update session as completed
-        await this.prisma.pdfSession.update({
-          where: { id: session.id },
-          data: { status: 'completed' },
-        });
-        this.pdfStatusGateway.sendStatusUpdate(userId, false);
-        console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
-      } catch (e: any) {
-        this.pdfStatusGateway.sendStatusUpdate(userId, false);
-        console.error(`[Background] Flashcard generation failed for PDF ${pdfId}:`, e);
-        try {
-          // If we managed to generate some questions, mark as ready instead of failed
-          const questionsCount = await this.prisma.mcq.count({
-            where: { objective: { pdfId } }
-          });
-
-          await this.prisma.pdfSession.update({
-            where: { id: session.id },
-            data: {
-              status: questionsCount > 0 ? 'completed' : 'failed',
-            },
-          });
-        } catch (updateError: any) {
-          console.error(`[Background] Failed to update session status to failed: ${updateError.message}`);
-        }
-      }
+    // Queue flashcard generation job
+    await this.queueService.addFlashcardGenerationJob({
+      pdfId,
+      sessionId: session.id,
+      userId,
+      userPrompt,
+      filename: pdf.filename,
+      gcsPathOrContent,
     });
 
     return {

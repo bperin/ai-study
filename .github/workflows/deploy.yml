@@ -4,7 +4,6 @@ on:
     push:
         branches:
             - main
-            - staging
     workflow_dispatch:
 
 env:
@@ -90,6 +89,9 @@ jobs:
                     --set-secrets=GOOGLE_API_KEY=ai_study_GOOGLE_API_KEY:latest \
                     --set-secrets=JWT_SECRET=ai_study_JWT_SECRET:latest \
                     --set-secrets=GCP_BUCKET_NAME=ai_study_GCP_BUCKET_NAME:latest \
+                    --set-secrets=REDIS_HOST=ai_study_REDIS_HOST:latest \
+                    --set-secrets=REDIS_PORT=ai_study_REDIS_PORT:latest \
+                    --set-secrets=REDIS_PASSWORD=ai_study_REDIS_PASSWORD:latest \
                     --set-env-vars GOOGLE_CLOUD_PROJECT_ID=${{ env.GCP_PROJECT_ID }} \
                     --quiet \
                     --format='value(status.url)' > api_url.txt

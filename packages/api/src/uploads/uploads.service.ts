@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { PdfTextService } from '../pdfs/pdf-text.service';
-import { IngestService } from '../rag/services/ingest.service';
+import { PdfTextService } from '../shared/services/pdf-text.service';
+import { QueueService } from '../queue/queue.service';
 
 @Injectable()
 export class UploadsService {
@@ -15,7 +15,7 @@ export class UploadsService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly pdfTextService: PdfTextService,
-    private readonly ingestService: IngestService,
+    private readonly queueService: QueueService,
   ) {
     this.storage = new Storage({
       projectId:
@@ -67,20 +67,41 @@ export class UploadsService {
       data: {
         filename: fileName,
         userId: userId,
-        gcsPath: filePath, // Store GCS path
+        gcsPath: filePath,
       },
     });
 
-    // Trigger RAG ingestion (non-blocking)
+    // Create document record for tracking
+    const document = await this.prisma.document.create({
+      data: {
+        title: fileName,
+        sourceType: 'gcs',
+        sourceUri: `gcs://${this.bucketName}/${filePath}`,
+        mimeType: 'application/pdf',
+        status: 'PROCESSING',
+      },
+    });
+
+    // Queue PDF ingestion job
     const gcsUri = `gcs://${this.bucketName}/${filePath}`;
-    this.ingestService.createFromGcs(fileName, gcsUri).catch(error => {
-      console.error(`[RAG Ingestion] Failed to trigger ingestion for PDF ${pdf.id}: ${error.message}`);
+    await this.queueService.addPdfIngestionJob({
+      documentId: document.id,
+      gcsUri,
+      title: fileName,
+      pdfId: pdf.id,
+    });
+
+    // Link document to PDF immediately
+    await this.prisma.pdf.update({
+      where: { id: pdf.id },
+      data: { documentId: document.id },
     });
 
     return {
       id: pdf.id,
       filename: pdf.filename,
       userId: pdf.userId,
+      documentId: document.id,
     };
   }
 }

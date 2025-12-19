@@ -33,7 +33,7 @@ export interface SubmitTestDto {
    * @type {Array<AnswerDto>}
    * @memberof SubmitTestDto
    */
-  answers: Array<AnswerDto>;
+  userAnswers: Array<AnswerDto>;
 }
 
 /**
@@ -42,7 +42,7 @@ export interface SubmitTestDto {
 export function instanceOfSubmitTestDto(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && 'pdfId' in value;
-  isInstance = isInstance && 'answers' in value;
+  isInstance = isInstance && 'userAnswers' in value;
 
   return isInstance;
 }
@@ -57,7 +57,7 @@ export function SubmitTestDtoFromJSONTyped(json: any, ignoreDiscriminator: boole
   }
   return {
     pdfId: json['pdfId'],
-    answers: (json['answers'] as Array<any>).map(AnswerDtoFromJSON),
+    userAnswers: (json['userAnswers'] as Array<any>).map(AnswerDtoFromJSON),
   };
 }
 
@@ -70,6 +70,6 @@ export function SubmitTestDtoToJSON(value?: SubmitTestDto | null): any {
   }
   return {
     pdfId: value.pdfId,
-    answers: (value.answers as Array<any>).map(AnswerDtoToJSON),
+    userAnswers: (value.userAnswers as Array<any>).map(AnswerDtoToJSON),
   };
 }

@@ -49,7 +49,7 @@ describe('TestTakingService', () => {
         userId: 'user-1',
         pdfId: 'pdf-1',
         startedAt: new Date(),
-        answers: [],
+        userAnswers: [],
       };
 
       mockPrisma.testAttempt.findFirst.mockResolvedValue(mockAttempt);
@@ -70,7 +70,7 @@ describe('TestTakingService', () => {
         userId: 'user-1',
         pdfId: 'pdf-1',
         startedAt: new Date(),
-        answers: [],
+        userAnswers: [],
       });
       mockPrisma.mcq.findMany.mockResolvedValue([]);
 

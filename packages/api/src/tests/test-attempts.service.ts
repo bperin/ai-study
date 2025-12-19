@@ -16,16 +16,14 @@ export class TestAttemptsService {
       data: {
         userId,
         pdfId,
-        score: 0,
-        total: 0, // Will be updated on completion
-        startedAt: new Date(),
+        totalQuestions: 0,
       },
     });
 
     return {
       attemptId: attempt.id,
       pdfId: attempt.pdfId,
-      startedAt: attempt.startedAt,
+      startedAt: attempt.createdAt,
     };
   }
 
@@ -80,11 +78,9 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
     await this.prisma.testAttempt.update({
       where: { id: body.attemptId },
       data: {
-        score: body.score,
-        total: body.totalQuestions,
+        totalQuestions: body.totalQuestions,
         percentage: (body.score / body.totalQuestions) * 100,
         completedAt: new Date(),
-        feedback: analysis as any,
       },
     });
 
