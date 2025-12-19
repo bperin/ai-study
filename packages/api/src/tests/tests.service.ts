@@ -1,6 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Mcq } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import { McqRepository } from '../shared/repositories/mcq.repository';
+import { TestAttemptRepository } from '../shared/repositories/test-attempt.repository';
+import { UserAnswerRepository } from '../shared/repositories/user-answer.repository';
+import { PdfRepository } from '../shared/repositories/pdf.repository';
 import { SubmitTestDto } from './dto/submit-test.dto';
 import { TestHistoryResponseDto, TestHistoryItemDto } from './dto/test-results.dto';
 import { AdkRunnerService } from '../ai/adk-runner.service';
@@ -10,24 +13,34 @@ import { GEMINI_MODEL } from '../constants/models';
 import { GcsService } from '../pdfs/gcs.service';
 import { PdfTextService } from '../shared/services/pdf-text.service';
 import { RetrieveService } from '../rag/services/retrieve.service';
+import { ParallelGenerationService } from '../ai/parallel-generation.service';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 import * as pdfParse from 'pdf-parse';
+import { QueueService } from '../queue/queue.service';
 
 @Injectable()
 export class TestsService {
   constructor(
-    private prisma: PrismaService,
+    private readonly mcqRepository: McqRepository,
+    private readonly testAttemptRepository: TestAttemptRepository,
+    private readonly userAnswerRepository: UserAnswerRepository,
+    private readonly pdfRepository: PdfRepository,
+    private readonly parallelGenerationService: ParallelGenerationService,
+    private readonly queueService: QueueService,
     private adkRunner?: AdkRunnerService,
     private gcsService?: GcsService,
     private pdfTextService?: PdfTextService,
     private retrieveService?: RetrieveService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger?: Logger,
   ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
+    this.logger?.info('Submitting test', { userId, answerCount: dto.userAnswers.length });
+    
     // 1. Validate all MCQs exist
     const mcqIds = dto.userAnswers.map((a) => a.mcqId);
-    const mcqs = await this.prisma.mcq.findMany({
-      where: { id: { in: mcqIds } },
-    });
+    const mcqs = await this.mcqRepository.findMany({ id: { in: mcqIds } });
 
     if (mcqs.length !== mcqIds.length) {
       throw new Error('Some MCQs not found');
@@ -50,73 +63,48 @@ export class TestsService {
     const total = dto.userAnswers.length;
     const percentage = total > 0 ? (score / total) * 100 : 0;
 
-    return this.prisma.testAttempt.create({
-      data: {
-        userId,
-        pdfId: dto.pdfId,
-        totalQuestions: total,
-        percentage,
-        completedAt: new Date(),
-        userAnswers: {
-          create: answerData,
-        },
-      },
-      include: {
-        userAnswers: true,
-      },
+    const attempt = await this.testAttemptRepository.create({
+      user: { connect: { id: userId } },
+      pdf: { connect: { id: dto.pdfId } },
+      totalQuestions: total,
+      percentage: Math.round((score / total) * 100),
+      completedAt: new Date(),
     });
+
+    await this.userAnswerRepository.createMany({
+      data: answerData.map((answer) => ({
+        attemptId: attempt.id,
+        mcqId: answer.mcqId,
+        selectedIdx: answer.selectedIdx,
+        isCorrect: answer.isCorrect,
+      })),
+    });
+
+    // Queue background analysis
+    await this.queueService.addTestAnalysisJob({
+      testId: attempt.id,
+      userId,
+    });
+
+    return attempt;
   }
 
   async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {
-    const attempts = await this.prisma.testAttempt.findMany({
-      where: { userId },
-      include: {
-        pdf: true,
-        userAnswers: {
-          include: {
-            mcq: true,
-          },
-        },
-      },
-      orderBy: { completedAt: { sort: 'desc', nulls: 'last' } },
-    });
+    this.logger?.info('Getting test history', { userId });
+    
+    const attempts = await this.testAttemptRepository.findByUserWithStats(userId);
 
     return TestHistoryResponseDto.fromEntities(attempts);
   }
 
   async getAllTestHistory(): Promise<TestHistoryResponseDto> {
-    const attempts = await this.prisma.testAttempt.findMany({
-      include: {
-        pdf: true,
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
-        userAnswers: {
-          include: {
-            mcq: true,
-          },
-        },
-      },
-      orderBy: { completedAt: { sort: 'desc', nulls: 'last' } },
-    });
+    const attempts = await this.testAttemptRepository.findAllWithStats();
 
     return TestHistoryResponseDto.fromEntities(attempts);
   }
 
   async getTestStats(pdfId: string) {
-    const attempts = await this.prisma.testAttempt.findMany({
-      where: {
-        pdfId,
-        completedAt: { not: null },
-      },
-      include: {
-        user: { select: { email: true } },
-      },
-      orderBy: { percentage: 'desc' },
-    });
+    const attempts = await this.testAttemptRepository.findByPdfWithStats(pdfId);
 
     if (attempts.length === 0) {
       return {
@@ -139,23 +127,23 @@ export class TestsService {
   }
 
   async getAttemptDetails(userId: string, attemptId: string): Promise<TestHistoryItemDto> {
-    const attempt = await this.prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-      include: {
-        pdf: true,
-        userAnswers: {
-          include: {
-            mcq: true,
-          },
-        },
-      },
-    });
+    const attempt = await this.testAttemptRepository.findByIdWithStats(attemptId);
 
     if (!attempt || attempt.userId !== userId) {
       throw new NotFoundException('Attempt not found');
     }
 
-    return TestHistoryItemDto.fromEntity(attempt);
+    // If summary is missing, it might be being generated in the background
+    const aiSummary = attempt.summary || 'AI Analysis is being generated. Please check back in a moment...';
+
+    // Add the summary to the attempt object
+    const attemptWithSummary = {
+      ...attempt,
+      summary: aiSummary,
+      answers: attempt.userAnswers, // Ensure answers are included
+    };
+
+    return TestHistoryItemDto.fromEntity(attemptWithSummary);
   }
 
   async chatAssist(message: string, questionId: string, history?: any[]) {
@@ -163,13 +151,12 @@ export class TestsService {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-    const mcq = await this.prisma.mcq.findUnique({
-      where: { id: questionId },
-      include: { objective: { include: { pdf: true } } },
-    });
+    const mcq = await this.mcqRepository.findById(questionId);
     if (!mcq) throw new NotFoundException('Question not found');
 
-    const pdfContent = mcq.objective.pdf.content || ''; // Or handle GCS path if needed (simplified for now as content usually has text)
+    // Get PDF content - need to fetch the MCQ with objective included
+    const mcqWithObjective = await this.mcqRepository.findByIdWithObjective(questionId);
+    const pdfContent = mcqWithObjective?.objective?.pdf?.content || '';
 
     const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
     const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, pdfContent);
@@ -205,7 +192,8 @@ export class TestsService {
         const parsed = await pdfParse(buffer);
         return parsed.text.substring(0, 10000);
       } catch (error) {
-        console.error('[AI Tutor] Failed to extract PDF content for chat assistance:', error);
+        this.logger?.error('Gemini API failed', { error: (error as Error).message });
+        return '';
       }
     }
 
@@ -222,74 +210,51 @@ export class TestsService {
       const bucketName = process.env.GCP_BUCKET_NAME;
       const gcsUri = pdf.gcsPath && bucketName ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
 
-      const documentIdentifiers = [
-        gcsUri ? { sourceUri: gcsUri } : null,
-        pdf.filename ? { title: pdf.filename } : null,
-      ].filter(Boolean);
+      const documentIdentifiers = [gcsUri ? { sourceUri: gcsUri } : null, pdf.filename ? { title: pdf.filename } : null].filter(Boolean);
 
       if (!documentIdentifiers.length) {
-        console.log('[AI Tutor][RAG] No identifiers available to look up document; falling back to PDF text');
+        this.logger?.info('No identifiers available to look up document; falling back to PDF text');
         return '';
       }
 
-      const document = await this.prisma.document.findFirst({
-        where: {
-          OR: documentIdentifiers as any,
-        },
-      });
+      const document = await this.pdfRepository.findWithDocument(pdf.filename || 'unknown');
 
       if (!document) {
-        console.log('[AI Tutor][RAG] No matching document found for PDF; falling back to PDF text');
+        this.logger?.info('No matching document found for PDF; falling back to PDF text');
         return '';
       }
 
-      const chunks = await this.prisma.chunk.findMany({
-        where: { documentId: document.id },
-        orderBy: { chunkIndex: 'asc' },
-      });
+      const chunks = await this.retrieveService.rankChunks(`${message}\n\nQuestion: ${questionText}`, document.document?.chunks || [], 6);
 
-      const ranked = await this.retrieveService.rankChunks(
-        `${message}\n\nQuestion: ${questionText}`,
-        chunks,
-        6,
-      );
-
-      if (!ranked.length) {
-        console.log('[AI Tutor][RAG] No ranked chunks found; falling back to PDF text');
+      if (!chunks.length) {
+        this.logger?.info('No ranked chunks found; falling back to PDF text');
         return '';
       }
 
-      console.log(`[AI Tutor][RAG] Using ${ranked.length} ranked chunks for context (document ${document.id})`);
-      return ranked
-        .map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`)
-        .join('\n\n');
+      this.logger?.info('Using RAG context', { chunkCount: chunks.length });
+      return chunks.map((chunk) => chunk.content).join('\n\n');
     } catch (error) {
-      console.error('[AI Tutor][RAG] Failed to build context; using PDF text instead:', error);
+      this.logger?.error('RAG retrieval failed', { error: (error as Error).message });
       return '';
     }
   }
 
   async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
-    console.log(`[AI Tutor] Starting chat assistance for user ${userId}, question ${questionId}, PDF ${pdfId}`);
-    console.log(`[AI Tutor] User message: "${message}"`);
+    this.logger?.info('Getting chat assistance', { userId, questionId, pdfId });
+    this.logger?.info('User message: "%s"', message);
 
     try {
       // Get the question and PDF info
-      const question = await this.prisma.mcq.findUnique({
-        where: { id: questionId },
-        include: { objective: true }
-      });
+      const question = await this.mcqRepository.findById(questionId);
 
       if (!question) {
-        throw new NotFoundException("Question not found");
+        throw new NotFoundException('Question not found');
       }
 
-      const pdf = await this.prisma.pdf.findUnique({
-        where: { id: pdfId }
-      });
+      const pdf = await this.pdfRepository.findById(pdfId);
 
       if (!pdf) {
-        throw new NotFoundException("PDF not found");
+        throw new NotFoundException('PDF not found');
       }
 
       const pdfContent = await this.loadPdfContent(pdf);
@@ -300,57 +265,52 @@ export class TestsService {
       // Try using centralized ADK runner first
       if (this.adkRunner && this.adkRunner.isAvailable()) {
         try {
-          console.log('[AI Tutor] ✅ Using centralized ADK runner');
+          this.logger?.info('Using centralized ADK runner for chat assistance');
 
-          const { createTestAssistanceAgent } = require("../ai/agents");
-          const agent = createTestAssistanceAgent(
-            question.question,
-            question.options,
-            context
-          );
+          const { LlmAgent } = require('@google/adk');
+          const agent = new LlmAgent({
+            name: 'ai_tutor',
+            description: 'AI tutor to help students with questions',
+            model: 'gemini-2.5-flash',
+            instruction: `You are an AI tutor helping a student with a specific question. Your goal is to guide them to the answer without giving it away directly.
 
-          const responseText = await this.adkRunner.runAgent(
-            agent,
-            userId,
-            message,
-            'ai-tutor'
-          );
-          
+Context from the document:
+${ragContext || context}`
+          });
+
+          const responseText = await this.adkRunner.runAgent(agent, userId, message, 'ai-tutor');
+
           return {
             message: responseText,
             questionContext: question.question,
-            helpful: true
+            helpful: true,
           } as ChatAssistanceResponseDto;
-
-        } catch (adkError) {
-          console.error('[AI Tutor] ❌ Centralized ADK runner failed, falling back to direct Gemini:', adkError);
+        } catch (error) {
+          this.logger?.error('ADK execution failed, falling back to Gemini', { error: (error as Error).message });
         }
       } else {
-        console.log('[AI Tutor] ❌ ADK not available - using direct Gemini fallback');
+        this.logger?.warn('ADK not available, using Gemini fallback');
       }
 
       // Direct Gemini fallback for AI tutor
-      console.log('[AI Tutor] 🔄 Using direct Gemini fallback');
-      const { GoogleGenerativeAI } = require("@google/generative-ai");
-      const { TEST_ASSISTANCE_CHAT_PROMPT } = require("../ai/prompts");
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
 
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-      const prompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, context) +
-        `\n\nContext source: ${contextSource}\nUser: ${message}`;
-      
+      const prompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, context) + `\n\nContext source: ${contextSource}\nUser: ${message}`;
+
       const result = await model.generateContent(prompt);
       const response = result.response.text();
 
       return {
         message: response,
         questionContext: question.question,
-        helpful: true
+        helpful: true,
       } as ChatAssistanceResponseDto;
-
     } catch (error) {
-      console.error("[AI Tutor] Error in getChatAssistance:", error);
+      this.logger?.error('Error in getChatAssistance', { error: (error as Error).message });
       throw error;
     }
   }

@@ -412,7 +412,7 @@ export class TestsApi extends runtime.BaseAPI {
 
   /**
    */
-  async testsControllerSubmitTestRaw(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
+  async testsControllerSubmitTestRaw(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
     if (requestParameters.submitTestDto === null || requestParameters.submitTestDto === undefined) {
       throw new runtime.RequiredError('submitTestDto', 'Required parameter requestParameters.submitTestDto was null or undefined when calling testsControllerSubmitTest.');
     }
@@ -442,13 +442,12 @@ export class TestsApi extends runtime.BaseAPI {
       initOverrides,
     );
 
-    return new runtime.JSONApiResponse<any>(response);
+    return new runtime.VoidApiResponse(response);
   }
 
   /**
    */
-  async testsControllerSubmitTest(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
-    const response = await this.testsControllerSubmitTestRaw(requestParameters, initOverrides);
-    return await response.value();
+  async testsControllerSubmitTest(requestParameters: TestsControllerSubmitTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.testsControllerSubmitTestRaw(requestParameters, initOverrides);
   }
 }

@@ -7,10 +7,10 @@ import { EmbedService } from './services/embed.service';
 import { RetrieveService } from './services/retrieve.service';
 import { RagService } from './services/rag.service';
 import { GeminiService } from './services/gemini.service';
-import { PrismaModule } from '../prisma/prisma.module';
+import { RepositoryModule } from '../shared/repositories/repository.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [RepositoryModule],
   controllers: [RagController],
   providers: [IngestService, PdfService, ChunkService, EmbedService, RetrieveService, RagService, GeminiService],
   exports: [IngestService, RetrieveService, RagService, ChunkService, EmbedService, PdfService],

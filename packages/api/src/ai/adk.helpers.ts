@@ -30,11 +30,13 @@ export function isAdkAvailable(): boolean {
   return !!loadAdkRuntime();
 }
 
-export function createAdkRunner(options: {
-  agent?: any;
-  appName?: string;
-  sessionService?: any;
-} = {}) {
+export function createAdkRunner(
+  options: {
+    agent?: any;
+    appName?: string;
+    sessionService?: any;
+  } = {},
+) {
   const runtime = loadAdkRuntime();
   if (!runtime) return null;
 

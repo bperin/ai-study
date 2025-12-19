@@ -32,15 +32,15 @@ export class PdfIngestionProcessor extends WorkerHost {
 
       const { bucket: bucketName, path } = this.parseGcsUri(gcsUri);
       const bucket = this.storage.bucket(bucketName);
-      
+
       this.logger.log(`Downloading ${path} from ${bucketName}`);
       const [buffer] = await bucket.file(path).download();
-      
+
       await job.updateProgress(30);
 
       this.logger.log(`Extracting text from PDF (${buffer.length} bytes)`);
       const text = await this.pdfService.extractText(buffer);
-      
+
       await job.updateProgress(50);
 
       this.logger.log(`Processing document with ${text.length} characters`);
@@ -79,7 +79,7 @@ export class PdfIngestionProcessor extends WorkerHost {
   private async processDocument(documentId: string, text: string, mimeType: string, job: Job) {
     this.logger.log(`Processing document ${documentId} with ${text.length} chars`);
     const chunks = this.chunkService.chunkText(text);
-    
+
     if (!chunks.length) {
       await this.prisma.document.update({
         where: { id: documentId },
@@ -116,7 +116,7 @@ export class PdfIngestionProcessor extends WorkerHost {
 
     const BATCH_SIZE = 10;
     const totalBatches = Math.ceil(chunkData.length / BATCH_SIZE);
-    
+
     for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
       const batch = chunkData.slice(i, i + BATCH_SIZE);
@@ -153,10 +153,10 @@ export class PdfIngestionProcessor extends WorkerHost {
             });
           }
         }
-        
+
         const progress = 70 + Math.floor((batchNumber / totalBatches) * 25);
         await job.updateProgress(progress);
-        
+
         this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
       } catch (error: any) {
         this.logger.error(`[Batch ${batchNumber}/${totalBatches}] Failed to save batch: ${error.message}`);

@@ -7,11 +7,7 @@ import { QUESTION_GENERATOR_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHE
 import { GEMINI_MODEL } from '../constants/models';
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { createAdkRunner, createAdkSession, isAdkAvailable } from './adk.helpers';
-import {
-  createQualityAnalyzerAgent,
-  createQuestionGeneratorAgentByDifficulty,
-  createTestAnalyzerAgent,
-} from './agents';
+import { createQualityAnalyzerAgent, createQuestionGeneratorAgentByDifficulty, createTestAnalyzerAgent } from './agents';
 
 // Model constants
 // @ts-ignore
@@ -44,18 +40,16 @@ export class ParallelGenerationService {
     // BUT we must preserve the original intent and counts.
     // The previous implementation was creating multiple chunks but the prompt sent to each chunk
     // still contained the FULL user instructions with the TOTAL count, confusing the agent.
-    
+
     // Instead of complex chunking which confuses the agent with conflicting "global" vs "local" counts,
     // we will run one agent per difficulty level as requested.
     // The parallelism comes from running different difficulties at the same time.
-    
+
     // If we really need chunking for > 5 questions of SAME difficulty, we would need to rewrite the
     // user prompt for each chunk to only ask for that chunk's specific questions,
     // which is complex to do reliably with natural language prompts.
-    
-    const generationPromises = tasks.map((task) =>
-      this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt)
-    );
+
+    const generationPromises = tasks.map((task) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt));
 
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
@@ -149,22 +143,11 @@ export class ParallelGenerationService {
 
     // Create specialized agent for this difficulty with PDF content
     let useADK = isAdkAvailable();
-    console.log(
-      useADK
-        ? `[Question Generator ${difficulty}] ✅ ADK available - using ADK agent`
-        : `[Question Generator ${difficulty}] ❌ ADK not available - using direct Gemini fallback`,
-    );
+    console.log(useADK ? `[Question Generator ${difficulty}] ✅ ADK available - using ADK agent` : `[Question Generator ${difficulty}] ❌ ADK not available - using direct Gemini fallback`);
 
     if (useADK) {
       try {
-        const agent = createQuestionGeneratorAgentByDifficulty(
-          difficulty,
-          this.prisma,
-          pdfId,
-          this.retrieveService,
-          pdfFilename,
-          gcsPath,
-        );
+        const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId, this.retrieveService, pdfFilename, gcsPath);
 
         const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
         if (!runner) {
@@ -196,14 +179,7 @@ export class ParallelGenerationService {
     }
 
     // Continue with ADK if available
-    const agent = createQuestionGeneratorAgentByDifficulty(
-      difficulty,
-      this.prisma,
-      pdfId,
-      this.retrieveService,
-      pdfFilename,
-      gcsPath,
-    );
+    const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId, this.retrieveService, pdfFilename, gcsPath);
 
     const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
     if (!runner) {
@@ -349,11 +325,7 @@ IMPORTANT:
     const document = await this.prisma.document.findFirst({
       where: {
         status: 'READY',
-        OR: [
-          { sourceUri: { contains: gcsPath } },
-          { sourceUri: { contains: normalizedPath } },
-          { title: { equals: pdfFilename, mode: 'insensitive' } },
-        ],
+        OR: [{ sourceUri: { contains: gcsPath } }, { sourceUri: { contains: normalizedPath } }, { title: { equals: pdfFilename, mode: 'insensitive' } }],
       },
       orderBy: { createdAt: 'desc' },
       select: { id: true },
@@ -365,12 +337,7 @@ IMPORTANT:
   /**
    * Build a contextual RAG snippet for the generator using top-ranked chunks
    */
-  private async buildRagContext(
-    userPrompt: string,
-    difficulty: string,
-    pdfFilename: string,
-    gcsPath: string,
-  ): Promise<string> {
+  private async buildRagContext(userPrompt: string, difficulty: string, pdfFilename: string, gcsPath: string): Promise<string> {
     try {
       const documentId = await this.findRagDocumentId(pdfFilename, gcsPath);
       if (!documentId) {
@@ -389,9 +356,7 @@ IMPORTANT:
         return '';
       }
 
-      const context = ranked
-        .map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`)
-        .join('\n\n');
+      const context = ranked.map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`).join('\n\n');
 
       console.log(`[RAG] Using ${ranked.length} ranked chunks for context (document ${documentId})`);
       return context;
@@ -419,13 +384,7 @@ IMPORTANT:
     const gcsPath = pdf.gcsPath || pdf.content || '';
 
     // Create analyzer agent with web search capability
-    const agent = createTestAnalyzerAgent(
-      pdfFilename,
-      gcsPath,
-      this.gcsService,
-      this.pdfTextService,
-      this.retrieveService,
-    );
+    const agent = createTestAnalyzerAgent(pdfFilename, gcsPath, this.gcsService, this.pdfTextService, this.retrieveService);
 
     const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
     if (!runner) {

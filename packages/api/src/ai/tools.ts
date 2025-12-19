@@ -144,10 +144,7 @@ export function createDocumentSearchTool(retrieveService: RetrieveService, pdfFi
         const chunks = await (retrieveService as any).prisma.chunk.findMany({
           where: {
             document: {
-              OR: [
-                { sourceUri: { contains: gcsPath } },
-                { title: { equals: pdfFilename, mode: 'insensitive' } },
-              ],
+              OR: [{ sourceUri: { contains: gcsPath } }, { title: { equals: pdfFilename, mode: 'insensitive' } }],
             },
           },
           orderBy: { chunkIndex: 'asc' },
@@ -156,7 +153,7 @@ export function createDocumentSearchTool(retrieveService: RetrieveService, pdfFi
             documentId: true,
             chunkIndex: true,
             content: true,
-          }
+          },
         });
 
         if (chunks.length === 0) {
@@ -164,9 +161,7 @@ export function createDocumentSearchTool(retrieveService: RetrieveService, pdfFi
         }
 
         const ranked = await retrieveService.rankChunks(query, chunks, 5);
-        const context = ranked
-          .map((chunk) => `[Relevance: ${Math.round(chunk.score * 100)}%] Content: ${chunk.content.trim()}`)
-          .join('\n\n---\n\n');
+        const context = ranked.map((chunk) => `[Relevance: ${Math.round(chunk.score * 100)}%] Content: ${chunk.content.trim()}`).join('\n\n---\n\n');
 
         return {
           results: context,

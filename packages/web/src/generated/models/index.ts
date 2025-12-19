@@ -22,6 +22,7 @@ export * from './PdfResponseDtoStats';
 export * from './QueryDocumentDto';
 export * from './RecordAnswerDto';
 export * from './RecordAnswerResponseDto';
+export * from './SampleQuestionDto';
 export * from './StartAttemptResponseDto';
 export * from './StartSessionDto';
 export * from './SubmitTestDto';

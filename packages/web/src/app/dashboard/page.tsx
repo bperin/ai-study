@@ -174,8 +174,11 @@ export default function DashboardPage() {
                         <TabsContent value="tests" className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                 {pdfs.map((pdf) => {
+                                    // Use the new API fields for question count and sample questions
+                                    const questionCount = (pdf as any).questionCount || 0;
+                                    const sampleQuestions = (pdf as any).sampleQuestions || [];
                                     const objectives = (pdf.objectives as PdfObjective[]) || [];
-                                    const questionCount = objectives.reduce((sum, obj) => sum + (obj._count?.mcqs || 0), 0);
+                                    
                                     return (
                                         <Card key={pdf.id} className="flex flex-col h-full hover:bg-muted/50 transition-all duration-200 relative group">
                                             <CardHeader>
@@ -235,14 +238,33 @@ export default function DashboardPage() {
                                                         )}
                                                     </div>
                                                 )}
-                                                <div className="space-y-1">
-                                                    {objectives.slice(0, 2).map((obj, i) => (
-                                                        <p key={i} className="text-sm text-muted-foreground line-clamp-1">
-                                                            • {obj.title || "Objective"}
-                                                        </p>
-                                                    ))}
-                                                    {objectives.length > 2 && <p className="text-xs text-muted-foreground">+{objectives.length - 2} more objectives</p>}
-                                                </div>
+                                                
+                                                {/* Show sample questions if available */}
+                                                {sampleQuestions.length > 0 ? (
+                                                    <div className="space-y-2">
+                                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sample Questions</p>
+                                                        <div className="space-y-1">
+                                                            {sampleQuestions.slice(0, 2).map((question: any, i: number) => (
+                                                                <div key={i} className="text-xs text-muted-foreground">
+                                                                    <p className="line-clamp-2 mb-1">• {question.question}</p>
+                                                                </div>
+                                                            ))}
+                                                            {sampleQuestions.length > 2 && (
+                                                                <p className="text-xs text-muted-foreground">+{sampleQuestions.length - 2} more questions</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    /* Fallback to objectives if no sample questions */
+                                                    <div className="space-y-1">
+                                                        {objectives.slice(0, 2).map((obj, i) => (
+                                                            <p key={i} className="text-sm text-muted-foreground line-clamp-1">
+                                                                • {obj.title || "Objective"}
+                                                            </p>
+                                                        ))}
+                                                        {objectives.length > 2 && <p className="text-xs text-muted-foreground">+{objectives.length - 2} more objectives</p>}
+                                                    </div>
+                                                )}
                                             </CardContent>
                                             <CardFooter className="mt-auto">
                                                 <Button className="w-full" onClick={() => router.push(`/study/${pdf.id}`)}>

@@ -1,11 +1,4 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
-  HttpStatus,
-  Logger,
-} from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ErrorResponseDto } from '../dto/error-response.dto';
 
@@ -38,10 +31,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
       error = exception.name;
 
-      this.logger.error(
-        `Unhandled exception: ${exception.message}`,
-        exception.stack,
-      );
+      this.logger.error(`Unhandled exception: ${exception.message}`, exception.stack);
     }
 
     const errorResponse: ErrorResponseDto = {

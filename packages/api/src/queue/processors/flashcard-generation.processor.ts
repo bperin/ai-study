@@ -20,18 +20,13 @@ export class FlashcardGenerationProcessor extends WorkerHost {
 
   async process(job: Job<FlashcardGenerationJobData>): Promise<any> {
     const { pdfId, sessionId, userId, userPrompt, filename, gcsPathOrContent } = job.data;
-    
+
     this.logger.log(`Processing flashcard generation job ${job.id} for PDF ${pdfId}`);
 
     try {
       await job.updateProgress(10);
 
-      await this.parallelGenerationService.generateFlashcardsParallel(
-        userPrompt,
-        pdfId,
-        filename,
-        gcsPathOrContent,
-      );
+      await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, filename, gcsPathOrContent);
 
       await job.updateProgress(90);
 
@@ -41,11 +36,11 @@ export class FlashcardGenerationProcessor extends WorkerHost {
       });
 
       this.pdfStatusGateway.sendStatusUpdate(userId, false);
-      
+
       await job.updateProgress(100);
-      
+
       this.logger.log(`Flashcard generation completed for PDF ${pdfId}`);
-      
+
       return { pdfId, status: 'completed' };
     } catch (error: any) {
       this.pdfStatusGateway.sendStatusUpdate(userId, false);
@@ -53,7 +48,7 @@ export class FlashcardGenerationProcessor extends WorkerHost {
 
       try {
         const questionsCount = await this.prisma.mcq.count({
-          where: { objective: { pdfId } }
+          where: { objective: { pdfId } },
         });
 
         await this.prisma.pdfSession.update({

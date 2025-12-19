@@ -16,9 +16,7 @@ export class GcsService {
     // Use default authentication
     console.log('Using default service account authentication for GCS');
     this.storage = new Storage({
-      projectId:
-        this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') ||
-        'pro-pulsar-274402',
+      projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'pro-pulsar-274402',
     });
   }
 
@@ -31,10 +29,7 @@ export class GcsService {
     return buffer;
   }
 
-  async createSignedUploadUrl(
-    fileName: string,
-    contentType: string,
-  ): Promise<{ url: string; signedUrl: string }> {
+  async createSignedUploadUrl(fileName: string, contentType: string): Promise<{ url: string; signedUrl: string }> {
     const bucket = this.storage.bucket(this.bucketName);
     const file = bucket.file(fileName);
 
