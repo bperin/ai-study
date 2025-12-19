@@ -161,7 +161,7 @@ export class TestTakingService {
     let totalTimeSpent = 0;
     const topicScores = new Map<string, { correct: number; total: number; objectiveTitle: string }>();
 
-    const processedAnswers = attempt.answers.map((a: any, index: number) => {
+    const processedAnswers = (attempt.userAnswers || []).map((a: any, index: number) => {
       const isCorrect = a.isCorrect;
       if (isCorrect) {
         correctCount++;
