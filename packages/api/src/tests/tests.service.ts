@@ -147,6 +147,13 @@ export class TestsService {
   }
 
   async chatAssist(message: string, questionId: string, history?: any[]) {
+    this.logger?.info('Chat assist requested', {
+      questionId,
+      message,
+      historyLength: history?.length,
+      history,
+    });
+
     const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
@@ -156,24 +163,91 @@ export class TestsService {
 
     // Get PDF content - need to fetch the MCQ with objective included
     const mcqWithObjective = await this.mcqRepository.findByIdWithObjective(questionId);
-    const pdfContent = mcqWithObjective?.objective?.pdf?.content || '';
+    const pdf = mcqWithObjective?.objective?.pdf;
+    
+    // Build context: prefer RAG chunks if available, fallback to raw content
+    let context = '';
+    
+    if (pdf) {
+      // 1. Try RAG retrieval first
+      // Search primarily using the question text to find the relevant section in the book
+      // Adding the user's message as secondary context
+      const ragContext = await this.buildRagContext(mcq.question, message, pdf);
+      
+      if (ragContext) {
+        context = ragContext;
+      } else {
+        // 2. Fallback to loading raw content (from GCS or DB)
+        context = await this.loadPdfContent(pdf);
+      }
+    }
 
+    const { createAdkRunner, isAdkAvailable } = require('../ai/adk.helpers');
     const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
-    const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, pdfContent);
+    const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, context);
+    
+    let useADK = isAdkAvailable();
+    let response = '';
 
-    const chat = model.startChat({
-      history: [
-        { role: 'user', parts: [{ text: systemPrompt }] },
-        { role: 'model', parts: [{ text: 'I understand. I will help the student with this question without giving away the answer.' }] },
-        ...(history || []).map((msg) => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }],
-        })),
-      ],
-    });
+    if (useADK) {
+      try {
+        const { LlmAgent } = require('@google/adk');
+        
+        // Use createTestAssistanceAgent helper which configures tools correctly
+        // We pass the context directly to it so it can build the instruction
+        const { createTestAssistanceAgent } = require('../ai/agents');
+        
+        // Pass empty retrieveService/path because we've already built the context
+        // and injected it into the prompt (systemPrompt).
+        // The agent helper expects these args, so we pass minimal values.
+        const agent = createTestAssistanceAgent(
+          mcq.question,
+          mcq.options,
+          this.retrieveService, // Still passed but tool usage is secondary to context
+          pdf.filename || 'Document',
+          pdf.gcsPath || ''
+        );
+        
+        // OVERRIDE the instruction with our context-rich prompt
+        // This ensures consistent behavior with the fallback path
+        agent.instruction = systemPrompt;
 
-    const result = await chat.sendMessage(message);
-    const response = result.response.text();
+        const runner = createAdkRunner({ agent, appName: 'test-assistant' });
+        
+        if (runner) {
+          // Construct full prompt with history for stateless execution
+          const conversationHistory = (history || []).map((msg: any) => `${msg.role === 'user' ? 'Student' : 'AI Tutor'}: ${msg.content}`).join('\n');
+          const fullMessage = conversationHistory ? `${conversationHistory}\n\nStudent: ${message}` : message;
+          
+          const result = await runner.run({
+            agent,
+            prompt: fullMessage
+          });
+          response = result.text;
+        } else {
+          useADK = false;
+        }
+      } catch (e) {
+        useADK = false;
+        this.logger?.warn('ADK execution failed, falling back to direct Gemini', { error: (e as Error).message });
+      }
+    }
+
+    if (!useADK) {
+        const chat = model.startChat({
+        history: [
+            { role: 'user', parts: [{ text: systemPrompt }] },
+            { role: 'model', parts: [{ text: 'I understand. I will help the student with this question without giving away the answer.' }] },
+            ...(history || []).map((msg) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }],
+            })),
+        ],
+        });
+
+        const result = await chat.sendMessage(message);
+        response = result.response.text();
+    }
 
     return {
       message: response,
@@ -201,7 +275,7 @@ export class TestsService {
     return text.substring(0, 10000);
   }
 
-  private async buildRagContext(message: string, questionText: string, pdf: { filename?: string; gcsPath?: string | null }) {
+  private async buildRagContext(primarySearchTerm: string, secondarySearchTerm: string, pdf: { filename?: string; gcsPath?: string | null }) {
     if (!this.retrieveService) {
       return '';
     }
@@ -224,7 +298,12 @@ export class TestsService {
         return '';
       }
 
-      const chunks = await this.retrieveService.rankChunks(`${message}\n\nQuestion: ${questionText}`, document.document?.chunks || [], 6);
+      // Search primarily for the question content to find the answer location in text
+      const chunks = await this.retrieveService.rankChunks(
+        `Question: ${primarySearchTerm}\n\nUser Hint Request: ${secondarySearchTerm}`,
+        document.document?.chunks || [],
+        6
+      );
 
       if (!chunks.length) {
         this.logger?.info('No ranked chunks found; falling back to PDF text');

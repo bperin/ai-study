@@ -49,7 +49,31 @@ export class PdfIngestionProcessor extends WorkerHost {
       await job.updateProgress(30);
 
       this.logger.log(`Extracting text from PDF (${buffer.length} bytes)`);
-      const text = await this.pdfService.extractText(buffer);
+      // Validation logic moved here to catch early failure
+      let text;
+      try {
+        text = await this.pdfService.extractText(buffer);
+      } catch (e: any) {
+        // Specific handling for known "unsupported" cases from PdfService
+        if (e.message.includes('scanned image PDF') || e.message.includes('insufficient text')) {
+          this.logger.error(`Validation failed for document ${documentId}: ${e.message}`);
+          await this.prisma.document.update({
+            where: { id: documentId },
+            data: { status: 'FAILED', errorMessage: e.message },
+          });
+          
+          if (userId) {
+            this.pdfStatusGateway.sendStatusUpdate(userId, {
+              isGenerating: false,
+              type: 'ingestion',
+              message: 'Failed: Document appears to be a scanned image or empty.'
+            });
+          }
+          // Stop processing immediately without throwing to prevent retry loop for this specific error
+          return { status: 'FAILED', reason: e.message };
+        }
+        throw e;
+      }
 
       await job.updateProgress(50);
 
@@ -97,11 +121,12 @@ export class PdfIngestionProcessor extends WorkerHost {
     const chunks = this.chunkService.chunkText(text);
 
     if (!chunks.length) {
+      const errorMsg = 'No extractable text found in chunks. The document might be an image or scanned PDF.';
       await this.prisma.document.update({
         where: { id: documentId },
-        data: { status: 'FAILED', errorMessage: 'No extractable text' },
+        data: { status: 'FAILED', errorMessage: errorMsg },
       });
-      throw new Error('No extractable text');
+      throw new Error(errorMsg);
     }
 
     const userId = job.data.userId;

@@ -544,19 +544,24 @@ ENSURE: The sum of all questionCount values equals the student's requested total
 
 Return ONLY the JSON object, no other text or markdown formatting.`;
 
-export const TEST_ASSISTANCE_CHAT_PROMPT = (question: string, options: string[], pdfContext: string) => `You are a helpful AI tutor assisting a student with a test question based on their study material.
+export const TEST_ASSISTANCE_CHAT_PROMPT = (question: string, options: string[], pdfContext: string) => `You are a helpful AI tutor assisting a student who is CURRENTLY looking at a specific test question.
 
-STUDY MATERIAL CONTEXT:
-${pdfContext ? pdfContext.substring(0, 10000) : 'No context available.'} ... (truncated)
+CONTEXT - The student is stuck on this specific question:
+"${question}"
 
-THE QUESTION: "${question}"
-THE OPTIONS:
+The options they are choosing from are:
 ${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}
 
-YOUR GOAL: Mildly assist the student without giving away the answer.
-- Provide hints, ask guiding questions, or explain related concepts using the study material.
-- DO NOT reveal the correct option directly.
-- DO NOT say "The answer is..."
-- Keep responses concise and encouraging.
-- If the student asks for the answer, firmly but politely refuse and offer a hint instead.
+RELEVANT STUDY MATERIAL (Use this to formulate your hint):
+${pdfContext ? pdfContext.substring(0, 10000) : 'No direct context available.'}
+
+CRITICAL INSTRUCTIONS:
+1. Assume the student's message (e.g., "give me a hint") refers specifically to the question above. DO NOT ask "what question are you working on?".
+2. Provide a helpful conceptual hint that guides them toward the correct answer without revealing it.
+3. Explain the underlying concept from the study material that solves the problem.
+4. DO NOT quote the text directly like a search engine. Synthesize the answer.
+5. DO NOT reveal the correct option (e.g., "It's option A").
+6. Keep your response concise (2-3 sentences).
+
+Example good response: "Recall that mitochondria are often called the powerhouse of the cell because they generate most of the cell's supply of adenosine triphosphate (ATP)."
 `;

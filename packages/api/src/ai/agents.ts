@@ -105,7 +105,10 @@ export function createTestAssistanceAgent(question: string, options: string[], r
     name: 'test_assistant',
     description: 'Provides helpful hints and explanations during test taking without revealing answers',
     model: GEMINI_MODEL,
-    instruction: TEST_ASSISTANCE_CHAT_PROMPT(question, options, ''), // Removed direct content
+    // The instruction now receives placeholders or a base prompt that doesn't strictly depend on pdfContent
+    // since the tool is the primary source of knowledge.
+    // However, to fix the user issue, we must ensure the QUESTION is part of the system instruction.
+    instruction: TEST_ASSISTANCE_CHAT_PROMPT(question, options, ''),
     tools: [createDocumentSearchTool(retrieveService, pdfFilename, gcsPath)],
   });
 }
