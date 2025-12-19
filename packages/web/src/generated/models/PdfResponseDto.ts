@@ -15,6 +15,8 @@
 import { exists, mapValues } from '../runtime';
 import type { PdfResponseDtoStats } from './PdfResponseDtoStats';
 import { PdfResponseDtoStatsFromJSON, PdfResponseDtoStatsFromJSONTyped, PdfResponseDtoStatsToJSON } from './PdfResponseDtoStats';
+import type { SampleQuestionDto } from './SampleQuestionDto';
+import { SampleQuestionDtoFromJSON, SampleQuestionDtoFromJSONTyped, SampleQuestionDtoToJSON } from './SampleQuestionDto';
 
 /**
  *
@@ -58,6 +60,18 @@ export interface PdfResponseDto {
    * @memberof PdfResponseDto
    */
   status?: string;
+  /**
+   * Total number of questions available for this PDF
+   * @type {number}
+   * @memberof PdfResponseDto
+   */
+  questionCount?: number;
+  /**
+   * Sample questions to preview the test content
+   * @type {Array<SampleQuestionDto>}
+   * @memberof PdfResponseDto
+   */
+  sampleQuestions?: Array<SampleQuestionDto>;
 }
 
 /**
@@ -89,6 +103,8 @@ export function PdfResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: bool
     objectives: json['objectives'],
     stats: PdfResponseDtoStatsFromJSON(json['stats']),
     status: !exists(json, 'status') ? undefined : json['status'],
+    questionCount: !exists(json, 'questionCount') ? undefined : json['questionCount'],
+    sampleQuestions: !exists(json, 'sampleQuestions') ? undefined : (json['sampleQuestions'] as Array<any>).map(SampleQuestionDtoFromJSON),
   };
 }
 
@@ -106,5 +122,7 @@ export function PdfResponseDtoToJSON(value?: PdfResponseDto | null): any {
     objectives: value.objectives,
     stats: PdfResponseDtoStatsToJSON(value.stats),
     status: value.status,
+    questionCount: value.questionCount,
+    sampleQuestions: value.sampleQuestions === undefined ? undefined : (value.sampleQuestions as Array<any>).map(SampleQuestionDtoToJSON),
   };
 }

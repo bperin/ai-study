@@ -1,12 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../prisma/prisma.service';
+import { TestAttemptRepository } from '../shared/repositories/test-attempt.repository';
+import { McqRepository } from '../shared/repositories/mcq.repository';
+import { UserAnswerRepository } from '../shared/repositories/user-answer.repository';
 import { RetrieveService } from '../rag/services/retrieve.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { createAdkRunner, isAdkAvailable } from '../ai/adk.helpers';
 import { createTestAssistanceAgent } from '../ai/agents';
+import { QueueService } from '../queue/queue.service';
 import { PdfTextService } from '../shared/services/pdf-text.service';
 import { GcsService } from '../pdfs/gcs.service';
 import { GEMINI_MODEL } from '../constants/models';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 /**
  * In-memory state for active test sessions
@@ -73,10 +79,15 @@ export interface TestSessionState {
 export class TestTakingService {
   constructor(
     private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly testAttemptRepository: TestAttemptRepository,
+    private readonly mcqRepository: McqRepository,
+    private readonly userAnswerRepository: UserAnswerRepository,
     private readonly retrieveService: RetrieveService,
+    private readonly prisma: PrismaService,
     private readonly pdfTextService: PdfTextService,
     private readonly gcsService: GcsService,
+    private readonly queueService: QueueService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {
     const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
     if (apiKey) {
@@ -88,38 +99,19 @@ export class TestTakingService {
    * Initialize or Resume a test session
    */
   async getOrStartSession(userId: string, pdfId: string): Promise<TestSessionState> {
+    this.logger.info('Getting or starting test session', { userId, pdfId });
+    
     // Check for existing incomplete attempt
-    let attempt = await this.prisma.testAttempt.findFirst({
-      where: {
-        userId,
-        pdfId,
-        completedAt: null,
-      },
-      include: {
-        userAnswers: {
-          include: { mcq: { include: { objective: true } } },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    });
+    let attempt = await this.testAttemptRepository.findActiveByUserAndPdf(userId, pdfId);
 
     if (!attempt) {
       // Create new attempt
-      const totalQuestions = await this.prisma.mcq.count({
-        where: { objective: { pdfId } },
-      });
+      const totalQuestions = await this.mcqRepository.countByPdfId(pdfId);
 
-      attempt = await this.prisma.testAttempt.create({
-        data: {
-          userId,
-          pdfId,
-          totalQuestions: totalQuestions,
-        },
-        include: {
-          userAnswers: {
-            include: { mcq: { include: { objective: true } } },
-          },
-        },
+      attempt = await this.testAttemptRepository.createWithAnswersIncluded({
+        user: { connect: { id: userId } },
+        pdf: { connect: { id: pdfId } },
+        totalQuestions: totalQuestions,
       });
     }
 
@@ -130,15 +122,7 @@ export class TestTakingService {
    * Get current session state (rehydrated)
    */
   async getSessionState(attemptId: string): Promise<TestSessionState> {
-    const attempt = await this.prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-      include: {
-        userAnswers: {
-          include: { mcq: { include: { objective: true } } },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    });
+    const attempt = await this.testAttemptRepository.findByIdWithAnswers(attemptId);
 
     if (!attempt) throw new Error('Attempt not found');
     return this.rehydrateState(attempt);
@@ -148,10 +132,7 @@ export class TestTakingService {
    * Rehydrate state from DB attempt
    */
   private async rehydrateState(attempt: any): Promise<TestSessionState> {
-    const questions = await this.prisma.mcq.findMany({
-      where: { objective: { pdfId: attempt.pdfId } },
-      include: { objective: true },
-    });
+    const questions = await this.mcqRepository.findWithObjectives(attempt.pdfId);
 
     // Calculate metrics from existing answers
     let correctCount = 0;
@@ -161,7 +142,10 @@ export class TestTakingService {
     let totalTimeSpent = 0;
     const topicScores = new Map<string, { correct: number; total: number; objectiveTitle: string }>();
 
-    const processedAnswers = (attempt.userAnswers || []).map((a: any, index: number) => {
+    // Support both `answers` (legacy alias) and `userAnswers` (standard prisma relation)
+    const answers = attempt.userAnswers || attempt.answers || [];
+
+    const processedAnswers = answers.map((a: any, index: number) => {
       const isCorrect = a.isCorrect;
       if (isCorrect) {
         correctCount++;
@@ -198,7 +182,6 @@ export class TestTakingService {
       currentQuestionIndex: processedAnswers.length,
       totalQuestions: questions.length, // Or attempt.total if fixed
       userAnswers: processedAnswers,
-      answers: processedAnswers, // Alias for frontend compatibility
       correctCount,
       incorrectCount,
       currentStreak,
@@ -218,16 +201,11 @@ export class TestTakingService {
    * Get AI assistance for a specific question
    */
   async getQuestionAssistance(attemptId: string, questionId: string): Promise<string> {
-    const attempt = await this.prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-      include: { pdf: true },
-    });
+    const attempt = await this.testAttemptRepository.findByIdWithPdf(attemptId);
 
     if (!attempt) throw new NotFoundException('Attempt not found');
 
-    const question = await this.prisma.mcq.findUnique({
-      where: { id: questionId },
-    });
+    const question = await this.mcqRepository.findById(questionId);
 
     if (!question) throw new NotFoundException('Question not found');
 
@@ -260,32 +238,21 @@ export class TestTakingService {
 
     const result = await runner.run({
       agent,
-      prompt: 'I need a hint for this question. Please help me understand the concept without giving away the answer.'
+      prompt: 'I need a hint for this question. Please help me understand the concept without giving away the answer.',
     });
     return result.text;
   }
 
   async recordAnswer(attemptId: string, questionId: string, selectedAnswer: number, timeSpent: number): Promise<any> {
     // Load attempt from DB
-    const attempt = await this.prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-      include: {
-        userAnswers: {
-          include: { mcq: { include: { objective: true } } },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    });
+    const attempt = await this.testAttemptRepository.findByIdWithAnswers(attemptId);
 
     if (!attempt) throw new Error('Attempt not found');
 
     const state = await this.rehydrateState(attempt);
 
     // Get question details
-    const question = await this.prisma.mcq.findUnique({
-      where: { id: questionId },
-      include: { objective: true },
-    });
+    const question = await this.mcqRepository.findById(questionId);
 
     if (!question) {
       throw new Error('Question not found');
@@ -318,35 +285,28 @@ export class TestTakingService {
 
     // Persist to database
     // Check if answer already exists - if so, update it (allow retries)
-    const existingAnswer = await this.prisma.userAnswer.findFirst({
-      where: { attemptId, mcqId: questionId },
-    });
+    const existingAnswer = await this.userAnswerRepository.findByAttemptAndMcq(attemptId, questionId);
 
     if (existingAnswer) {
       // Update existing answer - latest attempt counts
-      await this.prisma.userAnswer.update({
-        where: { id: existingAnswer.id },
-        data: {
-          selectedIdx: selectedAnswer,
-          isCorrect,
-          timeSpent: existingAnswer.timeSpent + timeSpent, // Accumulate time spent
-        },
+      await this.userAnswerRepository.update(existingAnswer.id, {
+        selectedIdx: selectedAnswer,
+        isCorrect,
+        timeSpent,
       });
     } else {
       // Create new answer
-      await this.prisma.userAnswer.create({
-        data: {
-          attemptId,
-          mcqId: questionId,
-          selectedIdx: selectedAnswer,
-          isCorrect,
-          timeSpent,
-        },
+      await this.userAnswerRepository.create({
+        attempt: { connect: { id: attemptId } },
+        mcq: { connect: { id: questionId } },
+        selectedIdx: selectedAnswer,
+        isCorrect,
+        timeSpent,
       });
     }
 
     // Generate encouragement
-    const encouragement = this.generateEncouragement(state);
+    const encouragement = this.generateFinalEncouragement(state);
 
     return {
       isCorrect,
@@ -359,104 +319,30 @@ export class TestTakingService {
   }
 
   /**
-   * Generate dynamic encouragement using bracket notation
-   */
-  private generateEncouragement(state: TestSessionState): string {
-    let template: string;
-
-    if (state.currentStreak >= 5) {
-      template = '🔥 On fire! [CURRENT_STREAK] correct in a row! [PROGRESS]';
-    } else if (state.userAnswers.length > 0 && state.correctCount / state.userAnswers.length > 0.8) {
-      template = "⭐ Excellent work! [CURRENT_SCORE] - you're mastering this!";
-    } else if (state.userAnswers.length > 0 && state.userAnswers[state.userAnswers.length - 1].isCorrect) {
-      template = '✅ Correct! [CURRENT_SCORE]. [PROGRESS]';
-    } else if (state.incorrectCount > state.correctCount && state.userAnswers.length > 0) {
-      template = 'Keep going! Learning from mistakes is progress. [PROGRESS]';
-    } else {
-      template = 'Nice! [CURRENT_SCORE]. [PROGRESS]';
-    }
-
-    return this.substituteBrackets(template, state);
-  }
-
-  /**
-   * Substitute bracket notation with actual values
-   */
-  private substituteBrackets(template: string, state: TestSessionState): string {
-    const weakTopics = Array.from(state.topicScores.entries())
-      .filter(([_, score]) => score.total > 0 && score.correct / score.total < 0.6)
-      .map(([_, score]) => score.objectiveTitle)
-      .join(', ');
-
-    const strongTopics = Array.from(state.topicScores.entries())
-      .filter(([_, score]) => score.total > 0 && score.correct / score.total >= 0.8)
-      .map(([_, score]) => score.objectiveTitle)
-      .join(', ');
-
-    const currentTopic =
-      state.userAnswers.length > 0
-        ? (() => {
-            // Find topic from topicScores
-            for (const [_, score] of state.topicScores.entries()) {
-              return score.objectiveTitle;
-            }
-            return '';
-          })()
-        : '';
-
-    const replacements: Record<string, string> = {
-      '[CURRENT_SCORE]': `${state.correctCount}/${state.userAnswers.length}`,
-      '[CORRECT_COUNT]': state.correctCount.toString(),
-      '[INCORRECT_COUNT]': state.incorrectCount.toString(),
-      '[CURRENT_STREAK]': state.currentStreak.toString(),
-      '[PROGRESS]': `Question ${state.currentQuestionIndex}/${state.totalQuestions}`,
-      '[TIME_ELAPSED]': `${Math.floor(state.totalTimeSpent / 60)} minutes`,
-      '[LAST_ANSWER]': state.userAnswers.length > 0 ? (state.userAnswers[state.userAnswers.length - 1].isCorrect ? 'correct' : 'incorrect') : '',
-      '[WEAK_TOPICS]': weakTopics || 'None yet',
-      '[STRONG_TOPICS]': strongTopics || 'Building...',
-      '[HINTS_USED]': state.totalHintsUsed.toString(),
-      '[CURRENT_TOPIC]': currentTopic,
-    };
-
-    let result = template;
-    for (const [bracket, value] of Object.entries(replacements)) {
-      result = result.replace(new RegExp(bracket.replace(/[[\]]/g, '\\$&'), 'g'), value);
-    }
-
-    return result;
-  }
-
-  /**
    * Complete test and generate feedback
    */
   async completeTest(attemptId: string): Promise<any> {
-    const attempt = await this.prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-      include: {
-        userAnswers: {
-          include: { mcq: { include: { objective: true } } },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    });
+    const attempt = await this.testAttemptRepository.findByIdWithAnswers(attemptId);
 
     if (!attempt) throw new Error('Attempt not found');
     const state = await this.rehydrateState(attempt);
 
     const percentage = (state.correctCount / state.totalQuestions) * 100;
 
-    // Generate detailed feedback
+    // Generate detailed feedback (basic metrics, not full AI analysis anymore)
     const feedback = await this.generateDetailedFeedback(state);
 
     // Update test attempt in database
-    await this.prisma.testAttempt.update({
-      where: { id: attemptId },
-      data: {
-        totalQuestions: state.totalQuestions,
-        percentage,
-        completedAt: new Date(),
-        summary: feedback.aiSummary,
-      },
+    await this.testAttemptRepository.markCompleted(
+      attemptId,
+      Math.round((state.correctCount / state.totalQuestions) * 100),
+      state.totalQuestions
+    );
+
+    // Queue background AI analysis
+    await this.queueService.addTestAnalysisJob({
+      testId: attemptId,
+      userId: attempt.userId,
     });
 
     return {
@@ -495,9 +381,6 @@ export class TestTakingService {
         correctAnswer: `Option ${a.correctAnswer + 1}`,
       }));
 
-    // Generate AI summary report
-    const aiSummary = await this.generateAISummaryReport(state, byObjective, strengths, weaknesses);
-
     return {
       strengths,
       weaknesses,
@@ -506,134 +389,7 @@ export class TestTakingService {
       longestStreak: state.longestStreak,
       averageTimePerQuestion: Math.round(state.totalTimeSpent / state.totalQuestions),
       encouragement: this.generateFinalEncouragement(state),
-      aiSummary, // Add AI-generated summary report
     };
-  }
-
-  /**
-   * Generate AI-powered summary report with web search and resource links
-   */
-  private async generateAISummaryReport(state: TestSessionState, byObjective: any[], strengths: string[], weaknesses: string[]): Promise<string> {
-    try {
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODEL,
-        tools: [
-          {
-            googleSearchRetrieval: {
-              dynamicRetrievalConfig: {
-                mode: 'MODE_DYNAMIC',
-                dynamicThreshold: 0.7,
-              },
-            },
-          },
-        ],
-      });
-
-      const percentage = (state.correctCount / state.totalQuestions) * 100;
-
-      const prompt = `Generate a personalized test summary report for a student who just completed a flashcard test. Use web search to find relevant study resources and include specific links.
-
-Test Results:
-- Score: ${state.correctCount}/${state.totalQuestions} (${percentage.toFixed(1)}%)
-- Longest streak: ${state.longestStreak} correct answers in a row
-- Average time per question: ${Math.round(state.totalTimeSpent / state.totalQuestions)} seconds
-- Total time: ${Math.round(state.totalTimeSpent / 60)} minutes
-
-Performance by Topic:
-${byObjective.map((obj) => `- ${obj.objectiveTitle}: ${obj.correct}/${obj.total} (${obj.percentage.toFixed(1)}%)`).join('\n')}
-
-Strong Areas: ${strengths.length > 0 ? strengths.join(', ') : 'Building foundation'}
-Areas for Improvement: ${weaknesses.length > 0 ? weaknesses.join(', ') : 'Great performance across all topics'}
-
-Generate a comprehensive summary that includes:
-
-1. **Performance Analysis** (1-2 paragraphs):
-   - Acknowledge their performance with specific insights
-   - Highlight strongest areas and learning patterns
-   - Identify areas needing improvement
-
-2. **Study Recommendations** with web-sourced links:
-   - For each weak area, search for and suggest 2-3 specific educational resources
-   - Include direct links to Khan Academy, Coursera, educational YouTube channels, or reputable study sites
-   - Provide brief descriptions of why each resource is helpful
-
-3. **Next Steps** (encouraging tone):
-   - Actionable study plan based on their performance
-   - Motivational message to keep them engaged
-
-Format the response in markdown with clickable links. Search the web for current, high-quality educational resources related to their weak topics.`;
-
-      const result = await model.generateContent(prompt);
-      return result.response.text();
-    } catch (error) {
-      console.error('Error generating AI summary with web search:', error);
-      // Fallback to enhanced summary without web search
-      return await this.generateFallbackSummaryWithLinks(state, byObjective, strengths, weaknesses);
-    }
-  }
-
-  /**
-   * Fallback summary generator with curated educational links
-   */
-  private async generateFallbackSummaryWithLinks(state: TestSessionState, byObjective: any[], strengths: string[], weaknesses: string[]): Promise<string> {
-    const percentage = (state.correctCount / state.totalQuestions) * 100;
-
-    // Curated educational resources by topic
-    const resourceMap: Record<string, string[]> = {
-      biology: ['[Khan Academy Biology](https://www.khanacademy.org/science/biology) - Comprehensive biology lessons', '[Crash Course Biology](https://www.youtube.com/playlist?list=PL3EED4C1D684D3ADF) - Engaging video series', '[Biology Online](https://www.biologyonline.com/) - Detailed biology reference'],
-      cell: ['[Khan Academy Cell Biology](https://www.khanacademy.org/science/biology/structure-of-a-cell) - Cell structure and function', '[Cells Alive!](https://www.cellsalive.com/) - Interactive cell animations', '[Nature Cell Biology](https://www.nature.com/ncb/) - Advanced cell biology research'],
-      genetics: ['[Khan Academy Genetics](https://www.khanacademy.org/science/biology/classical-genetics) - Genetics fundamentals', '[Genetics Home Reference](https://ghr.nlm.nih.gov/) - NIH genetics resource', '[Learn.Genetics](https://learn.genetics.utah.edu/) - University of Utah genetics tutorials'],
-      chemistry: ['[Khan Academy Chemistry](https://www.khanacademy.org/science/chemistry) - Complete chemistry course', '[ChemLibreTexts](https://chem.libretexts.org/) - Open-access chemistry textbook', '[Crash Course Chemistry](https://www.youtube.com/playlist?list=PL8dPuuaLjXtPHzzYuWy6fYEaX9mQQ8oGr) - Chemistry video series'],
-      physics: ['[Khan Academy Physics](https://www.khanacademy.org/science/physics) - Physics fundamentals', '[Physics Classroom](https://www.physicsclassroom.com/) - Interactive physics tutorials', '[MIT OpenCourseWare Physics](https://ocw.mit.edu/courses/physics/) - University-level physics courses'],
-    };
-
-    let summary = `## Performance Summary\n\n`;
-    summary += `Great work completing this test! You scored **${state.correctCount} out of ${state.totalQuestions}** questions (${percentage.toFixed(1)}%). `;
-
-    if (percentage >= 80) {
-      summary += `This shows strong mastery of the material. `;
-    } else if (percentage >= 60) {
-      summary += `You're making good progress and building a solid foundation. `;
-    } else {
-      summary += `Every attempt helps you learn - keep building your understanding! `;
-    }
-
-    if (state.longestStreak > 3) {
-      summary += `Your longest streak of ${state.longestStreak} correct answers shows you can maintain focus and apply concepts consistently.\n\n`;
-    } else {
-      summary += `Focus on building consistency in your understanding.\n\n`;
-    }
-
-    if (strengths.length > 0) {
-      summary += `### 🎯 Strong Areas\nYou demonstrated solid understanding in: **${strengths.join(', ')}**. These are great foundations to build upon!\n\n`;
-    }
-
-    if (weaknesses.length > 0) {
-      summary += `### 📚 Study Recommendations\n\n`;
-      weaknesses.forEach((weakness) => {
-        summary += `**${weakness}:**\n`;
-
-        // Find matching resources
-        const topicKey = Object.keys(resourceMap).find((key) => weakness.toLowerCase().includes(key) || key.includes(weakness.toLowerCase().split(' ')[0]));
-
-        const resources = topicKey ? resourceMap[topicKey] : resourceMap['biology']; // Default to biology
-        resources.forEach((resource) => {
-          summary += `- ${resource}\n`;
-        });
-        summary += `\n`;
-      });
-    }
-
-    summary += `### 🚀 Next Steps\n`;
-    summary += `1. Review the topics where you scored below 70%\n`;
-    summary += `2. Use the recommended resources above for targeted study\n`;
-    summary += `3. Retake this test in a few days to track your improvement\n`;
-    summary += `4. Focus on understanding concepts rather than memorizing facts\n\n`;
-    summary += `Keep up the excellent work! Consistent practice leads to mastery. 💪`;
-
-    return summary;
   }
 
   /**

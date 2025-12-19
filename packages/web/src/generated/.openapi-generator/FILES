@@ -31,6 +31,7 @@ models/PdfResponseDtoStats.ts
 models/QueryDocumentDto.ts
 models/RecordAnswerDto.ts
 models/RecordAnswerResponseDto.ts
+models/SampleQuestionDto.ts
 models/StartAttemptResponseDto.ts
 models/StartSessionDto.ts
 models/SubmitTestDto.ts

@@ -1,22 +1,23 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import * as crypto from 'crypto';
-import { Prisma } from '@prisma/client';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Storage } from '@google-cloud/storage';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DocumentRepository } from '../../shared/repositories/document.repository';
 import { ChunkService } from './chunk.service';
 import { EmbedService } from './embed.service';
 import { PdfService } from './pdf.service';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger as WinstonLogger } from 'winston';
 
 @Injectable()
 export class IngestService {
-  private readonly logger = new Logger(IngestService.name);
   private readonly storage = new Storage();
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly documentRepository: DocumentRepository,
     private readonly chunkService: ChunkService,
     private readonly embedService: EmbedService,
     private readonly pdfService: PdfService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: WinstonLogger,
   ) {}
 
   async createFromText(title: string | undefined, text: string) {
@@ -24,13 +25,11 @@ export class IngestService {
       throw new BadRequestException('text is required');
     }
 
-    const document = await this.prisma.document.create({
-      data: {
-        title,
-        sourceType: 'text',
-        mimeType: 'text/plain',
-        status: 'PROCESSING',
-      },
+    const document = await this.documentRepository.create({
+      title,
+      sourceType: 'TEXT',
+      mimeType: 'text/plain',
+      status: 'PROCESSING',
     });
 
     // Run in background to avoid timeouts
@@ -38,9 +37,9 @@ export class IngestService {
       try {
         await this.processDocument(document.id, text, 'text/plain');
       } catch (e: any) {
-        await this.prisma.document.update({
-          where: { id: document.id },
-          data: { status: 'FAILED', errorMessage: e.message },
+        await this.documentRepository.update(document.id, { 
+          status: 'FAILED', 
+          errorMessage: e.message 
         });
         this.logger.error(`Background ingestion failed for document ${document.id}: ${e.message}`);
       }
@@ -54,14 +53,11 @@ export class IngestService {
       throw new BadRequestException('file is required');
     }
 
-    const document = await this.prisma.document.create({
-      data: {
-        title: title || file.originalname,
-        sourceType: 'upload',
-        sourceUri: file.originalname,
-        mimeType: file.mimetype,
-        status: 'PROCESSING',
-      },
+    const document = await this.documentRepository.create({
+      title: title || file.originalname,
+      sourceType: 'UPLOAD',
+      mimeType: file.mimetype,
+      status: 'PROCESSING',
     });
 
     // Run in background to avoid timeouts
@@ -70,9 +66,9 @@ export class IngestService {
         const text = await this.pdfService.extractText(file.buffer);
         await this.processDocument(document.id, text, 'application/pdf');
       } catch (error: any) {
-        await this.prisma.document.update({
-          where: { id: document.id },
-          data: { status: 'FAILED', errorMessage: error.message },
+        await this.documentRepository.update(document.id, { 
+          status: 'FAILED', 
+          errorMessage: error.message 
         });
         this.logger.error(`Background ingestion failed for upload ${document.id}: ${error.message}`);
       }
@@ -86,14 +82,12 @@ export class IngestService {
       throw new BadRequestException('gcsUri must start with gcs://');
     }
 
-    const document = await this.prisma.document.create({
-      data: {
-        title,
-        sourceType: 'gcs',
-        sourceUri: gcsUri,
-        mimeType: 'application/pdf',
-        status: 'PROCESSING',
-      },
+    const document = await this.documentRepository.create({
+      title,
+      sourceType: 'GCS',
+      sourceUri: gcsUri,
+      mimeType: 'application/pdf',
+      status: 'PROCESSING',
     });
 
     // Run in background to avoid timeouts
@@ -101,14 +95,14 @@ export class IngestService {
       try {
         const { bucket: bucketName, path } = this.parseGcsUri(gcsUri);
         const bucket = this.storage.bucket(bucketName);
-        this.logger.log(`[Background] Downloading ${path} from ${bucketName}`);
+        this.logger.info(`[Background] Downloading ${path} from ${bucketName}`);
         const [buffer] = await bucket.file(path).download();
         const text = await this.pdfService.extractText(buffer);
         await this.processDocument(document.id, text, 'application/pdf');
       } catch (error: any) {
-        await this.prisma.document.update({
-          where: { id: document.id },
-          data: { status: 'FAILED', errorMessage: error.message },
+        await this.documentRepository.update(document.id, { 
+          status: 'FAILED', 
+          errorMessage: error.message 
         });
         this.logger.error(`Background ingestion failed for GCS ${document.id}: ${error.message}`);
       }
@@ -118,9 +112,7 @@ export class IngestService {
   }
 
   async reprocessDocument(documentId: string) {
-    const document = await this.prisma.document.findUnique({
-      where: { id: documentId },
-    });
+    const document = await this.documentRepository.findById(documentId);
 
     if (!document) {
       throw new BadRequestException('Document not found');
@@ -130,16 +122,14 @@ export class IngestService {
       throw new BadRequestException('Only GCS-based documents can be reprocessed currently');
     }
 
-    this.logger.log(`Reprocessing document ${documentId}: ${document.title}`);
+    this.logger.info(`Reprocessing document ${documentId}: ${document.title}`);
 
     // Update status to PROCESSING and clear existing chunks
-    await this.prisma.chunk.deleteMany({
-      where: { documentId },
-    });
+    await this.documentRepository.deleteChunksByDocumentId(documentId);
 
-    await this.prisma.document.update({
-      where: { id: documentId },
-      data: { status: 'PROCESSING', errorMessage: null },
+    await this.documentRepository.update(documentId, { 
+      status: 'PROCESSING', 
+      errorMessage: null 
     });
 
     // Run in background to avoid dashboard timeouts
@@ -147,16 +137,16 @@ export class IngestService {
       try {
         const { bucket: bucketName, path } = this.parseGcsUri(document.sourceUri!);
         const bucket = this.storage.bucket(bucketName);
-        this.logger.log(`[Reprocess] Downloading ${path} from ${bucketName}`);
+        this.logger.info(`[Reprocess] Downloading ${path} from ${bucketName}`);
         const [buffer] = await bucket.file(path).download();
-        this.logger.log(`[Reprocess] Downloaded ${buffer.length} bytes, extracting text...`);
+        this.logger.info(`[Reprocess] Downloaded ${buffer.length} bytes, extracting text...`);
         const text = await this.pdfService.extractText(buffer);
-        this.logger.log(`[Reprocess] Extracted ${text.length} chars, starting ingestion...`);
+        this.logger.info(`[Reprocess] Extracted ${text.length} chars, starting ingestion...`);
         await this.processDocument(documentId, text, document.mimeType || 'application/pdf');
       } catch (error: any) {
-        await this.prisma.document.update({
-          where: { id: documentId },
-          data: { status: 'FAILED', errorMessage: error.message },
+        await this.documentRepository.update(documentId, { 
+          status: 'FAILED', 
+          errorMessage: error.message 
         });
         this.logger.error(`Background reprocessing failed for document ${documentId}: ${error.message}`);
       }
@@ -166,24 +156,21 @@ export class IngestService {
   }
 
   async reprocessAllDocuments() {
-    const documents = await this.prisma.document.findMany({
-      where: { sourceType: 'gcs' },
-      select: { id: true, title: true },
-    });
+    const documents = await this.documentRepository.findBySourceType('GCS');
 
-    this.logger.log(`Queueing reprocessing for ${documents.length} GCS documents`);
+    this.logger.info(`Queueing reprocessing for ${documents.length} GCS documents`);
 
     // Run in background
     (async () => {
       for (const doc of documents) {
         try {
           await this.reprocessDocument(doc.id);
-          this.logger.log(`Successfully reprocessed ${doc.id} (${doc.title})`);
+          this.logger.info(`Successfully reprocessed ${doc.id} (${doc.title})`);
         } catch (e: any) {
           this.logger.error(`Failed to reprocess ${doc.id}: ${e.message}`);
         }
       }
-    })().catch(err => {
+    })().catch((err) => {
       this.logger.error('Fatal error in bulk reprocessing background task', err);
     });
 
@@ -201,17 +188,17 @@ export class IngestService {
   }
 
   private async processDocument(documentId: string, text: string, mimeType: string) {
-    this.logger.log(`Processing document ${documentId} with ${text.length} chars`);
+    this.logger.info(`Processing document ${documentId} with ${text.length} chars`);
     const chunks = this.chunkService.chunkText(text);
     if (!chunks.length) {
-      await this.prisma.document.update({
-        where: { id: documentId },
-        data: { status: 'FAILED', errorMessage: 'No extractable text' },
+      await this.documentRepository.update(documentId, { 
+        status: 'FAILED', 
+        errorMessage: 'No extractable text' 
       });
       throw new BadRequestException('No extractable text');
     }
 
-    this.logger.log(`Computing embeddings for ${chunks.length} chunks`);
+    this.logger.info(`Computing embeddings for ${chunks.length} chunks`);
     const embeddings = await Promise.all(chunks.map((chunk) => this.embedService.embedText(chunk.content)));
 
     const chunkData = chunks.map((chunk, idx) => {
@@ -231,60 +218,47 @@ export class IngestService {
       };
     });
 
-    this.logger.log(`Saving ${chunkData.length} chunks to database in batches`);
+    this.logger.info(`Saving ${chunkData.length} chunks to database in batches`);
 
     // Process in batches outside of a transaction to avoid Prisma Accelerate timeouts (15s limit)
     // Reduce batch size for better stability with Accelerate
     const BATCH_SIZE = 10;
     const totalBatches = Math.ceil(chunkData.length / BATCH_SIZE);
-    
+
     for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
       const batch = chunkData.slice(i, i + BATCH_SIZE);
-      this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Processing ${batch.length} chunks for document ${documentId}`);
+      this.logger.info(`[Batch ${batchNumber}/${totalBatches}] Processing ${batch.length} chunks for document ${documentId}`);
 
       try {
         // Use a simpler approach without interactive transaction to avoid Accelerate timeouts
         for (const data of batch) {
           if (data.embeddingSql) {
-            await this.prisma.$executeRawUnsafe(
-              `INSERT INTO "Chunk" ("id", "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "embeddingVec")
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector)`,
-              data.id,
-              data.documentId,
-              data.chunkIndex,
-              data.content,
-              data.contentHash,
-              data.startChar,
-              data.endChar,
-              JSON.stringify(data.embeddingJson),
-              data.embeddingSql,
-            );
+            await this.documentRepository.createChunkWithVector(data);
           } else {
-            await this.prisma.chunk.create({
-              data: {
-                id: data.id,
-                documentId: data.documentId,
-                chunkIndex: data.chunkIndex,
-                content: data.content,
-                contentHash: data.contentHash,
-                startChar: data.startChar,
-                endChar: data.endChar,
-                embeddingJson: data.embeddingJson as any,
-              },
+            await this.documentRepository.createChunk({
+              id: data.id,
+              documentId: data.documentId,
+              chunkIndex: data.chunkIndex,
+              content: data.content,
+              contentHash: data.contentHash,
+              startChar: data.startChar,
+              endChar: data.endChar,
+              embeddingJson: data.embeddingJson,
             });
           }
         }
-        this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
+        this.logger.info(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
       } catch (error: any) {
         this.logger.error(`[Batch ${batchNumber}/${totalBatches}] Failed to save batch: ${error.message}`);
         throw error; // Re-throw to fail the document status
       }
     }
 
-    await this.prisma.document.update({
-      where: { id: documentId },
-      data: { status: 'COMPLETED', mimeType, errorMessage: null },
+    await this.documentRepository.update(documentId, { 
+      status: 'COMPLETED', 
+      mimeType, 
+      errorMessage: null 
     });
 
     return { documentId, status: 'COMPLETED', chunks: chunks.length };

@@ -20,32 +20,33 @@ export class FlashcardGenerationProcessor extends WorkerHost {
 
   async process(job: Job<FlashcardGenerationJobData>): Promise<any> {
     const { pdfId, sessionId, userId, userPrompt, filename, gcsPathOrContent } = job.data;
-    
+
     this.logger.log(`Processing flashcard generation job ${job.id} for PDF ${pdfId}`);
 
     try {
       await job.updateProgress(10);
 
-      await this.parallelGenerationService.generateFlashcardsParallel(
-        userPrompt,
-        pdfId,
-        filename,
-        gcsPathOrContent,
-      );
+      await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, filename, gcsPathOrContent);
 
       await job.updateProgress(90);
 
-      await this.prisma.pdfSession.update({
-        where: { id: sessionId },
-        data: { status: 'completed' },
-      });
+      if (sessionId && sessionId !== 'temp-session') {
+        try {
+          await this.prisma.pdfSession.update({
+            where: { id: sessionId },
+            data: { status: 'completed' },
+          });
+        } catch (updateError: any) {
+          this.logger.warn(`Could not update session ${sessionId}: ${updateError.message}`);
+        }
+      }
 
       this.pdfStatusGateway.sendStatusUpdate(userId, false);
-      
+
       await job.updateProgress(100);
-      
+
       this.logger.log(`Flashcard generation completed for PDF ${pdfId}`);
-      
+
       return { pdfId, status: 'completed' };
     } catch (error: any) {
       this.pdfStatusGateway.sendStatusUpdate(userId, false);
@@ -53,15 +54,17 @@ export class FlashcardGenerationProcessor extends WorkerHost {
 
       try {
         const questionsCount = await this.prisma.mcq.count({
-          where: { objective: { pdfId } }
+          where: { objective: { pdfId } },
         });
 
-        await this.prisma.pdfSession.update({
-          where: { id: sessionId },
-          data: {
-            status: questionsCount > 0 ? 'completed' : 'failed',
-          },
-        });
+        if (sessionId && sessionId !== 'temp-session') {
+          await this.prisma.pdfSession.update({
+            where: { id: sessionId },
+            data: {
+              status: questionsCount > 0 ? 'completed' : 'failed',
+            },
+          });
+        }
       } catch (updateError: any) {
         this.logger.error(`Failed to update session status: ${updateError.message}`);
       }

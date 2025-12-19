@@ -1,5 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class SampleQuestionDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  question: string;
+
+  @ApiProperty({ type: [String] })
+  options: string[];
+}
+
 export class PdfResponseDto {
   @ApiProperty()
   id: string;
@@ -26,6 +37,16 @@ export class PdfResponseDto {
 
   @ApiProperty({ required: false, description: 'The current RAG processing status of the document' })
   status?: string;
+
+  @ApiProperty({ required: false, description: 'Total number of questions available for this PDF' })
+  questionCount?: number;
+
+  @ApiProperty({ 
+    type: [SampleQuestionDto], 
+    required: false, 
+    description: 'Sample questions to preview the test content' 
+  })
+  sampleQuestions?: SampleQuestionDto[];
 }
 
 export class PaginatedPdfResponseDto {

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './shared/logging/winston.config';
 import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -20,6 +22,7 @@ import { QueueModule } from './queue/queue.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    WinstonModule.forRoot(winstonConfig),
     BullModule.forRoot({
       connection: {
         host: process.env.REDIS_HOST || 'localhost',

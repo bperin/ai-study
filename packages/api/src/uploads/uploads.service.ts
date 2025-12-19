@@ -1,10 +1,13 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
+import { PdfRepository } from '../shared/repositories/pdf.repository';
+import { DocumentRepository } from '../shared/repositories/document.repository';
 import { PdfTextService } from '../shared/services/pdf-text.service';
 import { QueueService } from '../queue/queue.service';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 @Injectable()
 export class UploadsService {
@@ -13,17 +16,16 @@ export class UploadsService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly pdfRepository: PdfRepository,
+    private readonly documentRepository: DocumentRepository,
     private readonly pdfTextService: PdfTextService,
     private readonly queueService: QueueService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {
     this.storage = new Storage({
-      projectId:
-        this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') ||
-        'slap-ai-481400',
+      projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'slap-ai-481400',
     });
-    const bucketName =
-      this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
+    const bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
     // Clean up bucket name in case of copy-paste errors (e.g. " -n bucket-name")
     this.bucketName = bucketName.replace(/^-n\s+/, '').trim();
   }
@@ -62,24 +64,21 @@ export class UploadsService {
   }
 
   async confirmUpload(filePath: string, fileName: string, userId: string) {
-    // Save PDF metadata to database
-    const pdf = await this.prisma.pdf.create({
-      data: {
-        filename: fileName,
-        userId: userId,
-        gcsPath: filePath,
-      },
+    // Create PDF record in database
+    this.logger.info('Creating PDF record', { fileName, filePath, userId });
+    
+    const pdf = await this.pdfRepository.create({
+      filename: fileName,
+      gcsPath: filePath,
+      user: { connect: { id: userId } },
     });
 
-    // Create document record for tracking
-    const document = await this.prisma.document.create({
-      data: {
-        title: fileName,
-        sourceType: 'gcs',
-        sourceUri: `gcs://${this.bucketName}/${filePath}`,
-        mimeType: 'application/pdf',
-        status: 'PROCESSING',
-      },
+    // Create document record for RAG
+    const document = await this.documentRepository.create({
+      title: fileName,
+      sourceUri: `gcs://${this.bucketName}/${filePath}`,
+      sourceType: 'PDF',
+      status: 'PROCESSING',
     });
 
     // Queue PDF ingestion job
@@ -91,11 +90,8 @@ export class UploadsService {
       pdfId: pdf.id,
     });
 
-    // Link document to PDF immediately
-    await this.prisma.pdf.update({
-      where: { id: pdf.id },
-      data: { documentId: document.id },
-    });
+    // Link PDF to document
+    await this.pdfRepository.linkToDocument(pdf.id, document.id);
 
     return {
       id: pdf.id,

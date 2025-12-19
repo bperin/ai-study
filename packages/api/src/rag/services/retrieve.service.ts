@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { Chunk } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DocumentRepository } from '../../shared/repositories/document.repository';
 import { EmbedService } from './embed.service';
 import { keywordScore, limitContextByLength } from '../util/score';
 import { cosineSimilarity } from '../util/cosine';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 export interface ScoredChunk extends Chunk {
   score: number;
@@ -14,9 +16,19 @@ export class RetrieveService {
   private readonly defaultTopK = 6;
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly documentRepository: DocumentRepository,
     private readonly embedService: EmbedService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
+
+  async retrieveChunks(pdfFilename: string, gcsPath: string): Promise<Chunk[]> {
+    const document = await this.documentRepository.findByGcsUrisOrTitles([gcsPath], [pdfFilename]);
+    if (!document || document.length === 0) {
+      return [];
+    }
+    const docId = document[0].id;
+    return this.documentRepository.findChunksByDocumentId(docId) as Promise<Chunk[]>;
+  }
 
   async rankChunks(question: string, chunks: Chunk[], requestedTopK?: number): Promise<ScoredChunk[]> {
     const topK = requestedTopK ?? this.defaultTopK;
@@ -32,44 +44,17 @@ export class RetrieveService {
       if (await this.embedService.isEnabled()) {
         const { Prisma } = require('@prisma/client');
         const vectorString = `[${questionEmbedding.join(',')}]`;
-        
-        const results = await this.prisma.$queryRaw<Array<{
-          id: string;
-          documentId: string;
-          chunkIndex: number;
-          content: string;
-          contentHash: string;
-          startChar: number | null;
-          endChar: number | null;
-          embeddingJson: any;
-          createdAt: Date;
-          score: number;
-        }>>`
-          SELECT 
-            id, 
-            "documentId", 
-            "chunkIndex", 
-            "content", 
-            "contentHash", 
-            "startChar", 
-            "endChar", 
-            "embeddingJson", 
-            "createdAt",
-            (1 - ("embeddingVec" <=> ${Prisma.raw(`'${vectorString}'`)}::vector)) as score
-          FROM "Chunk"
-          WHERE "documentId" = ${chunks[0].documentId}
-          ORDER BY score DESC
-          LIMIT ${topK * 2}
-        `;
-        
+
+        const results = await this.documentRepository.queryRawVectorSimilarity(chunks, vectorString, topK);
+
         if (results.length > 0) {
-          scored = results.map(r => ({ ...r, score: Number(r.score) }));
-          console.log(`[RetrieveService] Vector search found ${scored.length} chunks`);
+          scored = results.map((r) => ({ ...r, score: Number(r.score) }));
+          this.logger.info(`Vector search found ${scored.length} chunks`);
         }
       }
     } catch (e) {
-      console.error('[RetrieveService] Vector SQL search failed:', e);
-      console.error('[RetrieveService] Falling back to in-memory search');
+      this.logger.error('Vector SQL search failed', { error: (e as Error).message });
+      this.logger.info('Falling back to in-memory search');
     }
 
     if (scored.length === 0) {
@@ -81,7 +66,7 @@ export class RetrieveService {
           return { ...chunk, score } as ScoredChunk;
         });
       } else {
-        scored = chunks.map((chunk) => ({ ...chunk, score: keywordScore(question, chunk.content) } as ScoredChunk));
+        scored = chunks.map((chunk) => ({ ...chunk, score: keywordScore(question, chunk.content) }) as ScoredChunk);
       }
     }
 

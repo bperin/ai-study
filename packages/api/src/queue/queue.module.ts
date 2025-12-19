@@ -11,24 +11,9 @@ import { PdfsModule } from '../pdfs/pdfs.module';
 import { PdfStatusModule } from '../pdf-status.module';
 
 @Module({
-  imports: [
-    BullModule.registerQueue(
-      { name: 'pdf-ingestion' },
-      { name: 'flashcard-generation' },
-      { name: 'test-analysis' },
-    ),
-    PrismaModule,
-    RagModule,
-    forwardRef(() => PdfsModule),
-    PdfStatusModule,
-  ],
+  imports: [BullModule.registerQueue({ name: 'pdf-ingestion' }, { name: 'flashcard-generation' }, { name: 'test-analysis' }), PrismaModule, RagModule, forwardRef(() => PdfsModule), PdfStatusModule],
   controllers: [QueueController],
-  providers: [
-    QueueService,
-    PdfIngestionProcessor,
-    FlashcardGenerationProcessor,
-    TestAnalysisProcessor,
-  ],
+  providers: [QueueService, PdfIngestionProcessor, FlashcardGenerationProcessor, TestAnalysisProcessor],
   exports: [QueueService, BullModule],
 })
 export class QueueModule {}
