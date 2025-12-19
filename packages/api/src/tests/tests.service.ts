@@ -161,6 +161,12 @@ export class TestsService {
     const mcq = await this.mcqRepository.findById(questionId);
     if (!mcq) throw new NotFoundException('Question not found');
 
+    this.logger?.info('Chat Assist Context', {
+      questionId,
+      questionText: mcq.question,
+      options: mcq.options,
+    });
+
     // Get PDF content - need to fetch the MCQ with objective included
     const mcqWithObjective = await this.mcqRepository.findByIdWithObjective(questionId);
     const pdf = mcqWithObjective?.objective?.pdf;
@@ -186,6 +192,8 @@ export class TestsService {
     const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
     const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, context);
     
+    this.logger?.info('Generated System Prompt', { systemPromptLength: systemPrompt.length, systemPromptPreview: systemPrompt.substring(0, 200) });
+
     let useADK = isAdkAvailable();
     let response = '';
 
@@ -217,8 +225,17 @@ export class TestsService {
         if (runner) {
           // Construct full prompt with history for stateless execution
           const conversationHistory = (history || []).map((msg: any) => `${msg.role === 'user' ? 'Student' : 'AI Tutor'}: ${msg.content}`).join('\n');
-          const fullMessage = conversationHistory ? `${conversationHistory}\n\nStudent: ${message}` : message;
           
+          // INJECT CONTEXT directly into the prompt stream to ensure the model focuses on the CURRENT question
+          // even if previous history confused it.
+          const contextInjection = `\n[SYSTEM: The student is asking about the question: "${mcq.question}". Provide a HINT based on the study material. DO NOT reveal the answer.]\n`;
+          
+          const fullMessage = conversationHistory
+            ? `${conversationHistory}${contextInjection}\nStudent: ${message}`
+            : `${contextInjection}\nStudent: ${message}`;
+          
+          this.logger?.info('Running ADK with injected context', { promptLength: fullMessage.length });
+
           const result = await runner.run({
             agent,
             prompt: fullMessage
@@ -234,6 +251,10 @@ export class TestsService {
     }
 
     if (!useADK) {
+        // For direct Gemini fallback, we also want to ensure context is prioritized
+        // We'll reset the history to ensure the system prompt (which contains the question) is the primary context
+        // If history exists, we append it but ensure the system prompt is FIRST.
+        
         const chat = model.startChat({
         history: [
             { role: 'user', parts: [{ text: systemPrompt }] },
@@ -245,7 +266,8 @@ export class TestsService {
         ],
         });
 
-        const result = await chat.sendMessage(message);
+        // Add a reminder about the context in the message itself
+        const result = await chat.sendMessage(`[Context: Question "${mcq.question}"] ${message}`);
         response = result.response.text();
     }
 
@@ -346,18 +368,28 @@ export class TestsService {
         try {
           this.logger?.info('Using centralized ADK runner for chat assistance');
 
-          const { LlmAgent } = require('@google/adk');
-          const agent = new LlmAgent({
-            name: 'ai_tutor',
-            description: 'AI tutor to help students with questions',
-            model: 'gemini-2.5-flash',
-            instruction: `You are an AI tutor helping a student with a specific question. Your goal is to guide them to the answer without giving it away directly.
+          // Use the shared helper to create the agent with the ROBUST prompt
+          const { createTestAssistanceAgent } = require('../ai/agents');
+          
+          const agent = createTestAssistanceAgent(
+            question.question,
+            question.options,
+            this.retrieveService,
+            pdf.filename || 'Document',
+            pdf.gcsPath || ''
+          );
 
-Context from the document:
-${ragContext || context}`
+          // INJECT CONTEXT directly into the prompt stream to ensure the model focuses on the CURRENT question
+          // even if previous history confused it.
+          const contextInjection = `\n[SYSTEM: The student is asking about the question: "${question.question}". Provide a HINT based on the study material. DO NOT reveal the answer.]\n`;
+          const fullMessage = `${contextInjection}\nStudent: ${message}`;
+
+          this.logger?.info('Running ADK Agent with prompt', {
+            question: question.question,
+            promptLength: fullMessage.length
           });
 
-          const responseText = await this.adkRunner.runAgent(agent, userId, message, 'ai-tutor');
+          const responseText = await this.adkRunner.runAgent(agent, userId, fullMessage, 'ai-tutor');
 
           return {
             message: responseText,
