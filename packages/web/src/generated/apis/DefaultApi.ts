@@ -55,6 +55,58 @@ export interface TestSessionsControllerGetSessionRequest {
 export class DefaultApi extends runtime.BaseAPI {
   /**
    */
+  async appControllerCheckAdkHealthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/health/adk`,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async appControllerCheckAdkHealth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.appControllerCheckAdkHealthRaw(initOverrides);
+  }
+
+  /**
+   */
+  async appControllerGetHealthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/health`,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   */
+  async appControllerGetHealth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.appControllerGetHealthRaw(initOverrides);
+  }
+
+  /**
+   */
   async appControllerGetHelloRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
     const queryParameters: any = {};
 

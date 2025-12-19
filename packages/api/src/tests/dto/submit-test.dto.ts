@@ -21,5 +21,5 @@ export class SubmitTestDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AnswerDto)
-  answers: AnswerDto[];
+  userAnswers: AnswerDto[];
 }

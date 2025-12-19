@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { createAdkRunner, isAdkAvailable } from '../ai/adk.helpers';
 import { createTestAssistanceAgent } from '../ai/agents';
-import { PdfTextService } from '../pdfs/pdf-text.service';
+import { PdfTextService } from '../shared/services/pdf-text.service';
 import { GcsService } from '../pdfs/gcs.service';
 import { GEMINI_MODEL } from '../constants/models';
 
@@ -18,7 +18,7 @@ export interface TestSessionState {
   totalQuestions: number;
 
   // Answer tracking
-  answers: {
+  userAnswers: {
     questionId: string;
     questionNumber: number;
     questionText: string;
@@ -84,7 +84,7 @@ export class TestTakingService {
         completedAt: null,
       },
       include: {
-        answers: {
+        userAnswers: {
           include: { mcq: { include: { objective: true } } },
           orderBy: { createdAt: 'asc' },
         },
@@ -101,10 +101,10 @@ export class TestTakingService {
         data: {
           userId,
           pdfId,
-          total: totalQuestions,
+          totalQuestions: totalQuestions,
         },
         include: {
-          answers: {
+          userAnswers: {
             include: { mcq: { include: { objective: true } } },
           },
         },
@@ -121,7 +121,7 @@ export class TestTakingService {
     const attempt = await this.prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
-        answers: {
+        userAnswers: {
           include: { mcq: { include: { objective: true } } },
           orderBy: { createdAt: 'asc' },
         },
@@ -185,7 +185,7 @@ export class TestTakingService {
       userId: attempt.userId,
       currentQuestionIndex: processedAnswers.length,
       totalQuestions: questions.length, // Or attempt.total if fixed
-      answers: processedAnswers,
+      userAnswers: processedAnswers,
       correctCount,
       incorrectCount,
       currentStreak,
@@ -257,7 +257,7 @@ export class TestTakingService {
     const attempt = await this.prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
-        answers: {
+        userAnswers: {
           include: { mcq: { include: { objective: true } } },
           orderBy: { createdAt: 'asc' },
         },
@@ -282,7 +282,7 @@ export class TestTakingService {
 
     // Update in-memory state simulation for immediate feedback
     // (This part is just to calculate the *next* state for the return value)
-    state.answers.push({
+    state.userAnswers.push({
       questionId,
       questionNumber: state.currentQuestionIndex + 1,
       questionText: question.question,
@@ -337,7 +337,7 @@ export class TestTakingService {
 
     return {
       isCorrect,
-      currentScore: `${state.correctCount}/${state.answers.length}`,
+      currentScore: `${state.correctCount}/${state.userAnswers.length}`,
       currentStreak: state.currentStreak,
       progress: `${state.currentQuestionIndex}/${state.totalQuestions}`,
       encouragement,
@@ -353,11 +353,11 @@ export class TestTakingService {
 
     if (state.currentStreak >= 5) {
       template = '🔥 On fire! [CURRENT_STREAK] correct in a row! [PROGRESS]';
-    } else if (state.answers.length > 0 && state.correctCount / state.answers.length > 0.8) {
+    } else if (state.userAnswers.length > 0 && state.correctCount / state.userAnswers.length > 0.8) {
       template = "⭐ Excellent work! [CURRENT_SCORE] - you're mastering this!";
-    } else if (state.answers.length > 0 && state.answers[state.answers.length - 1].isCorrect) {
+    } else if (state.userAnswers.length > 0 && state.userAnswers[state.userAnswers.length - 1].isCorrect) {
       template = '✅ Correct! [CURRENT_SCORE]. [PROGRESS]';
-    } else if (state.incorrectCount > state.correctCount && state.answers.length > 0) {
+    } else if (state.incorrectCount > state.correctCount && state.userAnswers.length > 0) {
       template = 'Keep going! Learning from mistakes is progress. [PROGRESS]';
     } else {
       template = 'Nice! [CURRENT_SCORE]. [PROGRESS]';
@@ -381,7 +381,7 @@ export class TestTakingService {
       .join(', ');
 
     const currentTopic =
-      state.answers.length > 0
+      state.userAnswers.length > 0
         ? (() => {
             // Find topic from topicScores
             for (const [_, score] of state.topicScores.entries()) {
@@ -392,13 +392,13 @@ export class TestTakingService {
         : '';
 
     const replacements: Record<string, string> = {
-      '[CURRENT_SCORE]': `${state.correctCount}/${state.answers.length}`,
+      '[CURRENT_SCORE]': `${state.correctCount}/${state.userAnswers.length}`,
       '[CORRECT_COUNT]': state.correctCount.toString(),
       '[INCORRECT_COUNT]': state.incorrectCount.toString(),
       '[CURRENT_STREAK]': state.currentStreak.toString(),
       '[PROGRESS]': `Question ${state.currentQuestionIndex}/${state.totalQuestions}`,
       '[TIME_ELAPSED]': `${Math.floor(state.totalTimeSpent / 60)} minutes`,
-      '[LAST_ANSWER]': state.answers.length > 0 ? (state.answers[state.answers.length - 1].isCorrect ? 'correct' : 'incorrect') : '',
+      '[LAST_ANSWER]': state.userAnswers.length > 0 ? (state.userAnswers[state.userAnswers.length - 1].isCorrect ? 'correct' : 'incorrect') : '',
       '[WEAK_TOPICS]': weakTopics || 'None yet',
       '[STRONG_TOPICS]': strongTopics || 'Building...',
       '[HINTS_USED]': state.totalHintsUsed.toString(),
@@ -420,7 +420,7 @@ export class TestTakingService {
     const attempt = await this.prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
-        answers: {
+        userAnswers: {
           include: { mcq: { include: { objective: true } } },
           orderBy: { createdAt: 'asc' },
         },
@@ -439,11 +439,10 @@ export class TestTakingService {
     await this.prisma.testAttempt.update({
       where: { id: attemptId },
       data: {
-        score: state.correctCount,
-        total: state.totalQuestions,
+        totalQuestions: state.totalQuestions,
+        percentage,
         completedAt: new Date(),
-        feedback: feedback as any, // Save feedback JSON
-        summary: feedback.aiSummary, // Save AI summary as text blob
+        summary: feedback.aiSummary,
       },
     });
 
@@ -475,7 +474,7 @@ export class TestTakingService {
     const weaknesses = byObjective.filter((obj) => obj.percentage < 60).map((obj) => obj.objectiveTitle);
 
     // Get wrong answers with details
-    const wrongAnswers = state.answers
+    const wrongAnswers = state.userAnswers
       .filter((a) => !a.isCorrect)
       .map((a) => ({
         question: a.questionText,

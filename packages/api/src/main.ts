@@ -5,9 +5,12 @@ import * as fs from 'fs';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import { createSwaggerDocument } from './swagger-config';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Increase timeout for long-running AI operations (10 minutes)
   app.use((req, res, next) => {

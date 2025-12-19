@@ -13,40 +13,71 @@ export class AdkRunnerService implements OnModuleInit {
 
     private async initializeAdkRunner() {
         try {
-            if (!isAdkAvailable()) {
+            this.logger.log('[ADK] Starting initialization...');
+            
+            const available = isAdkAvailable();
+            this.logger.log(`[ADK] Availability check: ${available}`);
+            
+            if (!available) {
                 this.isAdkAvailable = false;
-                this.logger.warn('❌ ADK not available - services will use Gemini fallback');
+                this.logger.warn('[ADK] ❌ ADK not available - services will use Gemini fallback');
                 return;
             }
 
+            this.logger.log('[ADK] Loading LlmAgent from @google/adk...');
             const { LlmAgent } = require('@google/adk');
+            this.logger.log('[ADK] ✓ LlmAgent loaded successfully');
+            
+            this.logger.log('[ADK] Creating CustomSessionService...');
             this.sessionService = new CustomSessionService();
+            this.logger.log('[ADK] ✓ CustomSessionService created');
 
+            this.logger.log('[ADK] Creating test agent...');
             const testAgent = new LlmAgent({
                 name: 'test_agent',
                 description: 'test',
                 model: 'gemini-2.5-flash',
                 instruction: 'test'
             });
+            this.logger.log(`[ADK] ✓ Test agent created: ${testAgent.name}`);
 
+            this.logger.log('[ADK] Creating test runner...');
             const testRunner = createAdkRunner({
                 agent: testAgent,
                 appName: 'ai-study-test',
                 sessionService: this.sessionService,
             });
+            this.logger.log(`[ADK] Test runner created: ${!!testRunner}`);
 
             if (!testRunner) {
                 this.isAdkAvailable = false;
-                this.logger.warn('❌ ADK initialization failed - services will use Gemini fallback');
+                this.logger.error('[ADK] ❌ Runner creation returned null');
+                this.logger.warn('[ADK] Services will use Gemini fallback');
                 return;
             }
 
+            this.logger.log('[ADK] Testing runner execution...');
+            try {
+                const testSession = await createAdkSession(testRunner, {
+                    appName: 'ai-study-test',
+                    userId: 'test-user',
+                    sessionId: 'test-session',
+                });
+                this.logger.log(`[ADK] ✓ Test session created: ${!!testSession}`);
+            } catch (execError) {
+                this.logger.error('[ADK] ❌ Test execution failed:', execError);
+                this.logger.error('[ADK] Error stack:', (execError as Error).stack);
+                throw execError;
+            }
+
             this.isAdkAvailable = true;
-            this.logger.log('✅ ADK Runner Service initialized successfully');
+            this.logger.log('[ADK] ✅ ADK Runner Service initialized successfully');
 
         } catch (error) {
             this.isAdkAvailable = false;
-            this.logger.warn('❌ ADK not available - services will use Gemini fallback', (error as Error).message);
+            this.logger.error('[ADK] ❌ Initialization failed:', (error as Error).message);
+            this.logger.error('[ADK] Error stack:', (error as Error).stack);
+            this.logger.warn('[ADK] Services will use Gemini fallback');
         }
     }
 
@@ -219,34 +250,42 @@ class CustomSessionService {
     }
 
     async getSession(arg1: any, arg2?: any, arg3?: any) {
-        console.error(`[CustomSession] getSession called with:`, arg1, arg2, arg3);
-        // Handle different signatures: (sessionId) or (app, user, sessionId)
-        let sessionId = null;
+        console.log(`[CustomSession] getSession called with args:`, { arg1: typeof arg1, arg2: typeof arg2, arg3: typeof arg3 });
+        
+        let sessionId: string | null = null;
 
-        // Direct lookup if arg1 is the ID
-        if (typeof arg1 === 'string' && this.sessions.has(arg1)) {
-            return this.sessions.get(arg1);
-        }
-
-        if (typeof arg1 === 'string' && !arg2) {
+        // Signature 1: (sessionId)
+        if (typeof arg1 === 'string' && !arg2 && !arg3) {
             sessionId = arg1;
-        } else if (typeof arg3 === 'string') {
+        }
+        // Signature 2: (appName, userId, sessionId)
+        else if (typeof arg1 === 'string' && typeof arg2 === 'string' && typeof arg3 === 'string') {
             sessionId = arg3;
-        } else if (typeof arg1 === 'object' && arg1.sessionId) {
+        }
+        // Signature 3: ({ sessionId, ... })
+        else if (typeof arg1 === 'object' && arg1 !== null && arg1.sessionId) {
             sessionId = arg1.sessionId;
         }
-
-        if (sessionId && this.sessions.has(sessionId)) {
-            return this.sessions.get(sessionId);
+        // Signature 4: Direct session object passed
+        else if (typeof arg1 === 'object' && arg1 !== null && arg1.id) {
+            sessionId = arg1.id;
         }
 
-        // Try finding by ID directly if arg1 matches a key
-        if (typeof arg1 === 'string' && this.sessions.has(arg1)) {
-            return this.sessions.get(arg1);
+        if (!sessionId) {
+            console.error('[CustomSession] Could not extract sessionId from arguments');
+            console.error('[CustomSession] Available sessions:', Array.from(this.sessions.keys()));
+            return null;
         }
 
-        console.warn(`[CustomSession] Session not found. Lookup args:`, arg1, arg2, arg3);
-        return null;
+        const session = this.sessions.get(sessionId);
+        if (!session) {
+            console.warn(`[CustomSession] Session not found: ${sessionId}`);
+            console.warn('[CustomSession] Available sessions:', Array.from(this.sessions.keys()));
+        } else {
+            console.log(`[CustomSession] Session found: ${sessionId}`);
+        }
+        
+        return session || null;
     }
 
     async updateSession(session: any) {

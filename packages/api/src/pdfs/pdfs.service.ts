@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { GcsService } from './gcs.service';
-import { PdfTextService } from './pdf-text.service';
+import { PdfTextService } from '../shared/services/pdf-text.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TEST_PLAN_CHAT_PROMPT } from '../ai/prompts';
 import { createAdkRunner } from '../ai/adk.helpers';
@@ -24,6 +24,46 @@ export class PdfsService {
     private readonly retrieveService: RetrieveService,
     private readonly pdfStatusGateway: PdfStatusGateway,
   ) { }
+
+  async getRagStatus(pdfId: string) {
+    const pdf = await this.prisma.pdf.findUnique({
+      where: { id: pdfId },
+      include: {
+        document: {
+          select: {
+            id: true,
+            status: true,
+            errorMessage: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: { chunks: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!pdf) {
+      throw new NotFoundException('PDF not found');
+    }
+
+    if (!pdf.document) {
+      return {
+        status: 'not_started',
+        message: 'RAG ingestion has not been triggered',
+      };
+    }
+
+    return {
+      status: pdf.document.status.toLowerCase(),
+      documentId: pdf.document.id,
+      chunkCount: pdf.document._count.chunks,
+      errorMessage: pdf.document.errorMessage,
+      createdAt: pdf.document.createdAt,
+      updatedAt: pdf.document.updatedAt,
+    };
+  }
 
   async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
     // 1. Get PDF from database

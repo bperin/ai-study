@@ -28,6 +28,12 @@ export class PdfsController {
     return this.pdfsService.getObjectives(pdfId);
   }
 
+  @Get(':id/rag-status')
+  @ApiOperation({ summary: 'Check RAG ingestion status for a PDF' })
+  getRagStatus(@Param('id') pdfId: string) {
+    return this.pdfsService.getRagStatus(pdfId);
+  }
+
   @Get()
   @ApiOperation({ summary: 'List all PDFs for the user with pagination' })
   @ApiResponse({ status: 200, type: PaginatedPdfResponseDto })

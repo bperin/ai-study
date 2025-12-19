@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { PdfTextService } from '../pdfs/pdf-text.service';
+import { PdfTextService } from '../shared/services/pdf-text.service';
 import { IngestService } from '../rag/services/ingest.service';
 
 @Injectable()
@@ -67,15 +67,26 @@ export class UploadsService {
       data: {
         filename: fileName,
         userId: userId,
-        gcsPath: filePath, // Store GCS path
+        gcsPath: filePath,
       },
     });
 
-    // Trigger RAG ingestion (non-blocking)
+    // Trigger RAG ingestion and link document
     const gcsUri = `gcs://${this.bucketName}/${filePath}`;
-    this.ingestService.createFromGcs(fileName, gcsUri).catch(error => {
-      console.error(`[RAG Ingestion] Failed to trigger ingestion for PDF ${pdf.id}: ${error.message}`);
-    });
+    
+    this.ingestService.createFromGcs(fileName, gcsUri)
+      .then(async (result) => {
+        if (result?.documentId) {
+          await this.prisma.pdf.update({
+            where: { id: pdf.id },
+            data: { documentId: result.documentId },
+          });
+          console.log(`[Upload] Linked PDF ${pdf.id} to Document ${result.documentId}`);
+        }
+      })
+      .catch(error => {
+        console.error(`[Upload] Failed to ingest/link PDF ${pdf.id}: ${error.message}`);
+      });
 
     return {
       id: pdf.id,

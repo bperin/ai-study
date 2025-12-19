@@ -40,7 +40,7 @@ export class TestSessionStateDto {
   totalQuestions: number;
 
   @ApiProperty({ type: [TestSessionAnswerDto] })
-  answers: TestSessionAnswerDto[];
+  userAnswers: TestSessionAnswerDto[];
 
   @ApiProperty()
   correctCount: number;
