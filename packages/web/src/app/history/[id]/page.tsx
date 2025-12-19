@@ -86,16 +86,16 @@ export default function HistoryDetailsPage() {
                     </CardHeader>
                     <CardContent className="pt-6 bg-background/50">
                         <div
-                            className="prose prose-slate dark:prose-invert max-w-none prose-sm prose-headings:text-primary prose-a:text-blue-600 hover:prose-a:text-blue-800 prose-a:underline break-words prose-p:leading-relaxed prose-li:my-1"
+                            className="prose prose-slate dark:prose-invert max-w-none prose-sm text-xs prose-headings:text-primary prose-a:text-blue-600 hover:prose-a:text-blue-800 prose-a:underline break-words prose-p:leading-relaxed prose-li:my-1"
                             dangerouslySetInnerHTML={{
                                 __html: (attempt.report || attempt.summary || "")
                                     // Enhanced markdown parsing
                                     .replace(/\n\n/g, "</p><p class='mt-4'>")
                                     .replace(/\n/g, "<br>")
                                     .replace(/\*\*(.*?)\*\*/g, "<strong class='font-semibold text-foreground'>$1</strong>")
-                                    .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 text-primary border-b-2 border-primary/20 pb-2">$1</h1>')
-                                    .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-6 mb-3 text-primary/90 border-b border-primary/10 pb-1">$1</h2>')
-                                    .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mt-4 mb-2 text-primary/80">$1</h3>')
+                                    .replace(/^# (.*$)/gm, '<h1 class="text-lg font-bold mt-4 mb-3 text-primary border-b border-primary/20 pb-1">$1</h1>')
+                                    .replace(/^## (.*$)/gm, '<h2 class="text-base font-bold mt-4 mb-2 text-primary/90 border-b border-primary/10 pb-1">$1</h2>')
+                                    .replace(/^### (.*$)/gm, '<h3 class="text-sm font-semibold mt-3 mb-1 text-primary/80">$1</h3>')
                                     .replace(/^- (.*$)/gm, '<li class="ml-4 list-disc my-1 leading-relaxed">$1</li>')
                                     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800 font-medium">$1 ↗</a>')
                                     .replace(/^<p class='mt-4'>/, "<p>"), // Remove first paragraph margin
