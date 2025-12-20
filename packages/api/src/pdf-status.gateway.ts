@@ -3,10 +3,11 @@ import { Server, Socket } from 'socket.io';
 
 export interface PdfStatusUpdate {
   isGenerating?: boolean;
+  type?: 'flashcards' | 'ingestion' | string;
   phase?: 'chunking' | 'flashcards' | string;
   status?: 'running' | 'completed' | 'failed';
   message?: string;
-  progress?: number;
+  progress?: number | { current: number; total: number };
   current?: number;
   total?: number;
   pdfId?: string;

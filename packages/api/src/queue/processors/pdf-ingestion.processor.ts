@@ -81,11 +81,7 @@ export class PdfIngestionProcessor extends WorkerHost {
       const result = await this.processDocument(documentId, text, 'application/pdf', job);
 
       if (pdfId) {
-        await this.prisma.pdf.update({
-          where: { id: pdfId },
-          data: { documentId },
-        });
-        this.logger.log(`Linked PDF ${pdfId} to Document ${documentId}`);
+        this.logger.log(`Processed ingestion for PDF ${pdfId} and document ${documentId}`);
       }
 
       await job.updateProgress(100);

@@ -20,26 +20,6 @@ export class PdfRepository implements BaseRepository<Pdf, Prisma.PdfCreateInput,
     });
   }
 
-  async findWithDocument(id: string): Promise<(Pdf & { document?: any }) | null> {
-    return this.prisma.pdf.findUnique({
-      where: { id },
-      include: {
-        document: {
-          select: {
-            id: true,
-            status: true,
-            errorMessage: true,
-            createdAt: true,
-            updatedAt: true,
-            _count: {
-              select: { chunks: true },
-            },
-          },
-        },
-      },
-    });
-  }
-
   async findMany(where?: Prisma.PdfWhereInput, skip?: number, take?: number): Promise<Pdf[]> {
     return this.prisma.pdf.findMany({
       where,
@@ -71,13 +51,6 @@ export class PdfRepository implements BaseRepository<Pdf, Prisma.PdfCreateInput,
   async count(where?: Prisma.PdfWhereInput): Promise<number> {
     return this.prisma.pdf.count({
       where,
-    });
-  }
-
-  async linkToDocument(id: string, documentId: string): Promise<Pdf> {
-    return this.prisma.pdf.update({
-      where: { id },
-      data: { documentId },
     });
   }
 

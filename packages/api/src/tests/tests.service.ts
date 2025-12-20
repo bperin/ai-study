@@ -29,13 +29,13 @@ export class TestsService {
 
   async submitTest(userId: string, dto: SubmitTestDto) {
     // 1. Fetch MCQs to check answers
-    const mcqIds = dto.answers.map((a) => a.mcqId);
+    const mcqIds = dto.userAnswers.map((a) => a.mcqId);
     const mcqs = await this.testsRepository.findMcqsByIds(mcqIds);
     const mcqMap = new Map<string, Mcq>(mcqs.map((m) => [m.id, m]));
 
     // 2. Calculate score and prepare answers
     let score = 0;
-    const answerData = dto.answers.map((answer) => {
+    const answerData = dto.userAnswers.map((answer) => {
       const mcq = mcqMap.get(answer.mcqId);
       if (!mcq) throw new Error(`MCQ not found: ${answer.mcqId}`);
 
@@ -50,7 +50,7 @@ export class TestsService {
     });
 
     // 3. Create Attempt
-    const total = dto.answers.length;
+    const total = dto.userAnswers.length;
 
     return this.testsRepository.createCompletedAttempt(userId, dto.pdfId, score, total, answerData);
   }

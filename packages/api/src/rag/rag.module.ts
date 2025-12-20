@@ -15,6 +15,6 @@ import { PdfStatusModule } from '../pdf-status.module';
   imports: [RagRepositoryModule, UsersModule, PdfStatusModule],
   controllers: [RagController],
   providers: [IngestService, PdfService, ChunkService, EmbedService, RetrieveService, RagService, GeminiService],
-  exports: [IngestService, RetrieveService, RagService, RagRepositoryModule],
+  exports: [IngestService, RetrieveService, RagService, RagRepositoryModule, PdfService, ChunkService, EmbedService],
 })
 export class RagModule {}

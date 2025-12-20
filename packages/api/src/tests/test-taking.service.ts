@@ -18,7 +18,7 @@ export interface TestSessionState {
   totalQuestions: number;
 
   // Answer tracking
-  answers: {
+  userAnswers: {
     questionId: string;
     questionNumber: number;
     questionText: string;
@@ -105,7 +105,7 @@ export class TestTakingService {
   private async rehydrateState(attempt: any): Promise<TestSessionState> {
     const questions = await this.testsRepository.findMcqsByPdfId(attempt.pdfId);
     // @ts-ignore
-    const answers = attempt.answers || [];
+    const dbAnswers = attempt.answers || [];
 
     // Calculate metrics from existing answers
     let correctCount = 0;
@@ -115,7 +115,7 @@ export class TestTakingService {
     let totalTimeSpent = 0;
     const topicScores = new Map<string, { correct: number; total: number; objectiveTitle: string }>();
 
-    const processedAnswers = answers.map((a: any, index: number) => {
+    const processedAnswers = dbAnswers.map((a: any, index: number) => {
       const isCorrect = a.isCorrect;
       if (isCorrect) {
         correctCount++;
@@ -159,7 +159,7 @@ export class TestTakingService {
       userId: attempt.userId,
       currentQuestionIndex: processedAnswers.length,
       totalQuestions: questions.length, // Or attempt.total if fixed
-      answers: processedAnswers,
+      userAnswers: processedAnswers,
       correctCount,
       incorrectCount,
       currentStreak,
@@ -234,7 +234,7 @@ export class TestTakingService {
 
     // Update in-memory state simulation for immediate feedback
     // (This part is just to calculate the *next* state for the return value)
-    state.answers.push({
+    state.userAnswers.push({
       questionId,
       questionNumber: state.currentQuestionIndex + 1,
       questionText: question.question,
@@ -273,7 +273,7 @@ export class TestTakingService {
 
     return {
       isCorrect,
-      currentScore: `${state.correctCount}/${state.answers.length}`,
+      currentScore: `${state.correctCount}/${state.userAnswers.length}`,
       currentStreak: state.currentStreak,
       progress: `${state.currentQuestionIndex}/${state.totalQuestions}`,
       encouragement,
@@ -289,11 +289,11 @@ export class TestTakingService {
 
     if (state.currentStreak >= 5) {
       template = '🔥 On fire! [CURRENT_STREAK] correct in a row! [PROGRESS]';
-    } else if (state.answers.length > 0 && state.correctCount / state.answers.length > 0.8) {
+    } else if (state.userAnswers.length > 0 && state.correctCount / state.userAnswers.length > 0.8) {
       template = "⭐ Excellent work! [CURRENT_SCORE] - you're mastering this!";
-    } else if (state.answers.length > 0 && state.answers[state.answers.length - 1].isCorrect) {
+    } else if (state.userAnswers.length > 0 && state.userAnswers[state.userAnswers.length - 1].isCorrect) {
       template = '✅ Correct! [CURRENT_SCORE]. [PROGRESS]';
-    } else if (state.incorrectCount > state.correctCount && state.answers.length > 0) {
+    } else if (state.incorrectCount > state.correctCount && state.userAnswers.length > 0) {
       template = 'Keep going! Learning from mistakes is progress. [PROGRESS]';
     } else {
       template = 'Nice! [CURRENT_SCORE]. [PROGRESS]';
@@ -317,7 +317,7 @@ export class TestTakingService {
       .join(', ');
 
     const currentTopic =
-      state.answers.length > 0
+      state.userAnswers.length > 0
         ? (() => {
             // Find topic from topicScores
             for (const [_, score] of state.topicScores.entries()) {
@@ -328,13 +328,13 @@ export class TestTakingService {
         : '';
 
     const replacements: Record<string, string> = {
-      '[CURRENT_SCORE]': `${state.correctCount}/${state.answers.length}`,
+      '[CURRENT_SCORE]': `${state.correctCount}/${state.userAnswers.length}`,
       '[CORRECT_COUNT]': state.correctCount.toString(),
       '[INCORRECT_COUNT]': state.incorrectCount.toString(),
       '[CURRENT_STREAK]': state.currentStreak.toString(),
       '[PROGRESS]': `Question ${state.currentQuestionIndex}/${state.totalQuestions}`,
       '[TIME_ELAPSED]': `${Math.floor(state.totalTimeSpent / 60)} minutes`,
-      '[LAST_ANSWER]': state.answers.length > 0 ? (state.answers[state.answers.length - 1].isCorrect ? 'correct' : 'incorrect') : '',
+      '[LAST_ANSWER]': state.userAnswers.length > 0 ? (state.userAnswers[state.userAnswers.length - 1].isCorrect ? 'correct' : 'incorrect') : '',
       '[WEAK_TOPICS]': weakTopics || 'None yet',
       '[STRONG_TOPICS]': strongTopics || 'Building...',
       '[HINTS_USED]': state.totalHintsUsed.toString(),
@@ -394,7 +394,7 @@ export class TestTakingService {
     const weaknesses = byObjective.filter((obj) => obj.percentage < 60).map((obj) => obj.objectiveTitle);
 
     // Get wrong answers with details
-    const wrongAnswers = state.answers
+    const wrongAnswers = state.userAnswers
       .filter((a) => !a.isCorrect)
       .map((a) => ({
         question: a.questionText,

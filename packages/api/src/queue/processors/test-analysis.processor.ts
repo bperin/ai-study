@@ -28,7 +28,7 @@ export class TestAnalysisProcessor extends WorkerHost {
       const attempt = await this.prisma.testAttempt.findUnique({
         where: { id: testId },
         include: {
-          userAnswers: {
+          answers: {
             include: { mcq: true },
           },
         },
@@ -41,7 +41,7 @@ export class TestAnalysisProcessor extends WorkerHost {
       await job.updateProgress(30);
 
       // 2. Prepare data for analysis
-      const missedQuestions = attempt.userAnswers
+      const missedQuestions = attempt.answers
         .filter((answer: any) => !answer.isCorrect)
         .map((answer: any) => ({
           questionText: answer.mcq.question,
@@ -50,7 +50,7 @@ export class TestAnalysisProcessor extends WorkerHost {
           explanation: answer.mcq.explanation || '',
         }));
 
-      const allAnswers = attempt.userAnswers.map((answer: any) => ({
+      const allAnswers = attempt.answers.map((answer: any) => ({
         questionText: answer.mcq.question,
         selectedAnswer: answer.mcq.options[answer.selectedIdx],
         correctAnswer: answer.mcq.options[answer.mcq.correctIdx],
