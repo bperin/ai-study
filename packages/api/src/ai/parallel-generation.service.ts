@@ -70,9 +70,7 @@ export class ParallelGenerationService {
     // user prompt for each chunk to only ask for that chunk's specific questions,
     // which is complex to do reliably with natural language prompts.
 
-    const generationPromises = tasks.map((task, index) =>
-      this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt, progress, index, totalBatches),
-    );
+    const generationPromises = tasks.map((task, index) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt, progress, index, totalBatches));
 
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
@@ -159,17 +157,7 @@ export class ParallelGenerationService {
   /**
    * Generate questions for a specific difficulty level
    */
-  private async generateQuestionsForDifficulty(
-    difficulty: 'easy' | 'medium' | 'hard',
-    count: number,
-    pdfId: string,
-    pdfFilename: string,
-    gcsPath: string,
-    userPrompt: string,
-    progress?: (update: FlashcardGenerationProgress) => void,
-    batchIndex?: number,
-    totalBatches?: number,
-  ): Promise<{ objectivesCreated: number; questionsCreated: number }> {
+  private async generateQuestionsForDifficulty(difficulty: 'easy' | 'medium' | 'hard', count: number, pdfId: string, pdfFilename: string, gcsPath: string, userPrompt: string, progress?: (update: FlashcardGenerationProgress) => void, batchIndex?: number, totalBatches?: number): Promise<{ objectivesCreated: number; questionsCreated: number }> {
     progress?.({
       status: 'running',
       message: `Generating ${count} ${difficulty} questions`,

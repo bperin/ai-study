@@ -23,7 +23,7 @@ export class UsersRepository {
       data: {
         email,
         password,
-        isAdmin: false
+        isAdmin: false,
       },
     });
   }
