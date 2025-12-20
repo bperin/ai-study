@@ -1,13 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Mcq, Objective, TestAttempt, UserAnswer } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTestAttemptRecordDto } from './dto/create-test-attempt-record.dto';
-import { CreateCompletedTestAttemptRecordDto } from './dto/create-completed-test-attempt-record.dto';
-import { UpdateTestAttemptRecordDto } from './dto/update-test-attempt-record.dto';
-import { CreateUserAnswerRecordDto } from './dto/create-user-answer-record.dto';
-import { UpdateUserAnswerRecordDto } from './dto/update-user-answer-record.dto';
-import { CreateObjectiveRecordDto } from './dto/create-objective-record.dto';
-
 @Injectable()
 export class TestsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -112,14 +105,14 @@ export class TestsRepository {
     });
   }
 
-  async createAttempt(data: CreateTestAttemptRecordDto): Promise<TestAttempt & { answers: UserAnswer[] }> {
+  async createAttempt(userId: string, pdfId: string, total: number, score: number = 0, percentage?: number | null): Promise<TestAttempt & { answers: UserAnswer[] }> {
     return this.prisma.testAttempt.create({
       data: {
-        userId: data.userId,
-        pdfId: data.pdfId,
-        total: data.total,
-        score: data.score ?? 0,
-        percentage: data.percentage ?? null,
+        userId,
+        pdfId,
+        total,
+        score,
+        percentage: percentage ?? null,
       },
       include: {
         answers: true,
@@ -127,17 +120,17 @@ export class TestsRepository {
     });
   }
 
-  async createCompletedAttempt(data: CreateCompletedTestAttemptRecordDto): Promise<TestAttempt> {
+  async createCompletedAttempt(userId: string, pdfId: string, score: number, total: number, answers: Array<{ mcqId: string; selectedIdx: number; isCorrect: boolean }>): Promise<TestAttempt> {
     return this.prisma.testAttempt.create({
       data: {
-        userId: data.userId,
-        pdfId: data.pdfId,
-        score: data.score,
-        total: data.total,
-        percentage: data.total > 0 ? (data.score / data.total) * 100 : 0,
+        userId,
+        pdfId,
+        score,
+        total,
+        percentage: total > 0 ? (score / total) * 100 : 0,
         completedAt: new Date(),
         answers: {
-          create: data.answers.map((answer) => ({
+          create: answers.map((answer) => ({
             mcqId: answer.mcqId,
             selectedIdx: answer.selectedIdx,
             isCorrect: answer.isCorrect,
@@ -148,14 +141,14 @@ export class TestsRepository {
     });
   }
 
-  async updateAttempt(id: string, data: UpdateTestAttemptRecordDto): Promise<TestAttempt> {
+  async updateAttempt(id: string, score?: number, total?: number, percentage?: number | null, completedAt?: Date | null, summary?: string | null, feedback?: string | null): Promise<TestAttempt> {
     const payload: Record<string, any> = {};
-    if (data.score !== undefined) payload.score = data.score;
-    if (data.total !== undefined) payload.total = data.total;
-    if (data.percentage !== undefined) payload.percentage = data.percentage;
-    if (data.completedAt !== undefined) payload.completedAt = data.completedAt;
-    if (data.summary !== undefined) payload.summary = data.summary;
-    if (data.feedback !== undefined) payload.feedback = data.feedback;
+    if (score !== undefined) payload.score = score;
+    if (total !== undefined) payload.total = total;
+    if (percentage !== undefined) payload.percentage = percentage;
+    if (completedAt !== undefined) payload.completedAt = completedAt;
+    if (summary !== undefined) payload.summary = summary;
+    if (feedback !== undefined) payload.feedback = feedback;
 
     return this.prisma.testAttempt.update({
       where: { id },
@@ -216,23 +209,23 @@ export class TestsRepository {
     });
   }
 
-  async createUserAnswer(data: CreateUserAnswerRecordDto): Promise<UserAnswer> {
+  async createUserAnswer(attemptId: string, mcqId: string, selectedIdx: number, isCorrect: boolean, timeSpent?: number | null): Promise<UserAnswer> {
     return this.prisma.userAnswer.create({
       data: {
-        attemptId: data.attemptId,
-        mcqId: data.mcqId,
-        selectedIdx: data.selectedIdx,
-        isCorrect: data.isCorrect,
-        timeSpent: data.timeSpent,
+        attemptId,
+        mcqId,
+        selectedIdx,
+        isCorrect,
+        timeSpent,
       },
     });
   }
 
-  async updateUserAnswer(id: string, data: UpdateUserAnswerRecordDto): Promise<UserAnswer> {
+  async updateUserAnswer(id: string, selectedIdx?: number, isCorrect?: boolean, timeSpent?: number | null): Promise<UserAnswer> {
     const payload: Record<string, any> = {};
-    if (data.selectedIdx !== undefined) payload.selectedIdx = data.selectedIdx;
-    if (data.isCorrect !== undefined) payload.isCorrect = data.isCorrect;
-    if (data.timeSpent !== undefined) payload.timeSpent = data.timeSpent;
+    if (selectedIdx !== undefined) payload.selectedIdx = selectedIdx;
+    if (isCorrect !== undefined) payload.isCorrect = isCorrect;
+    if (timeSpent !== undefined) payload.timeSpent = timeSpent;
 
     return this.prisma.userAnswer.update({
       where: { id },
@@ -249,15 +242,15 @@ export class TestsRepository {
     await this.prisma.objective.deleteMany({ where: { pdfId } });
   }
 
-  async createObjective(data: CreateObjectiveRecordDto): Promise<Objective> {
+  async createObjective(pdfId: string, title: string, difficulty: 'easy' | 'medium' | 'hard', mcqs?: Array<{ question: string; options: string[]; correctIdx: number; explanation?: string | null; hint?: string | null }>): Promise<Objective> {
     return this.prisma.objective.create({
       data: {
-        title: data.title,
-        difficulty: data.difficulty,
-        pdf: { connect: { id: data.pdfId } },
-        mcqs: data.mcqs?.length
+        title,
+        difficulty,
+        pdf: { connect: { id: pdfId } },
+        mcqs: mcqs?.length
           ? {
-              create: data.mcqs.map((mcq) => ({
+              create: mcqs.map((mcq) => ({
                 question: mcq.question,
                 options: mcq.options,
                 correctIdx: mcq.correctIdx,

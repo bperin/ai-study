@@ -5,8 +5,6 @@ import { randomUUID } from 'crypto';
 import { PdfTextService } from '../pdfs/pdf-text.service';
 import { IngestService } from '../rag/services/ingest.service';
 import { PdfsRepository } from '../pdfs/pdfs.repository';
-import { CreatePdfRecordDto } from '../pdfs/dto/create-pdf-record.dto';
-
 @Injectable()
 export class UploadsService {
   private storage: Storage;
@@ -61,11 +59,7 @@ export class UploadsService {
 
   async confirmUpload(filePath: string, fileName: string, userId: string) {
     // Save PDF metadata to database
-    const dto = new CreatePdfRecordDto();
-    dto.userId = userId;
-    dto.filename = fileName;
-    dto.gcsPath = filePath;
-    const pdf = await this.pdfsRepository.createPdf(dto);
+    const pdf = await this.pdfsRepository.createPdf(userId, fileName, filePath);
 
     // Trigger RAG ingestion (non-blocking)
     const gcsUri = `gcs://${this.bucketName}/${filePath}`;

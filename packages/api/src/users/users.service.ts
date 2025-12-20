@@ -19,23 +19,11 @@ export class UsersService {
   }
 
   async create(data: CreateUserRecordDto): Promise<User> {
-    return this.usersRepository.createUser({
-      email: data.email,
-      password: data.password,
-      name: data.name,
-      isAdmin: data.isAdmin,
-      provider: data.provider,
-    });
+    return this.usersRepository.createUser(data.email, data.password);
   }
 
   async update(id: string, data: UpdateUserRecordDto): Promise<User> {
-    return this.usersRepository.updateUser(id, {
-      email: data.email,
-      password: data.password,
-      name: data.name,
-      isAdmin: data.isAdmin,
-      provider: data.provider,
-    });
+    return this.usersRepository.updateUser(id, data.email, data.password, data.name, data.isAdmin, data.provider);
   }
 
   async findAll(): Promise<User[]> {

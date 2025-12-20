@@ -230,6 +230,7 @@ IMPORTANT:
 3. Generate the questions based on the content found.
 4. YOU MUST save the generated questions to the database using the save_objective tool.
 5. Do NOT output the questions as text. Only use the tool to save them.
+6. STOP immediately after saving the ${count} questions.
 `;
 
     // Run agent

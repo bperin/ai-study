@@ -14,7 +14,6 @@ import { PdfsRepository } from '../pdfs/pdfs.repository';
 import { RagRepository } from '../rag/rag.repository';
 import { DocumentIdentifierDto } from '../rag/dto/document-identifier.dto';
 import * as pdfParse from 'pdf-parse';
-import { CreateCompletedTestAttemptRecordDto, CompletedAttemptAnswerRecordDto } from './dto/create-completed-test-attempt-record.dto';
 
 @Injectable()
 export class TestsService {
@@ -53,22 +52,7 @@ export class TestsService {
     // 3. Create Attempt
     const total = dto.answers.length;
 
-    const completedAnswers = answerData.map((answer) => {
-      const record = new CompletedAttemptAnswerRecordDto();
-      record.mcqId = answer.mcqId;
-      record.selectedIdx = answer.selectedIdx;
-      record.isCorrect = answer.isCorrect;
-      return record;
-    });
-
-    const createDto = new CreateCompletedTestAttemptRecordDto();
-    createDto.userId = userId;
-    createDto.pdfId = dto.pdfId;
-    createDto.score = score;
-    createDto.total = total;
-    createDto.answers = completedAnswers;
-
-    return this.testsRepository.createCompletedAttempt(createDto);
+    return this.testsRepository.createCompletedAttempt(userId, dto.pdfId, score, total, answerData);
   }
 
   async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {

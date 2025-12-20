@@ -1,6 +1,5 @@
 import { TestsRepository } from './tests.repository';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTestAttemptRecordDto } from './dto/create-test-attempt-record.dto';
 
 describe('TestsRepository', () => {
   let repository: TestsRepository;
@@ -37,12 +36,7 @@ describe('TestsRepository', () => {
   });
 
   it('creates test attempts via Prisma', async () => {
-    const dto = new CreateTestAttemptRecordDto();
-    dto.userId = 'user';
-    dto.pdfId = 'pdf';
-    dto.total = 10;
-    dto.score = 0;
-    await repository.createAttempt(dto);
+    await repository.createAttempt('user', 'pdf', 10, 0);
     expect(prisma.testAttempt.create).toHaveBeenCalled();
   });
 

@@ -1,21 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { Chunk, Document, QueryLog } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateDocumentRecordDto } from './dto/create-document-record.dto';
-import { UpdateDocumentRecordDto } from './dto/update-document-record.dto';
 import { DocumentIdentifierDto } from './dto/document-identifier.dto';
-import { CreateChunkRecordDto } from './dto/create-chunk-record.dto';
 
 @Injectable()
 export class RagRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  createDocumentRecord(data: CreateDocumentRecordDto): Promise<Document> {
-    return this.prisma.document.create({ data });
+  createDocumentRecord(title: string | null | undefined, sourceType: string, sourceUri: string | null | undefined, mimeType: string, status: string): Promise<Document> {
+    return this.prisma.document.create({
+      data: {
+        title: title ?? null,
+        sourceType,
+        sourceUri: sourceUri ?? null,
+        mimeType,
+        status,
+      },
+    });
   }
 
-  updateDocumentById(documentId: string, data: UpdateDocumentRecordDto): Promise<Document> {
-    return this.prisma.document.update({ where: { id: documentId }, data });
+  updateDocumentById(documentId: string, status?: string, errorMessage?: string | null, mimeType?: string | null): Promise<Document> {
+    const payload: Record<string, any> = {};
+    if (status !== undefined) payload.status = status;
+    if (errorMessage !== undefined) payload.errorMessage = errorMessage;
+    if (mimeType !== undefined) payload.mimeType = mimeType;
+
+    return this.prisma.document.update({ where: { id: documentId }, data: payload });
   }
 
   findDocumentById(id: string): Promise<Document | null> {
@@ -75,17 +85,17 @@ export class RagRepository {
     });
   }
 
-  createChunkRecord(data: CreateChunkRecordDto) {
+  createChunkRecord(documentId: string, chunkIndex: number, content: string, contentHash: string, startChar: number, endChar: number, embeddingJson?: number[] | null, id?: string) {
     return this.prisma.chunk.create({
       data: {
-        id: data.id,
-        documentId: data.documentId,
-        chunkIndex: data.chunkIndex,
-        content: data.content,
-        contentHash: data.contentHash,
-        startChar: data.startChar,
-        endChar: data.endChar,
-        embeddingJson: data.embeddingJson as any,
+        id,
+        documentId,
+        chunkIndex,
+        content,
+        contentHash,
+        startChar,
+        endChar,
+        embeddingJson: (embeddingJson ?? null) as any,
       },
     });
   }
@@ -107,8 +117,18 @@ export class RagRepository {
     return this.prisma.chunk.count({ where: { documentId } });
   }
 
-  createQueryLogEntry(payload: Omit<QueryLog, 'id' | 'createdAt'>): Promise<QueryLog> {
-    return this.prisma.queryLog.create({ data: payload });
+  createQueryLogEntry(documentId: string, question: string, answer: string, model: string, topK: number, usedChunks: any, latencyMs?: number): Promise<QueryLog> {
+    return this.prisma.queryLog.create({
+      data: {
+        documentId,
+        question,
+        answer,
+        model,
+        topK,
+        usedChunks,
+        latencyMs,
+      },
+    });
   }
 
   vectorSearch(vectorSql: string, documentId: string, limit: number): Promise<any[]> {
@@ -125,8 +145,7 @@ export class RagRepository {
     );
   }
 
-  async insertChunkWithVector(params: { id: string; documentId: string; chunkIndex: number; content: string; contentHash: string; startChar: number; endChar: number; embeddingJson: number[] | null; embeddingSql: string }) {
-    const { id, documentId, chunkIndex, content, contentHash, startChar, endChar, embeddingJson, embeddingSql } = params;
+  async insertChunkWithVector(id: string, documentId: string, chunkIndex: number, content: string, contentHash: string, startChar: number, endChar: number, embeddingJson: number[] | null, embeddingSql: string) {
     await this.prisma.$executeRawUnsafe(
       `INSERT INTO "Chunk" ("id", "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "embeddingVec")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector)`,
@@ -145,12 +164,20 @@ export class RagRepository {
   async findChunksForDocumentLookup(pdfFilename: string, gcsPath: string): Promise<Chunk[]> {
     const normalizedPath = gcsPath?.replace('gcs://', '') || '';
 
-    return this.prisma.chunk.findMany({
+    const document = await this.prisma.document.findFirst({
       where: {
-        document: {
-          OR: [gcsPath ? { sourceUri: { contains: gcsPath } } : undefined, normalizedPath ? { sourceUri: { contains: normalizedPath } } : undefined, pdfFilename ? { title: { equals: pdfFilename, mode: 'insensitive' } } : undefined].filter(Boolean) as any,
-        },
+        OR: [gcsPath ? { sourceUri: { contains: gcsPath } } : undefined, normalizedPath ? { sourceUri: { contains: normalizedPath } } : undefined, pdfFilename ? { title: { equals: pdfFilename, mode: 'insensitive' } } : undefined].filter(Boolean) as any,
       },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!document) {
+      return [];
+    }
+
+    return this.prisma.chunk.findMany({
+      where: { documentId: document.id },
       orderBy: { chunkIndex: 'asc' },
     });
   }

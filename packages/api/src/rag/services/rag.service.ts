@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { RetrieveService } from './retrieve.service';
 import { GeminiService } from './gemini.service';
-import { QueryLog } from '@prisma/client';
 import { RagRepository } from '../rag.repository';
 
 @Injectable()
@@ -63,17 +62,7 @@ export class RagService {
   }
 
   private async logAndReturn(documentId: string, question: string, answer: string, model: string, topK: number, usedChunks: { chunkId: string; chunkIndex: number; score: number }[], latencyMs?: number) {
-    const payload: Omit<QueryLog, 'id' | 'createdAt'> = {
-      documentId,
-      question,
-      answer,
-      model,
-      topK,
-      usedChunks: usedChunks as any,
-      latencyMs,
-    } as any;
-
-    await this.ragRepository.createQueryLogEntry(payload);
+    await this.ragRepository.createQueryLogEntry(documentId, question, answer, model, topK, usedChunks as any, latencyMs);
 
     return {
       answer,

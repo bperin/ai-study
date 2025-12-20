@@ -23,7 +23,7 @@ describe('UsersRepository', () => {
   });
 
   it('creates users with the expected payload', async () => {
-    await repository.createUser({ email: 'test@example.com', password: 'hash' });
+    await repository.createUser('test@example.com', 'hash');
     expect(prisma.user.create).toHaveBeenCalledWith({ data: { email: 'test@example.com', password: 'hash' } });
   });
 });

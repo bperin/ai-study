@@ -8,9 +8,6 @@ import { createAdkRunner } from '../ai/adk.helpers';
 import { PdfsRepository } from './pdfs.repository';
 import { TestsRepository } from '../tests/tests.repository';
 import { RagRepository } from '../rag/rag.repository';
-import { CreatePdfRecordDto } from './dto/create-pdf-record.dto';
-import { CreatePdfSessionDto } from './dto/create-pdf-session.dto';
-import { UpdatePdfSessionDto } from './dto/update-pdf-session.dto';
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
@@ -41,12 +38,7 @@ export class PdfsService {
     }
 
     // Create a session to track this generation event
-    const sessionDto = new CreatePdfSessionDto();
-    sessionDto.pdfId = pdfId;
-    sessionDto.userId = userId;
-    sessionDto.userPreferences = { prompt: userPrompt };
-    sessionDto.status = 'generating';
-    const session = await this.pdfsRepository.createPdfSession(sessionDto);
+    const session = await this.pdfsRepository.createPdfSession(pdfId, userId, 'generating', { prompt: userPrompt });
 
     // Notify client that generation has started
     this.pdfStatusGateway.sendStatusUpdate(userId, true);
@@ -75,9 +67,7 @@ export class PdfsService {
         await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, pdf.filename, gcsPathOrContent);
 
         // Update session as completed
-        const updateDto = new UpdatePdfSessionDto();
-        updateDto.status = 'completed';
-        await this.pdfsRepository.updatePdfSession(session.id, updateDto);
+        await this.pdfsRepository.updatePdfSession(session.id, 'completed');
         this.pdfStatusGateway.sendStatusUpdate(userId, false);
         console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
       } catch (e: any) {
@@ -87,9 +77,7 @@ export class PdfsService {
           // If we managed to generate some questions, mark as ready instead of failed
           const questionsCount = await this.testsRepository.countMcqsByPdfId(pdfId);
 
-          const updateDto = new UpdatePdfSessionDto();
-          updateDto.status = questionsCount > 0 ? 'completed' : 'failed';
-          await this.pdfsRepository.updatePdfSession(session.id, updateDto);
+          await this.pdfsRepository.updatePdfSession(session.id, questionsCount > 0 ? 'completed' : 'failed');
         } catch (updateError: any) {
           console.error(`[Background] Failed to update session status to failed: ${updateError.message}`);
         }
@@ -225,12 +213,7 @@ export class PdfsService {
     if (!originalPdf) throw new NotFoundException('PDF not found');
 
     // Create a new PDF record pointing to the same content/storage
-    const dto = new CreatePdfRecordDto();
-    dto.userId = userId;
-    dto.filename = newTitle || `${originalPdf.filename} (Copy)`;
-    dto.content = originalPdf.content;
-    dto.gcsPath = originalPdf.gcsPath;
-    const newPdf = await this.pdfsRepository.createPdf(dto);
+    const newPdf = await this.pdfsRepository.createPdf(userId, newTitle || `${originalPdf.filename} (Copy)`, originalPdf.gcsPath, originalPdf.content);
 
     return newPdf;
   }

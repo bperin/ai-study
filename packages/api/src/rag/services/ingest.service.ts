@@ -5,9 +5,6 @@ import { ChunkService } from './chunk.service';
 import { EmbedService } from './embed.service';
 import { PdfService } from './pdf.service';
 import { RagRepository } from '../rag.repository';
-import { CreateDocumentRecordDto } from '../dto/create-document-record.dto';
-import { UpdateDocumentRecordDto } from '../dto/update-document-record.dto';
-import { CreateChunkRecordDto } from '../dto/create-chunk-record.dto';
 
 @Injectable()
 export class IngestService {
@@ -26,22 +23,14 @@ export class IngestService {
       throw new BadRequestException('text is required');
     }
 
-    const docDto = new CreateDocumentRecordDto();
-    docDto.title = title;
-    docDto.sourceType = 'text';
-    docDto.mimeType = 'text/plain';
-    docDto.status = 'PROCESSING';
-    const document = await this.ragRepository.createDocumentRecord(docDto);
+    const document = await this.ragRepository.createDocumentRecord(title, 'text', undefined, 'text/plain', 'PROCESSING');
 
     // Run in background to avoid timeouts
     (async () => {
       try {
         await this.processDocument(document.id, text, 'text/plain');
       } catch (e: any) {
-        const updateDto = new UpdateDocumentRecordDto();
-        updateDto.status = 'FAILED';
-        updateDto.errorMessage = e.message;
-        await this.ragRepository.updateDocumentById(document.id, updateDto);
+        await this.ragRepository.updateDocumentById(document.id, 'FAILED', e.message);
         this.logger.error(`Background ingestion failed for document ${document.id}: ${e.message}`);
       }
     })();
@@ -54,13 +43,7 @@ export class IngestService {
       throw new BadRequestException('file is required');
     }
 
-    const uploadDto = new CreateDocumentRecordDto();
-    uploadDto.title = title || file.originalname;
-    uploadDto.sourceType = 'upload';
-    uploadDto.sourceUri = file.originalname;
-    uploadDto.mimeType = file.mimetype;
-    uploadDto.status = 'PROCESSING';
-    const document = await this.ragRepository.createDocumentRecord(uploadDto);
+    const document = await this.ragRepository.createDocumentRecord(title || file.originalname, 'upload', file.originalname, file.mimetype, 'PROCESSING');
 
     // Run in background to avoid timeouts
     (async () => {
@@ -68,10 +51,7 @@ export class IngestService {
         const text = await this.pdfService.extractText(file.buffer);
         await this.processDocument(document.id, text, 'application/pdf');
       } catch (error: any) {
-        const updateDto = new UpdateDocumentRecordDto();
-        updateDto.status = 'FAILED';
-        updateDto.errorMessage = error.message;
-        await this.ragRepository.updateDocumentById(document.id, updateDto);
+        await this.ragRepository.updateDocumentById(document.id, 'FAILED', error.message);
         this.logger.error(`Background ingestion failed for upload ${document.id}: ${error.message}`);
       }
     })();
@@ -84,13 +64,7 @@ export class IngestService {
       throw new BadRequestException('gcsUri must start with gcs://');
     }
 
-    const gcsDto = new CreateDocumentRecordDto();
-    gcsDto.title = title;
-    gcsDto.sourceType = 'gcs';
-    gcsDto.sourceUri = gcsUri;
-    gcsDto.mimeType = 'application/pdf';
-    gcsDto.status = 'PROCESSING';
-    const document = await this.ragRepository.createDocumentRecord(gcsDto);
+    const document = await this.ragRepository.createDocumentRecord(title, 'gcs', gcsUri, 'application/pdf', 'PROCESSING');
 
     // Run in background to avoid timeouts
     (async () => {
@@ -102,10 +76,7 @@ export class IngestService {
         const text = await this.pdfService.extractText(buffer);
         await this.processDocument(document.id, text, 'application/pdf');
       } catch (error: any) {
-        const updateDto = new UpdateDocumentRecordDto();
-        updateDto.status = 'FAILED';
-        updateDto.errorMessage = error.message;
-        await this.ragRepository.updateDocumentById(document.id, updateDto);
+        await this.ragRepository.updateDocumentById(document.id, 'FAILED', error.message);
         this.logger.error(`Background ingestion failed for GCS ${document.id}: ${error.message}`);
       }
     })();
@@ -129,10 +100,7 @@ export class IngestService {
     // Update status to PROCESSING and clear existing chunks
     await this.ragRepository.deleteChunksByDocument(documentId);
 
-    const processingUpdate = new UpdateDocumentRecordDto();
-    processingUpdate.status = 'PROCESSING';
-    processingUpdate.errorMessage = null;
-    await this.ragRepository.updateDocumentById(documentId, processingUpdate);
+    await this.ragRepository.updateDocumentById(documentId, 'PROCESSING', null);
 
     // Run in background to avoid dashboard timeouts
     (async () => {
@@ -146,10 +114,7 @@ export class IngestService {
         this.logger.log(`[Reprocess] Extracted ${text.length} chars, starting ingestion...`);
         await this.processDocument(documentId, text, document.mimeType || 'application/pdf');
       } catch (error: any) {
-        const updateDto = new UpdateDocumentRecordDto();
-        updateDto.status = 'FAILED';
-        updateDto.errorMessage = error.message;
-        await this.ragRepository.updateDocumentById(documentId, updateDto);
+        await this.ragRepository.updateDocumentById(documentId, 'FAILED', error.message);
         this.logger.error(`Background reprocessing failed for document ${documentId}: ${error.message}`);
       }
     })();
@@ -193,10 +158,7 @@ export class IngestService {
     this.logger.log(`Processing document ${documentId} with ${text.length} chars`);
     const chunks = this.chunkService.chunkText(text);
     if (!chunks.length) {
-      const updateDto = new UpdateDocumentRecordDto();
-      updateDto.status = 'FAILED';
-      updateDto.errorMessage = 'No extractable text';
-      await this.ragRepository.updateDocumentById(documentId, updateDto);
+      await this.ragRepository.updateDocumentById(documentId, 'FAILED', 'No extractable text');
       throw new BadRequestException('No extractable text');
     }
 
@@ -236,28 +198,9 @@ export class IngestService {
         // Use a simpler approach without interactive transaction to avoid Accelerate timeouts
         for (const data of batch) {
           if (data.embeddingSql) {
-            await this.ragRepository.insertChunkWithVector({
-              id: data.id,
-              documentId: data.documentId,
-              chunkIndex: data.chunkIndex,
-              content: data.content,
-              contentHash: data.contentHash,
-              startChar: data.startChar,
-              endChar: data.endChar,
-              embeddingJson: data.embeddingJson as any,
-              embeddingSql: data.embeddingSql,
-            });
+            await this.ragRepository.insertChunkWithVector(data.id, data.documentId, data.chunkIndex, data.content, data.contentHash, data.startChar, data.endChar, data.embeddingJson as any, data.embeddingSql);
           } else {
-            const chunkDto = new CreateChunkRecordDto();
-            chunkDto.id = data.id;
-            chunkDto.documentId = data.documentId;
-            chunkDto.chunkIndex = data.chunkIndex;
-            chunkDto.content = data.content;
-            chunkDto.contentHash = data.contentHash;
-            chunkDto.startChar = data.startChar;
-            chunkDto.endChar = data.endChar;
-            chunkDto.embeddingJson = data.embeddingJson as any;
-            await this.ragRepository.createChunkRecord(chunkDto);
+            await this.ragRepository.createChunkRecord(data.documentId, data.chunkIndex, data.content, data.contentHash, data.startChar, data.endChar, data.embeddingJson as any, data.id);
           }
         }
         this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
@@ -267,11 +210,7 @@ export class IngestService {
       }
     }
 
-    const completeDto = new UpdateDocumentRecordDto();
-    completeDto.status = 'COMPLETED';
-    completeDto.mimeType = mimeType;
-    completeDto.errorMessage = null;
-    await this.ragRepository.updateDocumentById(documentId, completeDto);
+    await this.ragRepository.updateDocumentById(documentId, 'COMPLETED', null, mimeType);
 
     return { documentId, status: 'COMPLETED', chunks: chunks.length };
   }

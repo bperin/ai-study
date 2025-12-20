@@ -12,7 +12,4 @@ export class CreateUserRecordDto {
 
   @ApiProperty({ required: false, default: false })
   isAdmin?: boolean;
-
-  @ApiProperty({ required: false, nullable: true })
-  provider?: string | null;
 }

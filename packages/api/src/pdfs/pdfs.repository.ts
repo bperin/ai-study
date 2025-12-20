@@ -1,16 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { Pdf, PdfSession } from '@prisma/client';
+import { Pdf, PdfSession, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreatePdfRecordDto } from './dto/create-pdf-record.dto';
-import { CreatePdfSessionDto } from './dto/create-pdf-session.dto';
-import { UpdatePdfSessionDto } from './dto/update-pdf-session.dto';
-
 @Injectable()
 export class PdfsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createPdf(data: CreatePdfRecordDto): Promise<Pdf> {
-    return this.prisma.pdf.create({ data });
+  async createPdf(userId: string, filename: string, gcsPath?: string | null, content?: string | null): Promise<Pdf> {
+    return this.prisma.pdf.create({
+      data: {
+        filename,
+        gcsPath,
+        content,
+        user: { connect: { id: userId } },
+      },
+    });
   }
 
   async findPdfById(id: string): Promise<Pdf | null> {
@@ -76,14 +79,23 @@ export class PdfsRepository {
     return this.prisma.pdf.count();
   }
 
-  async createPdfSession(data: CreatePdfSessionDto): Promise<PdfSession> {
-    return this.prisma.pdfSession.create({ data });
+  async createPdfSession(pdfId: string, userId: string, status: 'generating' | 'completed' | 'failed', userPreferences?: any): Promise<PdfSession> {
+    return this.prisma.pdfSession.create({
+      data: {
+        status,
+        userPreferences,
+        pdf: { connect: { id: pdfId } },
+        user: { connect: { id: userId } },
+      },
+    });
   }
 
-  async updatePdfSession(sessionId: string, data: UpdatePdfSessionDto): Promise<PdfSession> {
+  async updatePdfSession(sessionId: string, status?: 'generating' | 'completed' | 'failed'): Promise<PdfSession> {
     return this.prisma.pdfSession.update({
       where: { id: sessionId },
-      data,
+      data: {
+        status,
+      },
     });
   }
 

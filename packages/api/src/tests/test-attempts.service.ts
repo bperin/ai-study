@@ -3,8 +3,6 @@ import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { StartAttemptResponseDto } from './dto/start-attempt-response.dto';
 import { SubmitTestResultsDto, TestAnalysisResponseDto } from './dto/test-results.dto';
 import { TestsRepository } from './tests.repository';
-import { CreateTestAttemptRecordDto } from './dto/create-test-attempt-record.dto';
-import { UpdateTestAttemptRecordDto } from './dto/update-test-attempt-record.dto';
 
 @Injectable()
 export class TestAttemptsService {
@@ -14,12 +12,7 @@ export class TestAttemptsService {
   ) {}
 
   async startAttempt(pdfId: string, userId: string): Promise<StartAttemptResponseDto> {
-    const createDto = new CreateTestAttemptRecordDto();
-    createDto.userId = userId;
-    createDto.pdfId = pdfId;
-    createDto.total = 0;
-    createDto.score = 0;
-    const attempt = await this.testsRepository.createAttempt(createDto);
+    const attempt = await this.testsRepository.createAttempt(userId, pdfId, 0, 0);
 
     return {
       attemptId: attempt.id,
@@ -73,13 +66,7 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
     }
 
     // Update attempt with feedback and score
-    const updateDto = new UpdateTestAttemptRecordDto();
-    updateDto.score = body.score;
-    updateDto.total = body.totalQuestions;
-    updateDto.percentage = (body.score / body.totalQuestions) * 100;
-    updateDto.completedAt = new Date();
-    updateDto.feedback = analysis as any;
-    await this.testsRepository.updateAttempt(body.attemptId, updateDto);
+    await this.testsRepository.updateAttempt(body.attemptId, body.score, body.totalQuestions, (body.score / body.totalQuestions) * 100, new Date(), undefined, analysis as any);
 
     return {
       attemptId: body.attemptId,

@@ -4,7 +4,6 @@ import * as pdfParse from 'pdf-parse';
 import { GcsService } from '../pdfs/gcs.service';
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { TestsRepository } from '../tests/tests.repository';
-import { CreateObjectiveRecordDto, CreateObjectiveMcqRecordDto } from '../tests/dto/create-objective-record.dto';
 
 /**
  * Tool for saving a single objective with its questions to the database
@@ -32,21 +31,18 @@ export function createSaveObjectiveTool(testsRepository: TestsRepository, pdfId:
     parameters: parametersSchema,
     execute: async (params) => {
       console.log(`[AI Tool] save_objective called for: ${params.title} with ${params.questions.length} questions`);
-      const objectiveDto = new CreateObjectiveRecordDto();
-      objectiveDto.pdfId = pdfId;
-      objectiveDto.title = params.title;
-      objectiveDto.difficulty = params.difficulty;
-      objectiveDto.mcqs = params.questions.map((q: any) => {
-        const mcqDto = new CreateObjectiveMcqRecordDto();
-        mcqDto.question = q.question;
-        mcqDto.options = q.options;
-        mcqDto.correctIdx = q.correctIndex;
-        mcqDto.explanation = q.explanation || null;
-        mcqDto.hint = q.hint || null;
-        return mcqDto;
-      });
-
-      const objective = await testsRepository.createObjective(objectiveDto);
+      const objective = await testsRepository.createObjective(
+        pdfId,
+        params.title,
+        params.difficulty,
+        params.questions.map((q: any) => ({
+          question: q.question,
+          options: q.options,
+          correctIdx: q.correctIndex,
+          explanation: q.explanation || null,
+          hint: q.hint || null,
+        })),
+      );
 
       // @ts-ignore
       console.log(`[AI Tool] Successfully saved objective ${objective.id} with ${objective.mcqs.length} questions`);

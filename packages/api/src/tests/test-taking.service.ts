@@ -7,10 +7,6 @@ import { PdfTextService } from '../pdfs/pdf-text.service';
 import { GcsService } from '../pdfs/gcs.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TestsRepository } from './tests.repository';
-import { CreateTestAttemptRecordDto } from './dto/create-test-attempt-record.dto';
-import { CreateUserAnswerRecordDto } from './dto/create-user-answer-record.dto';
-import { UpdateUserAnswerRecordDto } from './dto/update-user-answer-record.dto';
-import { UpdateTestAttemptRecordDto } from './dto/update-test-attempt-record.dto';
 
 /**
  * In-memory state for active test sessions
@@ -86,12 +82,7 @@ export class TestTakingService {
     if (!attempt) {
       // Create new attempt
       const totalQuestions = await this.testsRepository.countMcqsByPdfId(pdfId);
-      const createAttemptDto = new CreateTestAttemptRecordDto();
-      createAttemptDto.userId = userId;
-      createAttemptDto.pdfId = pdfId;
-      createAttemptDto.total = totalQuestions;
-      createAttemptDto.score = 0;
-      const newAttempt = await this.testsRepository.createAttempt(createAttemptDto);
+      const newAttempt = await this.testsRepository.createAttempt(userId, pdfId, totalQuestions, 0);
       return this.rehydrateState(newAttempt);
     }
 
@@ -270,20 +261,11 @@ export class TestTakingService {
 
     if (existingAnswer) {
       // Update existing answer - latest attempt counts
-      const updateDto = new UpdateUserAnswerRecordDto();
-      updateDto.selectedIdx = selectedAnswer;
-      updateDto.isCorrect = isCorrect;
-      updateDto.timeSpent = existingAnswer.timeSpent + timeSpent;
-      await this.testsRepository.updateUserAnswer(existingAnswer.id, updateDto);
+      const updatedTimeSpent = (existingAnswer.timeSpent ?? 0) + timeSpent;
+      await this.testsRepository.updateUserAnswer(existingAnswer.id, selectedAnswer, isCorrect, updatedTimeSpent);
     } else {
       // Create new answer
-      const createAnswerDto = new CreateUserAnswerRecordDto();
-      createAnswerDto.attemptId = attemptId;
-      createAnswerDto.mcqId = questionId;
-      createAnswerDto.selectedIdx = selectedAnswer;
-      createAnswerDto.isCorrect = isCorrect;
-      createAnswerDto.timeSpent = timeSpent;
-      await this.testsRepository.createUserAnswer(createAnswerDto);
+      await this.testsRepository.createUserAnswer(attemptId, questionId, selectedAnswer, isCorrect, timeSpent);
     }
 
     // Generate encouragement
@@ -382,13 +364,7 @@ export class TestTakingService {
     const feedback = await this.generateDetailedFeedback(state);
 
     // Update test attempt in database
-    const updateDto = new UpdateTestAttemptRecordDto();
-    updateDto.score = state.correctCount;
-    updateDto.total = state.totalQuestions;
-    updateDto.completedAt = new Date();
-    updateDto.feedback = feedback as any;
-    updateDto.summary = feedback.aiSummary;
-    await this.testsRepository.updateAttempt(attemptId, updateDto);
+    await this.testsRepository.updateAttempt(attemptId, state.correctCount, state.totalQuestions, percentage, new Date(), feedback.aiSummary, feedback as any);
 
     return {
       score: {

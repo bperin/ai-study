@@ -29,9 +29,9 @@ describe('RagRepository', () => {
   });
 
   it('creates documents via Prisma', async () => {
-    await repository.createDocumentRecord({ title: 'Doc', sourceType: 'text', mimeType: 'text/plain', status: 'PROCESSING' });
+    await repository.createDocumentRecord('Doc', 'text', undefined, 'text/plain', 'PROCESSING');
     expect(prisma.document.create).toHaveBeenCalledWith({
-      data: { title: 'Doc', sourceType: 'text', mimeType: 'text/plain', status: 'PROCESSING' },
+      data: { title: 'Doc', sourceType: 'text', sourceUri: null, mimeType: 'text/plain', status: 'PROCESSING' },
     });
   });
 
