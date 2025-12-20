@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ParallelGenerationService } from '../ai/parallel-generation.service';
+import { ParallelGenerationService, FlashcardGenerationProgress } from '../ai/parallel-generation.service';
 import { GcsService } from './gcs.service';
 import { PdfTextService } from './pdf-text.service';
 import { GEMINI_MODEL } from '../constants/models';
@@ -41,7 +41,13 @@ export class PdfsService {
     const session = await this.pdfsRepository.createPdfSession(pdfId, userId, 'generating', { prompt: userPrompt });
 
     // Notify client that generation has started
-    this.pdfStatusGateway.sendStatusUpdate(userId, true);
+    this.pdfStatusGateway.sendStatusUpdate(userId, {
+      pdfId,
+      phase: 'flashcards',
+      status: 'running',
+      isGenerating: true,
+      message: 'Preparing flashcard generation...',
+    });
 
     // 2. Use parallel generation for faster results
     console.log(`PDF record for generation:`, {
@@ -61,17 +67,32 @@ export class PdfsService {
     // Run in background to avoid dashboard timeouts
     // We use setImmediate to detach execution from the request cycle
     // to prevent cancellation if the request is aborted/refreshed
+    const emitFlashcardStatus = (update: FlashcardGenerationProgress) => {
+      this.pdfStatusGateway.sendStatusUpdate(userId, {
+        pdfId,
+        phase: 'flashcards',
+        ...update,
+        isGenerating: update.status === 'running',
+      });
+    };
+
     setImmediate(async () => {
       try {
         console.log(`[Background] Starting flashcard generation for PDF ${pdfId}`);
-        await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, pdf.filename, gcsPathOrContent);
+        const summary = await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, pdf.filename, gcsPathOrContent, emitFlashcardStatus);
 
         // Update session as completed
         await this.pdfsRepository.updatePdfSession(session.id, 'completed');
-        this.pdfStatusGateway.sendStatusUpdate(userId, false);
+        emitFlashcardStatus({
+          status: 'completed',
+          message: summary.summary || 'Flashcard generation completed',
+        });
         console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
       } catch (e: any) {
-        this.pdfStatusGateway.sendStatusUpdate(userId, false);
+        emitFlashcardStatus({
+          status: 'failed',
+          message: `Flashcard generation failed: ${e.message}`,
+        });
         console.error(`[Background] Flashcard generation failed for PDF ${pdfId}:`, e);
         try {
           // If we managed to generate some questions, mark as ready instead of failed

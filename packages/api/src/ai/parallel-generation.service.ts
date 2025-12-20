@@ -21,6 +21,14 @@ interface QuestionGenerationTask {
   count: number;
 }
 
+export interface FlashcardGenerationProgress {
+  status: 'running' | 'completed' | 'failed';
+  message: string;
+  current?: number;
+  total?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
+
 @Injectable()
 export class ParallelGenerationService {
   constructor(
@@ -35,9 +43,17 @@ export class ParallelGenerationService {
   /**
    * Generate flashcards using parallel agent execution
    */
-  async generateFlashcardsParallel(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
+  async generateFlashcardsParallel(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string, progress?: (update: FlashcardGenerationProgress) => void): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
     // Parse user prompt to determine distribution
     const tasks = this.parseUserPrompt(userPrompt);
+    const totalBatches = tasks.length || 1;
+
+    progress?.({
+      status: 'running',
+      message: `Queued ${tasks.length} generation batches`,
+      current: 0,
+      total: tasks.length,
+    });
 
     // Step 1: Generate questions in parallel by difficulty
     // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
@@ -54,7 +70,9 @@ export class ParallelGenerationService {
     // user prompt for each chunk to only ask for that chunk's specific questions,
     // which is complex to do reliably with natural language prompts.
 
-    const generationPromises = tasks.map((task) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt));
+    const generationPromises = tasks.map((task, index) =>
+      this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt, progress, index, totalBatches),
+    );
 
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
@@ -64,13 +82,30 @@ export class ParallelGenerationService {
     const totalQuestions = results.reduce((sum, r) => sum + r.questionsCreated, 0);
 
     // Step 3: Quality analysis (after all questions are generated)
+    progress?.({
+      status: 'running',
+      message: 'Running quality analysis on generated questions...',
+    });
     const qualitySummary = await this.runQualityAnalysis(pdfId);
+    progress?.({
+      status: 'running',
+      message: 'Quality analysis completed',
+    });
 
-    return {
+    const summary = {
       objectivesCount: totalObjectives,
       questionsCount: totalQuestions,
       summary: `Generated ${totalQuestions} questions across ${totalObjectives} objectives. ${qualitySummary}`,
     };
+
+    progress?.({
+      status: 'completed',
+      message: summary.summary,
+      current: totalBatches,
+      total: totalBatches,
+    });
+
+    return summary;
   }
 
   /**
@@ -124,7 +159,24 @@ export class ParallelGenerationService {
   /**
    * Generate questions for a specific difficulty level
    */
-  private async generateQuestionsForDifficulty(difficulty: 'easy' | 'medium' | 'hard', count: number, pdfId: string, pdfFilename: string, gcsPath: string, userPrompt: string): Promise<{ objectivesCreated: number; questionsCreated: number }> {
+  private async generateQuestionsForDifficulty(
+    difficulty: 'easy' | 'medium' | 'hard',
+    count: number,
+    pdfId: string,
+    pdfFilename: string,
+    gcsPath: string,
+    userPrompt: string,
+    progress?: (update: FlashcardGenerationProgress) => void,
+    batchIndex?: number,
+    totalBatches?: number,
+  ): Promise<{ objectivesCreated: number; questionsCreated: number }> {
+    progress?.({
+      status: 'running',
+      message: `Generating ${count} ${difficulty} questions`,
+      difficulty,
+      current: batchIndex ?? 0,
+      total: totalBatches,
+    });
     // Extract PDF content first
     let pdfContent = '';
     try {
@@ -180,7 +232,15 @@ export class ParallelGenerationService {
 
       // Parse and save questions directly (simplified fallback)
       console.log(`[Question Generator ${difficulty}] Generated questions via Gemini fallback`);
-      return { objectivesCreated: 0, questionsCreated: 0 };
+      const fallbackResult = { objectivesCreated: 0, questionsCreated: 0 };
+      progress?.({
+        status: 'running',
+        message: `Fallback Gemini generation completed for ${difficulty}`,
+        difficulty,
+        current: (batchIndex ?? 0) + 1,
+        total: totalBatches,
+      });
+      return fallbackResult;
     }
 
     // Continue with ADK if available
@@ -255,10 +315,20 @@ IMPORTANT:
     const objectivesCreated = filteredObjectives.length;
     const questionsCreated = filteredObjectives.reduce((sum, obj) => sum + obj.mcqs.length, 0);
 
-    return {
+    const result = {
       objectivesCreated,
       questionsCreated,
     };
+
+    progress?.({
+      status: 'running',
+      message: `Completed ${difficulty} batch (${questionsCreated} questions)`,
+      difficulty,
+      current: (batchIndex ?? 0) + 1,
+      total: totalBatches,
+    });
+
+    return result;
   }
 
   /**

@@ -9,9 +9,10 @@ import { RetrieveService } from './services/retrieve.service';
 import { RagService } from './services/rag.service';
 import { GeminiService } from './services/gemini.service';
 import { RagRepositoryModule } from './rag-repository.module';
+import { PdfStatusModule } from '../pdf-status.module';
 
 @Module({
-  imports: [RagRepositoryModule, UsersModule],
+  imports: [RagRepositoryModule, UsersModule, PdfStatusModule],
   controllers: [RagController],
   providers: [IngestService, PdfService, ChunkService, EmbedService, RetrieveService, RagService, GeminiService],
   exports: [IngestService, RetrieveService, RagService, RagRepositoryModule],

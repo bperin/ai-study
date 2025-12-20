@@ -63,9 +63,11 @@ export class UploadsService {
 
     // Trigger RAG ingestion (non-blocking)
     const gcsUri = `gcs://${this.bucketName}/${filePath}`;
-    this.ingestService.createFromGcs(fileName, gcsUri).catch((error) => {
-      console.error(`[RAG Ingestion] Failed to trigger ingestion for PDF ${pdf.id}: ${error.message}`);
-    });
+    this.ingestService
+      .createFromGcs(fileName, gcsUri, { userId, pdfId: pdf.id })
+      .catch((error) => {
+        console.error(`[RAG Ingestion] Failed to trigger ingestion for PDF ${pdf.id}: ${error.message}`);
+      });
 
     return {
       id: pdf.id,

@@ -5,6 +5,12 @@ import { ChunkService } from './chunk.service';
 import { EmbedService } from './embed.service';
 import { PdfService } from './pdf.service';
 import { RagRepository } from '../rag.repository';
+import { PdfStatusGateway, PdfStatusUpdate } from '../../pdf-status.gateway';
+
+interface IngestContext {
+  userId?: string;
+  pdfId?: string;
+}
 
 @Injectable()
 export class IngestService {
@@ -16,9 +22,10 @@ export class IngestService {
     private readonly chunkService: ChunkService,
     private readonly embedService: EmbedService,
     private readonly pdfService: PdfService,
+    private readonly pdfStatusGateway?: PdfStatusGateway,
   ) {}
 
-  async createFromText(title: string | undefined, text: string) {
+  async createFromText(title: string | undefined, text: string, context?: IngestContext) {
     if (!text || !text.trim()) {
       throw new BadRequestException('text is required');
     }
@@ -28,17 +35,22 @@ export class IngestService {
     // Run in background to avoid timeouts
     (async () => {
       try {
-        await this.processDocument(document.id, text, 'text/plain');
+        await this.processDocument(document.id, text, 'text/plain', context);
       } catch (e: any) {
         await this.ragRepository.updateDocumentById(document.id, 'FAILED', e.message);
         this.logger.error(`Background ingestion failed for document ${document.id}: ${e.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${e.message}`,
+          isGenerating: false,
+        });
       }
     })();
 
     return { documentId: document.id, status: 'PROCESSING' };
   }
 
-  async createFromUpload(title: string | undefined, file: Express.Multer.File) {
+  async createFromUpload(title: string | undefined, file: Express.Multer.File, context?: IngestContext) {
     if (!file) {
       throw new BadRequestException('file is required');
     }
@@ -49,17 +61,22 @@ export class IngestService {
     (async () => {
       try {
         const text = await this.pdfService.extractText(file.buffer);
-        await this.processDocument(document.id, text, 'application/pdf');
+        await this.processDocument(document.id, text, 'application/pdf', context);
       } catch (error: any) {
         await this.ragRepository.updateDocumentById(document.id, 'FAILED', error.message);
         this.logger.error(`Background ingestion failed for upload ${document.id}: ${error.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${error.message}`,
+          isGenerating: false,
+        });
       }
     })();
 
     return { documentId: document.id, status: 'PROCESSING' };
   }
 
-  async createFromGcs(title: string | undefined, gcsUri: string) {
+  async createFromGcs(title: string | undefined, gcsUri: string, context?: IngestContext) {
     if (!gcsUri || !gcsUri.startsWith('gcs://')) {
       throw new BadRequestException('gcsUri must start with gcs://');
     }
@@ -74,10 +91,15 @@ export class IngestService {
         this.logger.log(`[Background] Downloading ${path} from ${bucketName}`);
         const [buffer] = await bucket.file(path).download();
         const text = await this.pdfService.extractText(buffer);
-        await this.processDocument(document.id, text, 'application/pdf');
+        await this.processDocument(document.id, text, 'application/pdf', context);
       } catch (error: any) {
         await this.ragRepository.updateDocumentById(document.id, 'FAILED', error.message);
         this.logger.error(`Background ingestion failed for GCS ${document.id}: ${error.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${error.message}`,
+          isGenerating: false,
+        });
       }
     })();
 
@@ -154,11 +176,16 @@ export class IngestService {
     return { bucket, path };
   }
 
-  private async processDocument(documentId: string, text: string, mimeType: string) {
+  private async processDocument(documentId: string, text: string, mimeType: string, context?: IngestContext) {
     this.logger.log(`Processing document ${documentId} with ${text.length} chars`);
     const chunks = this.chunkService.chunkText(text);
     if (!chunks.length) {
       await this.ragRepository.updateDocumentById(documentId, 'FAILED', 'No extractable text');
+      this.emitChunkingStatus(context, {
+        status: 'failed',
+        message: 'No extractable text available for chunking',
+        isGenerating: false,
+      });
       throw new BadRequestException('No extractable text');
     }
 
@@ -183,11 +210,19 @@ export class IngestService {
     });
 
     this.logger.log(`Saving ${chunkData.length} chunks to database in batches`);
+    this.emitChunkingStatus(context, {
+      status: 'running',
+      message: 'Starting PDF chunking...',
+      current: 0,
+      total: chunkData.length,
+      isGenerating: true,
+    });
 
     // Process in batches outside of a transaction to avoid Prisma Accelerate timeouts (15s limit)
     // Reduce batch size for better stability with Accelerate
     const BATCH_SIZE = 10;
     const totalBatches = Math.ceil(chunkData.length / BATCH_SIZE);
+    let processed = 0;
 
     for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
@@ -204,14 +239,48 @@ export class IngestService {
           }
         }
         this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
+        processed += batch.length;
+        this.emitChunkingStatus(context, {
+          status: 'running',
+          message: `Chunking batch ${batchNumber}/${totalBatches}`,
+          current: Math.min(processed, chunkData.length),
+          total: chunkData.length,
+          progress: chunkData.length ? Math.min(processed / chunkData.length, 1) : undefined,
+          isGenerating: true,
+        });
       } catch (error: any) {
         this.logger.error(`[Batch ${batchNumber}/${totalBatches}] Failed to save batch: ${error.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${error.message}`,
+          isGenerating: false,
+        });
         throw error; // Re-throw to fail the document status
       }
     }
 
     await this.ragRepository.updateDocumentById(documentId, 'COMPLETED', null, mimeType);
+    this.emitChunkingStatus(context, {
+      status: 'completed',
+      message: `Chunking complete (${chunkData.length} chunks)`,
+      current: chunkData.length,
+      total: chunkData.length,
+      progress: 1,
+      isGenerating: false,
+    });
 
     return { documentId, status: 'COMPLETED', chunks: chunks.length };
+  }
+
+  private emitChunkingStatus(context: IngestContext | undefined, update: PdfStatusUpdate) {
+    if (!context?.userId || !this.pdfStatusGateway) {
+      return;
+    }
+
+    this.pdfStatusGateway.sendStatusUpdate(context.userId, {
+      phase: 'chunking',
+      pdfId: context.pdfId,
+      ...update,
+    });
   }
 }
