@@ -22,10 +22,11 @@ The system uses a multi-agent architecture powered by **Google Vertex AI**.
 
 | Diagram Type | Visualization |
 |---|---|
-| **System Architecture** | [![System Architecture](https://github.com/bperin/ai-study/blob/main/docs/ai-study-architecture-1.png)](./docs/ai-study-architecture.md) |
-| **Agent Details** | [![Agent Details](https://github.com/bperin/ai-study/blob/main/docs/ai-study-agent-details-1.png)](./docs/ai-study-agent-details.md) |
-| **Data Flow** | [![Data Flow](https://github.com/bperin/ai-study/blob/main/docs/ai-study-data-flow-1.png)](./docs/ai-study-data-flow.md) |
-| **Workflow Sequence** | [![Workflow Sequence](https://github.com/bperin/ai-study/blob/main/docs/ai-study-workflow-1.png)](./docs/ai-study-workflow.md) |
+| **System Architecture** | ![System Architecture](./docs/ai-study-architecture.png) |
+| **Agent Details** | ![Agent Details](./docs/ai-study-agent-details.png) |
+| **Data Flow** | ![Data Flow](./docs/ai-study-data-flow.png) |
+| **Workflow Sequence** | ![Workflow Sequence](./docs/ai-study-workflow.png) |
+| **RAG Sequence** | ![RAG Sequence](./docs/ai-study-rag-sequence.png) |
 
 </details>
 
