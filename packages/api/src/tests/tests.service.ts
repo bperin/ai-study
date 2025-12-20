@@ -1,9 +1,5 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Mcq } from '@prisma/client';
-import { McqRepository } from '../shared/repositories/mcq.repository';
-import { TestAttemptRepository } from '../shared/repositories/test-attempt.repository';
-import { UserAnswerRepository } from '../shared/repositories/user-answer.repository';
-import { PdfRepository } from '../shared/repositories/pdf.repository';
 import { SubmitTestDto } from './dto/submit-test.dto';
 import { TestHistoryResponseDto, TestHistoryItemDto } from './dto/test-results.dto';
 import { AdkRunnerService } from '../ai/adk-runner.service';
@@ -11,45 +7,41 @@ import { TestStatsDto } from './dto/test-stats.dto';
 import { ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
 import { GEMINI_MODEL } from '../constants/models';
 import { GcsService } from '../pdfs/gcs.service';
-import { PdfTextService } from '../shared/services/pdf-text.service';
+import { PdfTextService } from '../pdfs/pdf-text.service';
 import { RetrieveService } from '../rag/services/retrieve.service';
-import { ParallelGenerationService } from '../ai/parallel-generation.service';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
+import { TestsRepository } from './tests.repository';
+import { PdfsRepository } from '../pdfs/pdfs.repository';
+import { RagRepository } from '../rag/rag.repository';
+import { DocumentIdentifierDto } from '../rag/dto/document-identifier.dto';
 import * as pdfParse from 'pdf-parse';
-import { QueueService } from '../queue/queue.service';
 
 @Injectable()
 export class TestsService {
   constructor(
-    private readonly mcqRepository: McqRepository,
-    private readonly testAttemptRepository: TestAttemptRepository,
-    private readonly userAnswerRepository: UserAnswerRepository,
-    private readonly pdfRepository: PdfRepository,
-    private readonly parallelGenerationService: ParallelGenerationService,
-    private readonly queueService: QueueService,
+    private readonly testsRepository: TestsRepository,
+    private readonly pdfsRepository: PdfsRepository,
+    private readonly ragRepository: RagRepository,
     private adkRunner?: AdkRunnerService,
     private gcsService?: GcsService,
     private pdfTextService?: PdfTextService,
     private retrieveService?: RetrieveService,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger?: Logger,
   ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
-    this.logger?.info('Submitting test', { userId, answerCount: dto.userAnswers.length });
-    
-    // 1. Validate all MCQs exist
-    const mcqIds = dto.userAnswers.map((a) => a.mcqId);
-    const mcqs = await this.mcqRepository.findMany({ id: { in: mcqIds } });
+    // 1. Fetch MCQs to check answers
+    const mcqIds = dto.answers.map((a) => a.mcqId);
+    const mcqs = await this.testsRepository.findMcqsByIds(mcqIds);
+    const mcqMap = new Map<string, Mcq>(mcqs.map((m) => [m.id, m]));
 
-    if (mcqs.length !== mcqIds.length) {
-      throw new Error('Some MCQs not found');
-    }
+    // 2. Calculate score and prepare answers
+    let score = 0;
+    const answerData = dto.answers.map((answer) => {
+      const mcq = mcqMap.get(answer.mcqId);
+      if (!mcq) throw new Error(`MCQ not found: ${answer.mcqId}`);
 
-    // 2. Create answer data
-    const answerData = dto.userAnswers.map((answer) => {
-      const mcq = mcqs.find((m) => m.id === answer.mcqId);
-      const isCorrect = mcq ? mcq.correctIdx === answer.selectedIdx : false;
+      const isCorrect = mcq.correctIdx === answer.selectedIdx;
+      if (isCorrect) score++;
+
       return {
         mcqId: answer.mcqId,
         selectedIdx: answer.selectedIdx,
@@ -57,54 +49,24 @@ export class TestsService {
       };
     });
 
-    const score = answerData.filter((a) => a.isCorrect).length;
-
     // 3. Create Attempt
-    const total = dto.userAnswers.length;
-    const percentage = total > 0 ? (score / total) * 100 : 0;
+    const total = dto.answers.length;
 
-    const attempt = await this.testAttemptRepository.create({
-      user: { connect: { id: userId } },
-      pdf: { connect: { id: dto.pdfId } },
-      totalQuestions: total,
-      percentage: Math.round((score / total) * 100),
-      completedAt: new Date(),
-    });
-
-    await this.userAnswerRepository.createMany({
-      data: answerData.map((answer) => ({
-        attemptId: attempt.id,
-        mcqId: answer.mcqId,
-        selectedIdx: answer.selectedIdx,
-        isCorrect: answer.isCorrect,
-      })),
-    });
-
-    // Queue background analysis
-    await this.queueService.addTestAnalysisJob({
-      testId: attempt.id,
-      userId,
-    });
-
-    return attempt;
+    return this.testsRepository.createCompletedAttempt(userId, dto.pdfId, score, total, answerData);
   }
 
   async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {
-    this.logger?.info('Getting test history', { userId });
-    
-    const attempts = await this.testAttemptRepository.findByUserWithStats(userId);
-
+    const attempts = await this.testsRepository.findUserAttempts(userId);
     return TestHistoryResponseDto.fromEntities(attempts);
   }
 
   async getAllTestHistory(): Promise<TestHistoryResponseDto> {
-    const attempts = await this.testAttemptRepository.findAllWithStats();
-
+    const attempts = await this.testsRepository.findAllAttemptsWithDetails();
     return TestHistoryResponseDto.fromEntities(attempts);
   }
 
   async getTestStats(pdfId: string) {
-    const attempts = await this.testAttemptRepository.findByPdfWithStats(pdfId);
+    const attempts = await this.testsRepository.findCompletedAttemptsByPdf(pdfId);
 
     if (attempts.length === 0) {
       return {
@@ -118,32 +80,26 @@ export class TestsService {
     const avgScore = Math.round(attempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / attempts.length);
     const topAttempt = attempts[0];
 
+    // @ts-ignore
+    const email = topAttempt.user?.email || 'Unknown';
+
     return {
       attemptCount: attempts.length,
       avgScore,
-      topScorer: topAttempt.user.email.split('@')[0],
+      topScorer: email.split('@')[0],
       topScore: Math.round(topAttempt.percentage || 0),
     };
   }
 
   async getAttemptDetails(userId: string, attemptId: string): Promise<TestHistoryItemDto> {
-    const attempt = await this.testAttemptRepository.findByIdWithStats(attemptId);
+    const attempt = await this.testsRepository.findAttemptById(attemptId);
 
     if (!attempt || attempt.userId !== userId) {
       throw new NotFoundException('Attempt not found');
     }
 
-    // If summary is missing, it might be being generated in the background
-    const aiSummary = attempt.summary || 'AI Analysis is being generated. Please check back in a moment...';
-
-    // Add the summary to the attempt object
-    const attemptWithSummary = {
-      ...attempt,
-      summary: aiSummary,
-      answers: attempt.userAnswers, // Ensure answers are included
-    };
-
-    return TestHistoryItemDto.fromEntity(attemptWithSummary);
+    // @ts-ignore
+    return TestHistoryItemDto.fromEntity(attempt);
   }
 
   async chatAssist(message: string, questionId: string, history?: any[]) {
@@ -151,12 +107,11 @@ export class TestsService {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-    const mcq = await this.mcqRepository.findById(questionId);
+    const mcq = await this.testsRepository.findMcqById(questionId);
     if (!mcq) throw new NotFoundException('Question not found');
 
-    // Get PDF content - need to fetch the MCQ with objective included
-    const mcqWithObjective = await this.mcqRepository.findByIdWithObjective(questionId);
-    const pdfContent = mcqWithObjective?.objective?.pdf?.content || '';
+    // @ts-ignore
+    const pdfContent = mcq.objective?.pdf?.content || ''; // Or handle GCS path if needed (simplified for now as content usually has text)
 
     const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
     const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, pdfContent);
@@ -192,8 +147,7 @@ export class TestsService {
         const parsed = await pdfParse(buffer);
         return parsed.text.substring(0, 10000);
       } catch (error) {
-        this.logger?.error('Gemini API failed', { error: (error as Error).message });
-        return '';
+        console.error('[AI Tutor] Failed to extract PDF content for chat assistance:', error);
       }
     }
 
@@ -210,48 +164,57 @@ export class TestsService {
       const bucketName = process.env.GCP_BUCKET_NAME;
       const gcsUri = pdf.gcsPath && bucketName ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
 
-      const documentIdentifiers = [gcsUri ? { sourceUri: gcsUri } : null, pdf.filename ? { title: pdf.filename } : null].filter(Boolean);
+      const identifierInputs = [gcsUri ? { sourceUri: gcsUri } : null, pdf.filename ? { title: pdf.filename } : null].filter(Boolean);
 
-      if (!documentIdentifiers.length) {
-        this.logger?.info('No identifiers available to look up document; falling back to PDF text');
+      if (!identifierInputs.length) {
+        console.log('[AI Tutor][RAG] No identifiers available to look up document; falling back to PDF text');
         return '';
       }
 
-      const document = await this.pdfRepository.findWithDocument(pdf.filename || 'unknown');
+      const identifierDtos = identifierInputs.map((ident: any) => {
+        const dto = new DocumentIdentifierDto();
+        dto.sourceUri = ident.sourceUri || null;
+        dto.title = ident.title || null;
+        return dto;
+      });
+
+      const document = await this.ragRepository.findDocumentByIdentifiers(identifierDtos, ['READY', 'COMPLETED']);
 
       if (!document) {
-        this.logger?.info('No matching document found for PDF; falling back to PDF text');
+        console.log('[AI Tutor][RAG] No matching document found for PDF; falling back to PDF text');
         return '';
       }
 
-      const chunks = await this.retrieveService.rankChunks(`${message}\n\nQuestion: ${questionText}`, document.document?.chunks || [], 6);
+      const chunks = await this.ragRepository.listChunksByDocument(document.id);
 
-      if (!chunks.length) {
-        this.logger?.info('No ranked chunks found; falling back to PDF text');
+      const ranked = await this.retrieveService.rankChunks(`${message}\n\nQuestion: ${questionText}`, chunks, 6);
+
+      if (!ranked.length) {
+        console.log('[AI Tutor][RAG] No ranked chunks found; falling back to PDF text');
         return '';
       }
 
-      this.logger?.info('Using RAG context', { chunkCount: chunks.length });
-      return chunks.map((chunk) => chunk.content).join('\n\n');
+      console.log(`[AI Tutor][RAG] Using ${ranked.length} ranked chunks for context (document ${document.id})`);
+      return ranked.map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`).join('\n\n');
     } catch (error) {
-      this.logger?.error('RAG retrieval failed', { error: (error as Error).message });
+      console.error('[AI Tutor][RAG] Failed to build context; using PDF text instead:', error);
       return '';
     }
   }
 
   async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
-    this.logger?.info('Getting chat assistance', { userId, questionId, pdfId });
-    this.logger?.info('User message: "%s"', message);
+    console.log(`[AI Tutor] Starting chat assistance for user ${userId}, question ${questionId}, PDF ${pdfId}`);
+    console.log(`[AI Tutor] User message: "${message}"`);
 
     try {
       // Get the question and PDF info
-      const question = await this.mcqRepository.findById(questionId);
+      const question = await this.testsRepository.findMcqById(questionId);
 
       if (!question) {
         throw new NotFoundException('Question not found');
       }
 
-      const pdf = await this.pdfRepository.findById(pdfId);
+      const pdf = await this.pdfsRepository.findPdfById(pdfId);
 
       if (!pdf) {
         throw new NotFoundException('PDF not found');
@@ -265,18 +228,10 @@ export class TestsService {
       // Try using centralized ADK runner first
       if (this.adkRunner && this.adkRunner.isAvailable()) {
         try {
-          this.logger?.info('Using centralized ADK runner for chat assistance');
+          console.log('[AI Tutor] ✅ Using centralized ADK runner');
 
-          const { LlmAgent } = require('@google/adk');
-          const agent = new LlmAgent({
-            name: 'ai_tutor',
-            description: 'AI tutor to help students with questions',
-            model: 'gemini-2.5-flash',
-            instruction: `You are an AI tutor helping a student with a specific question. Your goal is to guide them to the answer without giving it away directly.
-
-Context from the document:
-${ragContext || context}`
-          });
+          const { createTestAssistanceAgent } = require('../ai/agents');
+          const agent = createTestAssistanceAgent(question.question, question.options, context);
 
           const responseText = await this.adkRunner.runAgent(agent, userId, message, 'ai-tutor');
 
@@ -285,14 +240,15 @@ ${ragContext || context}`
             questionContext: question.question,
             helpful: true,
           } as ChatAssistanceResponseDto;
-        } catch (error) {
-          this.logger?.error('ADK execution failed, falling back to Gemini', { error: (error as Error).message });
+        } catch (adkError) {
+          console.error('[AI Tutor] ❌ Centralized ADK runner failed, falling back to direct Gemini:', adkError);
         }
       } else {
-        this.logger?.warn('ADK not available, using Gemini fallback');
+        console.log('[AI Tutor] ❌ ADK not available - using direct Gemini fallback');
       }
 
       // Direct Gemini fallback for AI tutor
+      console.log('[AI Tutor] 🔄 Using direct Gemini fallback');
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
 
@@ -310,7 +266,7 @@ ${ragContext || context}`
         helpful: true,
       } as ChatAssistanceResponseDto;
     } catch (error) {
-      this.logger?.error('Error in getChatAssistance', { error: (error as Error).message });
+      console.error('[AI Tutor] Error in getChatAssistance:', error);
       throw error;
     }
   }

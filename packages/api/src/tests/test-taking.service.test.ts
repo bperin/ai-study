@@ -1,41 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TestTakingService } from './test-taking.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { TestsRepository } from './tests.repository';
+import { RetrieveService } from '../rag/services/retrieve.service';
+import { PdfTextService } from '../pdfs/pdf-text.service';
+import { GcsService } from '../pdfs/gcs.service';
 
 describe('TestTakingService', () => {
   let service: TestTakingService;
-  let prisma: PrismaService;
+  let testsRepository: TestsRepository;
 
-  const mockPrisma = {
-    testAttempt: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-    mcq: {
-      count: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-    },
-    userAnswer: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-    },
+  const mockTestsRepository = {
+    findActiveAttempt: jest.fn(),
+    countMcqsByPdfId: jest.fn(),
+    createAttempt: jest.fn(),
+    findMcqsByPdfId: jest.fn(),
   };
+
+  const mockRetrieveService = {};
 
   const mockConfig = {
     get: jest.fn().mockReturnValue('test-api-key'),
   };
 
+  const mockPdfTextService = {
+    extractText: jest.fn(),
+  };
+
+  const mockGcsService = {
+    downloadFile: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TestTakingService, { provide: PrismaService, useValue: mockPrisma }, { provide: ConfigService, useValue: mockConfig }],
+      providers: [TestTakingService, { provide: TestsRepository, useValue: mockTestsRepository }, { provide: ConfigService, useValue: mockConfig }, { provide: RetrieveService, useValue: mockRetrieveService }, { provide: PdfTextService, useValue: mockPdfTextService }, { provide: GcsService, useValue: mockGcsService }],
     }).compile();
 
     service = module.get<TestTakingService>(TestTakingService);
-    prisma = module.get<PrismaService>(PrismaService);
+    testsRepository = module.get<TestsRepository>(TestsRepository);
   });
 
   it('should be defined', () => {
@@ -52,32 +54,32 @@ describe('TestTakingService', () => {
         userAnswers: [],
       };
 
-      mockPrisma.testAttempt.findFirst.mockResolvedValue(mockAttempt);
-      mockPrisma.mcq.findMany.mockResolvedValue([]);
+      mockTestsRepository.findActiveAttempt.mockResolvedValue(mockAttempt);
+      mockTestsRepository.findMcqsByPdfId.mockResolvedValue([]);
 
       const result = await service.getOrStartSession('user-1', 'pdf-1');
 
       expect(result.attemptId).toBe('attempt-1');
-      expect(mockPrisma.testAttempt.findFirst).toHaveBeenCalled();
-      expect(mockPrisma.testAttempt.create).not.toHaveBeenCalled();
+      expect(mockTestsRepository.findActiveAttempt).toHaveBeenCalled();
+      expect(mockTestsRepository.createAttempt).not.toHaveBeenCalled();
     });
 
     it('should create a new attempt if none exists', async () => {
-      mockPrisma.testAttempt.findFirst.mockResolvedValue(null);
-      mockPrisma.mcq.count.mockResolvedValue(10);
-      mockPrisma.testAttempt.create.mockResolvedValue({
+      mockTestsRepository.findActiveAttempt.mockResolvedValue(null);
+      mockTestsRepository.countMcqsByPdfId.mockResolvedValue(10);
+      mockTestsRepository.createAttempt.mockResolvedValue({
         id: 'new-attempt',
         userId: 'user-1',
         pdfId: 'pdf-1',
         startedAt: new Date(),
         userAnswers: [],
       });
-      mockPrisma.mcq.findMany.mockResolvedValue([]);
+      mockTestsRepository.findMcqsByPdfId.mockResolvedValue([]);
 
       const result = await service.getOrStartSession('user-1', 'pdf-1');
 
       expect(result.attemptId).toBe('new-attempt');
-      expect(mockPrisma.testAttempt.create).toHaveBeenCalled();
+      expect(mockTestsRepository.createAttempt).toHaveBeenCalled();
     });
   });
 });

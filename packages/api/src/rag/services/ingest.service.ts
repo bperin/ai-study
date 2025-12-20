@@ -1,110 +1,105 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
-import { Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { Storage } from '@google-cloud/storage';
-import { DocumentRepository } from '../../shared/repositories/document.repository';
 import { ChunkService } from './chunk.service';
 import { EmbedService } from './embed.service';
 import { PdfService } from './pdf.service';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger as WinstonLogger } from 'winston';
+import { RagRepository } from '../rag.repository';
+import { PdfStatusGateway, PdfStatusUpdate } from '../../pdf-status.gateway';
+
+interface IngestContext {
+  userId?: string;
+  pdfId?: string;
+}
 
 @Injectable()
 export class IngestService {
+  private readonly logger = new Logger(IngestService.name);
   private readonly storage = new Storage();
 
   constructor(
-    private readonly documentRepository: DocumentRepository,
+    private readonly ragRepository: RagRepository,
     private readonly chunkService: ChunkService,
     private readonly embedService: EmbedService,
     private readonly pdfService: PdfService,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: WinstonLogger,
+    private readonly pdfStatusGateway?: PdfStatusGateway,
   ) {}
 
-  async createFromText(title: string | undefined, text: string) {
+  async createFromText(title: string | undefined, text: string, context?: IngestContext) {
     if (!text || !text.trim()) {
       throw new BadRequestException('text is required');
     }
 
-    const document = await this.documentRepository.create({
-      title,
-      sourceType: 'TEXT',
-      mimeType: 'text/plain',
-      status: 'PROCESSING',
-    });
+    const document = await this.ragRepository.createDocumentRecord(title, 'text', undefined, 'text/plain', 'PROCESSING');
 
     // Run in background to avoid timeouts
     (async () => {
       try {
-        await this.processDocument(document.id, text, 'text/plain');
+        await this.processDocument(document.id, text, 'text/plain', context);
       } catch (e: any) {
-        await this.documentRepository.update(document.id, { 
-          status: 'FAILED', 
-          errorMessage: e.message 
-        });
+        await this.ragRepository.updateDocumentById(document.id, 'FAILED', e.message);
         this.logger.error(`Background ingestion failed for document ${document.id}: ${e.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${e.message}`,
+          isGenerating: false,
+        });
       }
     })();
 
     return { documentId: document.id, status: 'PROCESSING' };
   }
 
-  async createFromUpload(title: string | undefined, file: Express.Multer.File) {
+  async createFromUpload(title: string | undefined, file: Express.Multer.File, context?: IngestContext) {
     if (!file) {
       throw new BadRequestException('file is required');
     }
 
-    const document = await this.documentRepository.create({
-      title: title || file.originalname,
-      sourceType: 'UPLOAD',
-      mimeType: file.mimetype,
-      status: 'PROCESSING',
-    });
+    const document = await this.ragRepository.createDocumentRecord(title || file.originalname, 'upload', file.originalname, file.mimetype, 'PROCESSING');
 
     // Run in background to avoid timeouts
     (async () => {
       try {
         const text = await this.pdfService.extractText(file.buffer);
-        await this.processDocument(document.id, text, 'application/pdf');
+        await this.processDocument(document.id, text, 'application/pdf', context);
       } catch (error: any) {
-        await this.documentRepository.update(document.id, { 
-          status: 'FAILED', 
-          errorMessage: error.message 
-        });
+        await this.ragRepository.updateDocumentById(document.id, 'FAILED', error.message);
         this.logger.error(`Background ingestion failed for upload ${document.id}: ${error.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${error.message}`,
+          isGenerating: false,
+        });
       }
     })();
 
     return { documentId: document.id, status: 'PROCESSING' };
   }
 
-  async createFromGcs(title: string | undefined, gcsUri: string) {
+  async createFromGcs(title: string | undefined, gcsUri: string, context?: IngestContext) {
     if (!gcsUri || !gcsUri.startsWith('gcs://')) {
       throw new BadRequestException('gcsUri must start with gcs://');
     }
 
-    const document = await this.documentRepository.create({
-      title,
-      sourceType: 'GCS',
-      sourceUri: gcsUri,
-      mimeType: 'application/pdf',
-      status: 'PROCESSING',
-    });
+    const document = await this.ragRepository.createDocumentRecord(title, 'gcs', gcsUri, 'application/pdf', 'PROCESSING');
 
     // Run in background to avoid timeouts
     (async () => {
       try {
         const { bucket: bucketName, path } = this.parseGcsUri(gcsUri);
         const bucket = this.storage.bucket(bucketName);
-        this.logger.info(`[Background] Downloading ${path} from ${bucketName}`);
+        this.logger.log(`[Background] Downloading ${path} from ${bucketName}`);
         const [buffer] = await bucket.file(path).download();
         const text = await this.pdfService.extractText(buffer);
-        await this.processDocument(document.id, text, 'application/pdf');
+        await this.processDocument(document.id, text, 'application/pdf', context);
       } catch (error: any) {
-        await this.documentRepository.update(document.id, { 
-          status: 'FAILED', 
-          errorMessage: error.message 
-        });
+        await this.ragRepository.updateDocumentById(document.id, 'FAILED', error.message);
         this.logger.error(`Background ingestion failed for GCS ${document.id}: ${error.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${error.message}`,
+          isGenerating: false,
+        });
       }
     })();
 
@@ -112,7 +107,7 @@ export class IngestService {
   }
 
   async reprocessDocument(documentId: string) {
-    const document = await this.documentRepository.findById(documentId);
+    const document = await this.ragRepository.findDocumentById(documentId);
 
     if (!document) {
       throw new BadRequestException('Document not found');
@@ -122,32 +117,26 @@ export class IngestService {
       throw new BadRequestException('Only GCS-based documents can be reprocessed currently');
     }
 
-    this.logger.info(`Reprocessing document ${documentId}: ${document.title}`);
+    this.logger.log(`Reprocessing document ${documentId}: ${document.title}`);
 
     // Update status to PROCESSING and clear existing chunks
-    await this.documentRepository.deleteChunksByDocumentId(documentId);
+    await this.ragRepository.deleteChunksByDocument(documentId);
 
-    await this.documentRepository.update(documentId, { 
-      status: 'PROCESSING', 
-      errorMessage: null 
-    });
+    await this.ragRepository.updateDocumentById(documentId, 'PROCESSING', null);
 
     // Run in background to avoid dashboard timeouts
     (async () => {
       try {
         const { bucket: bucketName, path } = this.parseGcsUri(document.sourceUri!);
         const bucket = this.storage.bucket(bucketName);
-        this.logger.info(`[Reprocess] Downloading ${path} from ${bucketName}`);
+        this.logger.log(`[Reprocess] Downloading ${path} from ${bucketName}`);
         const [buffer] = await bucket.file(path).download();
-        this.logger.info(`[Reprocess] Downloaded ${buffer.length} bytes, extracting text...`);
+        this.logger.log(`[Reprocess] Downloaded ${buffer.length} bytes, extracting text...`);
         const text = await this.pdfService.extractText(buffer);
-        this.logger.info(`[Reprocess] Extracted ${text.length} chars, starting ingestion...`);
+        this.logger.log(`[Reprocess] Extracted ${text.length} chars, starting ingestion...`);
         await this.processDocument(documentId, text, document.mimeType || 'application/pdf');
       } catch (error: any) {
-        await this.documentRepository.update(documentId, { 
-          status: 'FAILED', 
-          errorMessage: error.message 
-        });
+        await this.ragRepository.updateDocumentById(documentId, 'FAILED', error.message);
         this.logger.error(`Background reprocessing failed for document ${documentId}: ${error.message}`);
       }
     })();
@@ -156,16 +145,16 @@ export class IngestService {
   }
 
   async reprocessAllDocuments() {
-    const documents = await this.documentRepository.findBySourceType('GCS');
+    const documents = await this.ragRepository.listGcsDocuments();
 
-    this.logger.info(`Queueing reprocessing for ${documents.length} GCS documents`);
+    this.logger.log(`Queueing reprocessing for ${documents.length} GCS documents`);
 
     // Run in background
     (async () => {
       for (const doc of documents) {
         try {
           await this.reprocessDocument(doc.id);
-          this.logger.info(`Successfully reprocessed ${doc.id} (${doc.title})`);
+          this.logger.log(`Successfully reprocessed ${doc.id} (${doc.title})`);
         } catch (e: any) {
           this.logger.error(`Failed to reprocess ${doc.id}: ${e.message}`);
         }
@@ -187,18 +176,20 @@ export class IngestService {
     return { bucket, path };
   }
 
-  private async processDocument(documentId: string, text: string, mimeType: string) {
-    this.logger.info(`Processing document ${documentId} with ${text.length} chars`);
+  private async processDocument(documentId: string, text: string, mimeType: string, context?: IngestContext) {
+    this.logger.log(`Processing document ${documentId} with ${text.length} chars`);
     const chunks = this.chunkService.chunkText(text);
     if (!chunks.length) {
-      await this.documentRepository.update(documentId, { 
-        status: 'FAILED', 
-        errorMessage: 'No extractable text' 
+      await this.ragRepository.updateDocumentById(documentId, 'FAILED', 'No extractable text');
+      this.emitChunkingStatus(context, {
+        status: 'failed',
+        message: 'No extractable text available for chunking',
+        isGenerating: false,
       });
       throw new BadRequestException('No extractable text');
     }
 
-    this.logger.info(`Computing embeddings for ${chunks.length} chunks`);
+    this.logger.log(`Computing embeddings for ${chunks.length} chunks`);
     const embeddings = await Promise.all(chunks.map((chunk) => this.embedService.embedText(chunk.content)));
 
     const chunkData = chunks.map((chunk, idx) => {
@@ -218,49 +209,78 @@ export class IngestService {
       };
     });
 
-    this.logger.info(`Saving ${chunkData.length} chunks to database in batches`);
+    this.logger.log(`Saving ${chunkData.length} chunks to database in batches`);
+    this.emitChunkingStatus(context, {
+      status: 'running',
+      message: 'Starting PDF chunking...',
+      current: 0,
+      total: chunkData.length,
+      isGenerating: true,
+    });
 
     // Process in batches outside of a transaction to avoid Prisma Accelerate timeouts (15s limit)
     // Reduce batch size for better stability with Accelerate
     const BATCH_SIZE = 10;
     const totalBatches = Math.ceil(chunkData.length / BATCH_SIZE);
+    let processed = 0;
 
     for (let i = 0; i < chunkData.length; i += BATCH_SIZE) {
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
       const batch = chunkData.slice(i, i + BATCH_SIZE);
-      this.logger.info(`[Batch ${batchNumber}/${totalBatches}] Processing ${batch.length} chunks for document ${documentId}`);
+      this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Processing ${batch.length} chunks for document ${documentId}`);
 
       try {
         // Use a simpler approach without interactive transaction to avoid Accelerate timeouts
         for (const data of batch) {
           if (data.embeddingSql) {
-            await this.documentRepository.createChunkWithVector(data);
+            await this.ragRepository.insertChunkWithVector(data.id, data.documentId, data.chunkIndex, data.content, data.contentHash, data.startChar, data.endChar, data.embeddingJson as any, data.embeddingSql);
           } else {
-            await this.documentRepository.createChunk({
-              id: data.id,
-              documentId: data.documentId,
-              chunkIndex: data.chunkIndex,
-              content: data.content,
-              contentHash: data.contentHash,
-              startChar: data.startChar,
-              endChar: data.endChar,
-              embeddingJson: data.embeddingJson,
-            });
+            await this.ragRepository.createChunkRecord(data.documentId, data.chunkIndex, data.content, data.contentHash, data.startChar, data.endChar, data.embeddingJson as any, data.id);
           }
         }
-        this.logger.info(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
+        this.logger.log(`[Batch ${batchNumber}/${totalBatches}] Successfully saved ${batch.length} chunks`);
+        processed += batch.length;
+        this.emitChunkingStatus(context, {
+          status: 'running',
+          message: `Chunking batch ${batchNumber}/${totalBatches}`,
+          current: Math.min(processed, chunkData.length),
+          total: chunkData.length,
+          progress: chunkData.length ? Math.min(processed / chunkData.length, 1) : undefined,
+          isGenerating: true,
+        });
       } catch (error: any) {
         this.logger.error(`[Batch ${batchNumber}/${totalBatches}] Failed to save batch: ${error.message}`);
+        this.emitChunkingStatus(context, {
+          status: 'failed',
+          message: `Chunking failed: ${error.message}`,
+          isGenerating: false,
+        });
         throw error; // Re-throw to fail the document status
       }
     }
 
-    await this.documentRepository.update(documentId, { 
-      status: 'COMPLETED', 
-      mimeType, 
-      errorMessage: null 
+    await this.ragRepository.updateDocumentById(documentId, 'COMPLETED', null, mimeType);
+    this.emitChunkingStatus(context, {
+      status: 'completed',
+      message: `Chunking complete (${chunkData.length} chunks)`,
+      current: chunkData.length,
+      total: chunkData.length,
+      progress: 1,
+      isGenerating: false,
     });
 
     return { documentId, status: 'COMPLETED', chunks: chunks.length };
+  }
+
+  private emitChunkingStatus(context: IngestContext | undefined, update: PdfStatusUpdate) {
+    if (!context?.userId || !this.pdfStatusGateway) {
+      return;
+    }
+
+    this.pdfStatusGateway.sendStatusUpdate(context.userId, {
+      phase: 'chunking',
+      pdfId: context.pdfId,
+      ...update,
+    });
   }
 }

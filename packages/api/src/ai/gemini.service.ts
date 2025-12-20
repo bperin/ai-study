@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InMemoryRunner, getFunctionCalls } from '@google/adk';
-import { PrismaService } from '../prisma/prisma.service';
 import { GcsService } from '../pdfs/gcs.service';
 import { PdfTextService } from '../shared/services/pdf-text.service';
 import { createSaveObjectiveTool, createGetPdfInfoTool, createCompletionTool } from './tools';
 import { createFlashcardOrchestratorAgent } from './agents';
+import { TestsRepository } from '../tests/tests.repository';
 
 @Injectable()
 export class GeminiService {
   constructor(
     private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly testsRepository: TestsRepository,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
   ) {
@@ -29,7 +29,7 @@ export class GeminiService {
    */
   async generateFlashcards(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
     // Create tools for this specific PDF - now with PdfTextService
-    const tools = [createSaveObjectiveTool(this.prisma, pdfId), createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createCompletionTool()];
+    const tools = [createSaveObjectiveTool(this.testsRepository, pdfId), createGetPdfInfoTool(pdfFilename, gcsPath, this.gcsService, this.pdfTextService), createCompletionTool()];
 
     // Create the root orchestrator agent
     const orchestratorAgent = createFlashcardOrchestratorAgent(tools);

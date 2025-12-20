@@ -1,11 +1,9 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Chunk } from '@prisma/client';
-import { DocumentRepository } from '../../shared/repositories/document.repository';
 import { EmbedService } from './embed.service';
 import { keywordScore, limitContextByLength } from '../util/score';
 import { cosineSimilarity } from '../util/cosine';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
+import { RagRepository } from '../rag.repository';
 
 export interface ScoredChunk extends Chunk {
   score: number;
@@ -16,19 +14,9 @@ export class RetrieveService {
   private readonly defaultTopK = 6;
 
   constructor(
-    private readonly documentRepository: DocumentRepository,
+    private readonly ragRepository: RagRepository,
     private readonly embedService: EmbedService,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
-
-  async retrieveChunks(pdfFilename: string, gcsPath: string): Promise<Chunk[]> {
-    const document = await this.documentRepository.findByGcsUrisOrTitles([gcsPath], [pdfFilename]);
-    if (!document || document.length === 0) {
-      return [];
-    }
-    const docId = document[0].id;
-    return this.documentRepository.findChunksByDocumentId(docId) as Promise<Chunk[]>;
-  }
 
   async rankChunks(question: string, chunks: Chunk[], requestedTopK?: number): Promise<ScoredChunk[]> {
     const topK = requestedTopK ?? this.defaultTopK;
@@ -41,20 +29,15 @@ export class RetrieveService {
     const questionEmbedding = await this.embedService.embedText(question);
 
     try {
-      if (await this.embedService.isEnabled()) {
-        const { Prisma } = require('@prisma/client');
-        const vectorString = `[${questionEmbedding.join(',')}]`;
+      const vectorSql = `[${questionEmbedding.join(',')}]`;
+      const results: any[] = this.embedService.isEnabled() ? await this.ragRepository.vectorSearch(vectorSql, chunks[0].documentId, topK * 2) : [];
 
-        const results = await this.documentRepository.queryRawVectorSimilarity(chunks, vectorString, topK);
-
-        if (results.length > 0) {
-          scored = results.map((r) => ({ ...r, score: Number(r.score) }));
-          this.logger.info(`Vector search found ${scored.length} chunks`);
-        }
+      if (results.length > 0) {
+        scored = results.map((r) => ({ ...r, score: Number(r.score) }) as ScoredChunk);
       }
     } catch (e) {
-      this.logger.error('Vector SQL search failed', { error: (e as Error).message });
-      this.logger.info('Falling back to in-memory search');
+      // Fallback to in-memory cosine similarity or keyword search if raw SQL fails
+      console.error('[RetrieveService] Vector SQL search failed, falling back:', e);
     }
 
     if (scored.length === 0) {
@@ -73,5 +56,9 @@ export class RetrieveService {
     scored.sort((a, b) => b.score - a.score || a.chunkIndex - b.chunkIndex);
     const limited = scored.slice(0, topK);
     return limitContextByLength(limited);
+  }
+
+  findChunksForDocumentLookup(pdfFilename: string, gcsPath: string) {
+    return this.ragRepository.findChunksForDocumentLookup(pdfFilename, gcsPath);
   }
 }

@@ -1,16 +1,13 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { PdfRepository } from '../shared/repositories/pdf.repository';
-import { DocumentRepository } from '../shared/repositories/document.repository';
-import { ObjectiveRepository } from '../shared/repositories/objective.repository';
-import { McqRepository } from '../shared/repositories/mcq.repository';
-import { ParallelGenerationService } from '../ai/parallel-generation.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { ParallelGenerationService, FlashcardGenerationProgress } from '../ai/parallel-generation.service';
 import { GcsService } from './gcs.service';
-import { PdfTextService } from '../shared/services/pdf-text.service';
+import { PdfTextService } from './pdf-text.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TEST_PLAN_CHAT_PROMPT } from '../ai/prompts';
 import { createAdkRunner } from '../ai/adk.helpers';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
+import { PdfsRepository } from './pdfs.repository';
+import { TestsRepository } from '../tests/tests.repository';
+import { RagRepository } from '../rag/rag.repository';
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
@@ -18,65 +15,42 @@ const os = require('os');
 
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { PdfStatusGateway } from '../pdf-status.gateway';
-import { QueueService } from '../queue/queue.service';
 
 @Injectable()
 export class PdfsService {
   constructor(
-    private readonly pdfRepository: PdfRepository,
-    private readonly documentRepository: DocumentRepository,
-    private readonly objectiveRepository: ObjectiveRepository,
-    private readonly mcqRepository: McqRepository,
+    private readonly pdfsRepository: PdfsRepository,
+    private readonly testsRepository: TestsRepository,
+    private readonly ragRepository: RagRepository,
     private readonly parallelGenerationService: ParallelGenerationService,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
     private readonly pdfStatusGateway: PdfStatusGateway,
-    private readonly queueService: QueueService,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
 
-  async getRagStatus(pdfId: string) {
-    this.logger.info('Getting RAG status', { pdfId });
-    
-    const pdf = await this.pdfRepository.findWithDocument(pdfId);
+  async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
+    // 1. Get PDF from database
+    const pdf = await this.pdfsRepository.findPdfForUser(pdfId, userId);
 
     if (!pdf) {
       throw new NotFoundException('PDF not found');
     }
 
-    if (!pdf.document) {
-      return {
-        status: 'not_started',
-        message: 'RAG ingestion has not been triggered',
-      };
-    }
-
-    return {
-      status: pdf.document.status.toLowerCase(),
-      documentId: pdf.document.id,
-      chunkCount: pdf.document._count.chunks,
-      errorMessage: pdf.document.errorMessage,
-      createdAt: pdf.document.createdAt,
-      updatedAt: pdf.document.updatedAt,
-    };
-  }
-
-  async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
-    // 1. Get PDF from database
-    const pdf = await this.pdfRepository.findById(pdfId);
-    
-    if (!pdf || pdf.userId !== userId) {
-      throw new NotFoundException('PDF not found');
-    }
-
-    // Skip session creation for now - not implemented in repository
+    // Create a session to track this generation event
+    const session = await this.pdfsRepository.createPdfSession(pdfId, userId, 'generating', { prompt: userPrompt });
 
     // Notify client that generation has started
-    this.pdfStatusGateway.sendStatusUpdate(userId, true);
+    this.pdfStatusGateway.sendStatusUpdate(userId, {
+      pdfId,
+      phase: 'flashcards',
+      status: 'running',
+      isGenerating: true,
+      message: 'Preparing flashcard generation...',
+    });
 
     // 2. Use parallel generation for faster results
-    this.logger.info('PDF record for generation', {
+    console.log(`PDF record for generation:`, {
       id: pdf.id,
       filename: pdf.filename,
       hasGcsPath: !!pdf.gcsPath,
@@ -90,14 +64,45 @@ export class PdfsService {
       throw new Error(`PDF ${pdf.filename} has no GCS path or content - cannot generate questions`);
     }
 
-    // Queue flashcard generation job
-    await this.queueService.addFlashcardGenerationJob({
-      pdfId,
-      sessionId: 'temp-session',
-      userId,
-      userPrompt,
-      filename: pdf.filename,
-      gcsPathOrContent,
+    // Run in background to avoid dashboard timeouts
+    // We use setImmediate to detach execution from the request cycle
+    // to prevent cancellation if the request is aborted/refreshed
+    const emitFlashcardStatus = (update: FlashcardGenerationProgress) => {
+      this.pdfStatusGateway.sendStatusUpdate(userId, {
+        pdfId,
+        phase: 'flashcards',
+        ...update,
+        isGenerating: update.status === 'running',
+      });
+    };
+
+    setImmediate(async () => {
+      try {
+        console.log(`[Background] Starting flashcard generation for PDF ${pdfId}`);
+        const summary = await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, pdf.filename, gcsPathOrContent, emitFlashcardStatus);
+
+        // Update session as completed
+        await this.pdfsRepository.updatePdfSession(session.id, 'completed');
+        emitFlashcardStatus({
+          status: 'completed',
+          message: summary.summary || 'Flashcard generation completed',
+        });
+        console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
+      } catch (e: any) {
+        emitFlashcardStatus({
+          status: 'failed',
+          message: `Flashcard generation failed: ${e.message}`,
+        });
+        console.error(`[Background] Flashcard generation failed for PDF ${pdfId}:`, e);
+        try {
+          // If we managed to generate some questions, mark as ready instead of failed
+          const questionsCount = await this.testsRepository.countMcqsByPdfId(pdfId);
+
+          await this.pdfsRepository.updatePdfSession(session.id, questionsCount > 0 ? 'completed' : 'failed');
+        } catch (updateError: any) {
+          console.error(`[Background] Failed to update session status to failed: ${updateError.message}`);
+        }
+      }
     });
 
     return {
@@ -107,51 +112,29 @@ export class PdfsService {
   }
 
   async getObjectives(pdfId: string) {
-    return this.objectiveRepository.findByPdfIdWithMcqs(pdfId);
+    return this.testsRepository.findObjectivesByPdfId(pdfId);
   }
 
   async listPdfs(userId: string, page: number = 1, limit: number = 10) {
-    this.logger.info('Listing PDFs for user', { userId, page, limit });
-    
     const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.pdfRepository.findByUserId(userId, skip, limit),
-      this.pdfRepository.countByUserId(userId),
-    ]);
+    const [data, total] = await Promise.all([this.pdfsRepository.listUserPdfsWithObjectives(userId, skip, limit), this.pdfsRepository.countUserPdfs(userId)]);
 
     // Fetch related RAG document statuses
     const bucketName = this.gcsService.getBucketName();
     const gcsUris = data.map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null)).filter(Boolean) as string[];
 
-    const ragDocs = await this.documentRepository.findByGcsUrisOrTitles(gcsUris, data.map((p) => p.filename));
-
-    const pdfIds = data.map((p) => p.id);
-    const attempts = await this.pdfRepository.findAttemptsByPdfIds(pdfIds);
-
-    // Get question counts and sample questions for each PDF
-    const pdfQuestionData = await Promise.all(
-      pdfIds.map(async (pdfId) => {
-        const questionCount = await this.mcqRepository.countByPdfId(pdfId);
-        const sampleQuestions = await this.mcqRepository.findByPdfId(pdfId);
-        return {
-          pdfId,
-          questionCount,
-          sampleQuestions: sampleQuestions.slice(0, 3).map(q => ({
-            id: q.id,
-            question: q.question,
-            options: q.options
-          })), // Get first 3 questions as samples with minimal data
-        };
-      })
+    const ragDocs = await this.ragRepository.findDocumentsForSources(
+      data.map((p) => p.filename),
+      gcsUris,
     );
 
-    const dataWithStats = await Promise.all(data.map(async (pdf) => {
+    const pdfIds = data.map((p) => p.id);
+    const attempts = await this.testsRepository.findCompletedAttemptsByPdfIds(pdfIds);
+
+    const dataWithStats = data.map((pdf) => {
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
       // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
       const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
-
-      // Get question data for this PDF
-      const questionData = pdfQuestionData.find((q) => q.pdfId === pdf.id);
 
       // Match RAG status
       const fullGcsUri = pdf.gcsPath ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
@@ -162,8 +145,6 @@ export class PdfsService {
           ...pdf,
           status: ragStatus as any,
           stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null },
-          questionCount: questionData?.questionCount || 0,
-          sampleQuestions: questionData?.sampleQuestions || [],
         };
       }
 
@@ -179,10 +160,8 @@ export class PdfsService {
           topScorer: topAttempt.user.email.split('@')[0],
           topScore: Math.round(topAttempt.percentage || 0),
         },
-        questionCount: questionData?.questionCount || 0,
-        sampleQuestions: questionData?.sampleQuestions || [],
       };
-    }));
+    });
 
     return {
       data: dataWithStats,
@@ -194,47 +173,25 @@ export class PdfsService {
   }
 
   async listAllPdfs(page: number = 1, limit: number = 10) {
-    this.logger.info('Listing all PDFs', { page, limit });
-    
     const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.pdfRepository.findAll(skip, limit),
-      this.pdfRepository.count(),
-    ]);
+    const [data, total] = await Promise.all([this.pdfsRepository.listAllPdfsWithObjectives(skip, limit), this.pdfsRepository.countAllPdfs()]);
 
     // Fetch related RAG document statuses
     const bucketName = this.gcsService.getBucketName();
     const gcsUris = data.map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null)).filter(Boolean) as string[];
 
-    const ragDocs = await this.documentRepository.findByGcsUrisOrTitles(gcsUris, data.map((p) => p.filename));
-
-    const pdfIds = data.map((p) => p.id);
-    const attempts = await this.pdfRepository.findAttemptsByPdfIds(pdfIds);
-
-    // Get question counts and sample questions for each PDF
-    const pdfQuestionData = await Promise.all(
-      pdfIds.map(async (pdfId) => {
-        const questionCount = await this.mcqRepository.countByPdfId(pdfId);
-        const sampleQuestions = await this.mcqRepository.findByPdfId(pdfId);
-        return {
-          pdfId,
-          questionCount,
-          sampleQuestions: sampleQuestions.slice(0, 3).map(q => ({
-            id: q.id,
-            question: q.question,
-            options: q.options
-          })), // Get first 3 questions as samples with minimal data
-        };
-      })
+    const ragDocs = await this.ragRepository.findDocumentsForSources(
+      data.map((p) => p.filename),
+      gcsUris,
     );
 
-    const dataWithStats = await Promise.all(data.map(async (pdf) => {
+    const pdfIds = data.map((p) => p.id);
+    const attempts = await this.testsRepository.findCompletedAttemptsByPdfIds(pdfIds);
+
+    const dataWithStats = data.map((pdf) => {
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
       // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
       const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
-
-      // Get question data for this PDF
-      const questionData = pdfQuestionData.find((q) => q.pdfId === pdf.id);
 
       // Match RAG status
       const fullGcsUri = pdf.gcsPath ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
@@ -245,8 +202,6 @@ export class PdfsService {
           ...pdf,
           status: ragStatus as any,
           stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null },
-          questionCount: questionData?.questionCount || 0,
-          sampleQuestions: questionData?.sampleQuestions || [],
         };
       }
 
@@ -262,10 +217,8 @@ export class PdfsService {
           topScorer: topAttempt.user.email.split('@')[0],
           topScore: Math.round(topAttempt.percentage || 0),
         },
-        questionCount: questionData?.questionCount || 0,
-        sampleQuestions: questionData?.sampleQuestions || [],
       };
-    }));
+    });
 
     return {
       data: dataWithStats,
@@ -277,56 +230,27 @@ export class PdfsService {
   }
 
   async forkPdf(pdfId: string, userId: string, newTitle?: string) {
-    this.logger.info('Forking PDF', { pdfId, userId, newTitle });
-    
-    const originalPdf = await this.pdfRepository.findById(pdfId);
-
-    if (!originalPdf) {
-      throw new NotFoundException('PDF not found');
-    }
+    const originalPdf = await this.pdfsRepository.findPdfById(pdfId);
+    if (!originalPdf) throw new NotFoundException('PDF not found');
 
     // Create a new PDF record pointing to the same content/storage
-    const newPdf = await this.pdfRepository.create({
-      filename: newTitle || `${originalPdf.filename} (Copy)`,
-      content: originalPdf.content,
-      gcsPath: originalPdf.gcsPath,
-      user: { connect: { id: userId } },
-    });
+    const newPdf = await this.pdfsRepository.createPdf(userId, newTitle || `${originalPdf.filename} (Copy)`, originalPdf.gcsPath, originalPdf.content);
 
     return newPdf;
   }
 
   async deletePdf(pdfId: string) {
-    this.logger.info('Deleting PDF', { pdfId });
-    
-    const pdf = await this.pdfRepository.findById(pdfId);
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
+    if (!pdf) throw new NotFoundException('PDF not found');
 
-    if (!pdf) {
-      throw new NotFoundException('PDF not found');
-    }
+    // Delete related data first
+    await this.testsRepository.deletePdfRelatedData(pdfId);
 
-    // Delete in correct order due to foreign key constraints
-    // 1. Delete user answers (linked to test attempts)
-    await this.pdfRepository.deleteUserAnswersByPdfId(pdfId);
+    // Delete PDF sessions
+    await this.pdfsRepository.deleteSessionsByPdf(pdfId);
 
-    // 2. Delete test attempts
-    await this.pdfRepository.deleteAttemptsByPdfId(pdfId);
-
-    // 3. Delete MCQs (linked to objectives)
-    await this.objectiveRepository.deleteMcqsByPdfId(pdfId);
-
-    // 4. Delete objectives
-    // Delete all objectives for this PDF
-    const existingObjectives = await this.objectiveRepository.findByPdfId(pdfId);
-    for (const objective of existingObjectives) {
-      await this.objectiveRepository.delete(objective.id);
-    }
-
-    // 5. Delete PDF sessions
-    await this.pdfRepository.deleteSessionsByPdfId(pdfId);
-
-    // 6. Finally delete the PDF itself
-    await this.pdfRepository.delete(pdfId);
+    // Finally delete the PDF itself
+    await this.pdfsRepository.deletePdf(pdfId);
 
     return {
       message: 'PDF and all associated data deleted successfully',
@@ -337,7 +261,7 @@ export class PdfsService {
 
   async chatPlan(message: string, pdfId: string, userId: string, history?: any[]) {
     // Get PDF info
-    const pdf = await this.pdfRepository.findById(pdfId);
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!pdf) throw new NotFoundException('PDF not found');
 
     // Extract PDF text content for the agent
@@ -348,14 +272,14 @@ export class PdfsService {
         const extracted = await this.pdfTextService.extractText(buffer);
         pdfContent = extracted.structuredText.substring(0, 50000); // Limit to 50k chars
       } catch (e) {
-        this.logger.error('Failed to extract PDF text', { pdfId, error: (e as Error).message });
+        console.error(`Failed to extract PDF text (ID: ${pdfId}):`, e);
         // Continue without content
       }
     }
 
     const adkRunner = createAdkRunner();
     let useADK = !!adkRunner;
-    this.logger.info(useADK ? 'ADK available - using ADK agent' : 'ADK not available - using direct Gemini fallback');
+    console.log(useADK ? '[Chat Service] ✅ ADK available - using ADK agent' : '[Chat Service] ❌ ADK not available - using direct Gemini fallback');
 
     let response = '';
 
@@ -374,14 +298,14 @@ export class PdfsService {
         const result = await adkRunner.run({ agent, prompt: fullMessage });
         response = result.text;
       } catch (adkError) {
-        this.logger.error('ADK agent failed, falling back to direct Gemini', { error: (adkError as Error).message });
+        console.error('[Chat Service] ❌ ADK agent failed, falling back to direct Gemini:', adkError);
         useADK = false;
       }
     }
 
     if (!useADK) {
       // Direct Gemini fallback
-      this.logger.info('Using direct Gemini fallback');
+      console.log('[Chat Service] 🔄 Using direct Gemini fallback');
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
@@ -397,7 +321,7 @@ export class PdfsService {
       response = result.response.text();
     }
 
-    this.logger.info('Raw LLM response from Gemini', {
+    console.log('[Chat Service] Raw LLM response from Gemini:', {
       responseLength: response.length,
       responsePreview: response.substring(0, 500),
       fullResponse: response,
@@ -407,9 +331,9 @@ export class PdfsService {
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        this.logger.info('Found JSON in response, parsing', { json: jsonMatch[0] });
+        console.log('[Chat Service] Found JSON in response, parsing:', jsonMatch[0]);
         const parsed = JSON.parse(jsonMatch[0]);
-        this.logger.info('Parsed JSON result', parsed);
+        console.log('[Chat Service] Parsed JSON result:', parsed);
 
         // Ensure uniform response structure
         let normalizedTestPlan = null;
@@ -435,7 +359,7 @@ export class PdfsService {
         };
       }
     } catch (e) {
-      this.logger.warn('Failed to parse JSON from response', { error: (e as Error).message });
+      console.log('[Chat Service] Failed to parse JSON from response:', e);
       // If not JSON, return as plain message
     }
 
@@ -444,13 +368,13 @@ export class PdfsService {
       testPlan: null,
       shouldGenerate: false,
     };
-    this.logger.info('Returning plain message result', finalResult);
+    console.log('[Chat Service] Returning plain message result:', finalResult);
     return finalResult;
   }
 
   async autoGenerateTestPlan(pdfId: string, userId: string) {
     // Get PDF info
-    const pdf = await this.pdfRepository.findById(pdfId);
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!pdf) throw new NotFoundException('PDF not found');
 
     // Extract PDF text content
@@ -461,7 +385,7 @@ export class PdfsService {
         const extracted = await this.pdfTextService.extractText(buffer);
         pdfContent = extracted.structuredText.substring(0, 50000);
       } catch (e) {
-        this.logger.error('Failed to extract PDF text in autoGenerateTestPlan', { pdfId, error: (e as Error).message });
+        console.error(`Failed to extract PDF text (ID: ${pdfId}):`, e);
       }
     }
 
@@ -492,7 +416,7 @@ export class PdfsService {
         };
       }
     } catch (e) {
-      this.logger.error('Failed to parse auto-generated test plan', { error: (e as Error).message });
+      console.error('Failed to parse auto-generated test plan:', e);
     }
 
     // Fallback: create a basic test plan structure

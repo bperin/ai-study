@@ -1,18 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PdfsRepository } from '../pdfs/pdfs.repository';
 
 @Injectable()
 export class PdfIngestService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly pdfsRepository: PdfsRepository) {}
 
   async registerLinkedPdf(params: { userId: string; filename: string; signedUrl: string }) {
     const { userId, filename, signedUrl } = params;
-    return this.prisma.pdf.create({
-      data: {
-        userId,
-        filename,
-        content: `Linked upload at ${signedUrl}`,
-      },
-    });
+    return this.pdfsRepository.createPdf(userId, filename, null, `Linked upload at ${signedUrl}`);
   }
 }

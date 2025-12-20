@@ -1,48 +1,32 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { UserRepository } from '../shared/repositories/user.repository';
-import { User, Prisma } from '@prisma/client';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
+import { Injectable } from '@nestjs/common';
+import { User } from '@prisma/client';
+import { UsersRepository } from './users.repository';
+import { CreateUserRecordDto } from './dto/create-user-record.dto';
+import { UpdateUserRecordDto } from './dto/update-user-record.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private readonly userRepository: UserRepository,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
-  ) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
-  async findOne(userWhereUniqueInput: Prisma.UserWhereUniqueInput): Promise<User | null> {
-    this.logger.info('Finding user', { where: userWhereUniqueInput });
-    
-    if (userWhereUniqueInput.id) {
-      return this.userRepository.findById(userWhereUniqueInput.id);
+  async findOne(criteria: { id?: string; email?: string }): Promise<User | null> {
+    if (criteria.id) {
+      return this.usersRepository.findById(criteria.id);
     }
-    
-    if (userWhereUniqueInput.email) {
-      return this.userRepository.findByEmail(userWhereUniqueInput.email);
+    if (criteria.email) {
+      return this.usersRepository.findByEmail(criteria.email);
     }
-    
-    return null;
+    throw new Error('Must provide an id or email to find a user');
   }
 
-  async create(data: Prisma.UserCreateInput): Promise<User> {
-    this.logger.info('Creating new user', { email: data.email });
-    return this.userRepository.create(data);
+  async create(data: CreateUserRecordDto): Promise<User> {
+    return this.usersRepository.createUser(data.email, data.password);
   }
 
-  async update(params: { where: Prisma.UserWhereUniqueInput; data: Prisma.UserUpdateInput }): Promise<User> {
-    const { where, data } = params;
-    this.logger.info('Updating user', { where, data });
-    
-    if (!where.id) {
-      throw new Error('User ID is required for updates');
-    }
-    
-    return this.userRepository.update(where.id, data);
+  async update(id: string, data: UpdateUserRecordDto): Promise<User> {
+    return this.usersRepository.updateUser(id, data.email, data.password, data.name, data.isAdmin, data.provider);
   }
 
   async findAll(): Promise<User[]> {
-    this.logger.info('Finding all users');
-    return this.userRepository.findMany();
+    return this.usersRepository.listAll();
   }
 }
