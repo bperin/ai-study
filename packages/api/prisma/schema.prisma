@@ -21,26 +21,19 @@ model User {
   pdfs        Pdf[]
   attempts    TestAttempt[]
   pdfSessions PdfSession[]
-  documents   Document[]
 }
 
 model Pdf {
   id          String        @id @default(uuid())
   filename    String
   content     String?       @db.Text
-  gcsPath     String?
+  gcsPath     String? // Google Cloud Storage path
   userId      String
   user        User          @relation(fields: [userId], references: [id])
-  documentId  String?       @unique
-  document    Document?     @relation(fields: [documentId], references: [id])
-  ingestionJobId String?    // Stores BullMQ job ID for ingestion tracking/cancellation
   createdAt   DateTime      @default(now())
   objectives  Objective[]
   attempts    TestAttempt[]
   pdfSessions PdfSession[]
-
-  @@index([userId])
-  @@index([gcsPath])
 }
 
 model Objective {
@@ -79,19 +72,25 @@ model TestAttempt {
   pdf    Pdf    @relation(fields: [pdfId], references: [id])
 
   // Session link
-  sessionId String?
+  sessionId String? // Link to PdfSession if applicable
 
-  // Test metadata
-  totalQuestions Int      @default(0)
-  percentage     Int?
-  completedAt    DateTime?
+  // Performance
+  score      Int    @default(0)
+  total      Int    @default(0)
+  percentage Float? // Calculated percentage
 
-  summary     String?      @db.Text
-  createdAt   DateTime     @default(now())
-  userAnswers UserAnswer[]
+  // Timing
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  totalTime   Int? // Total time in seconds
 
-  @@index([userId, completedAt])
-  @@index([pdfId, completedAt])
+  // Detailed feedback (JSON)
+  feedback Json? // Stores TestFeedback structure
+
+  // AI-generated summary report with links (markdown text)
+  summary String? @db.Text // Stores AI summary with web links as markdown
+
+  answers UserAnswer[]
 }
 
 model UserAnswer {
@@ -113,20 +112,6 @@ model UserAnswer {
   createdAt DateTime @default(now())
 }
 
-enum PdfSessionStatus {
-  planning
-  generating
-  ready
-  completed
-  failed
-}
-
-enum PlanStatus {
-  pending
-  approved
-  rejected
-}
-
 // PDF Session - for Test Setup Agent HITL workflow
 model PdfSession {
   id     String @id @default(uuid())
@@ -140,50 +125,37 @@ model PdfSession {
 
   // Plan proposal
   proposedPlan   Json? // TestPlan structure
-  planStatus     PlanStatus        @default(pending)
-  planIterations Int               @default(0)
+  planStatus     String @default("pending") // pending, approved, rejected
+  planIterations Int    @default(0) // Number of plan revisions
 
   // Configuration
   difficulty      String?
   totalQuestions  Int?
   includePictures Boolean @default(false)
   pictureCount    Int     @default(0)
-  timeLimit       Int?
+  timeLimit       Int? // Suggested time limit in minutes
 
   // Status
-  status PdfSessionStatus @default(planning)
+  status String @default("planning") // planning, generating, ready, completed
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-enum DocumentStatus {
-  PROCESSING
-  COMPLETED
-  FAILED
-  READY
-}
-
 model Document {
-  id           String         @id @default(uuid())
+  id           String   @id @default(uuid())
   ownerId      String?
-  owner        User?          @relation(fields: [ownerId], references: [id])
   title        String?
   sourceType   String
   sourceUri    String?
   mimeType     String?
-  status       DocumentStatus @default(READY)
+  status       String   @default("READY")
   errorMessage String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  pdf      Pdf?
   chunks   Chunk[]
   queries  QueryLog[]
-
-  @@index([sourceUri])
-  @@index([status])
-  @@index([ownerId, status])
 }
 
 model Chunk {

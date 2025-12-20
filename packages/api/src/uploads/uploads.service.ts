@@ -1,14 +1,10 @@
-import { Injectable, InternalServerErrorException, Inject } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
-import { PdfRepository } from '../shared/repositories/pdf.repository';
-import { DocumentRepository } from '../shared/repositories/document.repository';
-import { PdfTextService } from '../shared/services/pdf-text.service';
-import { QueueService } from '../queue/queue.service';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
-
+import { PdfTextService } from '../pdfs/pdf-text.service';
+import { IngestService } from '../rag/services/ingest.service';
+import { PdfsRepository } from '../pdfs/pdfs.repository';
 @Injectable()
 export class UploadsService {
   private storage: Storage;
@@ -16,11 +12,9 @@ export class UploadsService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly pdfRepository: PdfRepository,
-    private readonly documentRepository: DocumentRepository,
+    private readonly pdfsRepository: PdfsRepository,
     private readonly pdfTextService: PdfTextService,
-    private readonly queueService: QueueService,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+    private readonly ingestService: IngestService,
   ) {
     this.storage = new Storage({
       projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'slap-ai-481400',
@@ -64,47 +58,19 @@ export class UploadsService {
   }
 
   async confirmUpload(filePath: string, fileName: string, userId: string) {
-    // Create PDF record in database
-    this.logger.info('Creating PDF record', { fileName, filePath, userId });
-    
-    const pdf = await this.pdfRepository.create({
-      filename: fileName,
-      gcsPath: filePath,
-      user: { connect: { id: userId } },
-    });
+    // Save PDF metadata to database
+    const pdf = await this.pdfsRepository.createPdf(userId, fileName, filePath);
 
-    // Create document record for RAG
-    const document = await this.documentRepository.create({
-      title: fileName,
-      sourceUri: `gcs://${this.bucketName}/${filePath}`,
-      sourceType: 'PDF',
-      status: 'PROCESSING',
-    });
-
-    // Queue PDF ingestion job
+    // Trigger RAG ingestion (non-blocking)
     const gcsUri = `gcs://${this.bucketName}/${filePath}`;
-    const job = await this.queueService.addPdfIngestionJob({
-      documentId: document.id,
-      gcsUri,
-      title: fileName,
-      pdfId: pdf.id,
-      userId,
+    this.ingestService.createFromGcs(fileName, gcsUri, { userId, pdfId: pdf.id }).catch((error) => {
+      console.error(`[RAG Ingestion] Failed to trigger ingestion for PDF ${pdf.id}: ${error.message}`);
     });
-
-    // Store job ID on the PDF record for potential cancellation
-    // @ts-ignore
-    await this.pdfRepository.update(pdf.id, {
-      ingestionJobId: job.id,
-    });
-
-    // Link PDF to document
-    await this.pdfRepository.linkToDocument(pdf.id, document.id);
 
     return {
       id: pdf.id,
       filename: pdf.filename,
       userId: pdf.userId,
-      documentId: document.id,
     };
   }
 }

@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { GcsService } from '../pdfs/gcs.service';
-import { PdfTextService } from '../shared/services/pdf-text.service';
+import { PdfTextService } from '../pdfs/pdf-text.service';
 import * as pdfParse from 'pdf-parse';
 import { QUESTION_GENERATOR_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHENSIVE_ANALYSIS_PROMPT } from './prompts';
 import { GEMINI_MODEL } from '../constants/models';
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { createAdkRunner, createAdkSession, isAdkAvailable } from './adk.helpers';
 import { createQualityAnalyzerAgent, createQuestionGeneratorAgentByDifficulty, createTestAnalyzerAgent } from './agents';
-import { PdfStatusGateway } from '../pdf-status.gateway';
+import { DocumentIdentifierDto } from '../rag/dto/document-identifier.dto';
+import { TestsRepository } from '../tests/tests.repository';
+import { PdfsRepository } from '../pdfs/pdfs.repository';
+import { RagRepository } from '../rag/rag.repository';
 
 // Model constants
 // @ts-ignore
@@ -19,31 +21,39 @@ interface QuestionGenerationTask {
   count: number;
 }
 
+export interface FlashcardGenerationProgress {
+  status: 'running' | 'completed' | 'failed';
+  message: string;
+  current?: number;
+  total?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
+
 @Injectable()
 export class ParallelGenerationService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly testsRepository: TestsRepository,
+    private readonly pdfsRepository: PdfsRepository,
+    private readonly ragRepository: RagRepository,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
-    private readonly pdfStatusGateway: PdfStatusGateway,
   ) {}
 
   /**
    * Generate flashcards using parallel agent execution
    */
-  async generateFlashcardsParallel(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string, userId?: string): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
+  async generateFlashcardsParallel(userPrompt: string, pdfId: string, pdfFilename: string, gcsPath: string, progress?: (update: FlashcardGenerationProgress) => void): Promise<{ objectivesCount: number; questionsCount: number; summary: string }> {
     // Parse user prompt to determine distribution
     const tasks = this.parseUserPrompt(userPrompt);
+    const totalBatches = tasks.length || 1;
 
-    if (userId) {
-      this.pdfStatusGateway.sendStatusUpdate(userId, {
-        isGenerating: true,
-        type: 'flashcards',
-        message: 'Starting parallel generation agents...',
-        progress: { current: 0, total: tasks.length }
-      });
-    }
+    progress?.({
+      status: 'running',
+      message: `Queued ${tasks.length} generation batches`,
+      current: 0,
+      total: tasks.length,
+    });
 
     // Step 1: Generate questions in parallel by difficulty
     // Optimization: Break down large tasks into smaller chunks (max 5 questions per agent) for faster parallel execution
@@ -60,20 +70,7 @@ export class ParallelGenerationService {
     // user prompt for each chunk to only ask for that chunk's specific questions,
     // which is complex to do reliably with natural language prompts.
 
-    let completedTasks = 0;
-    const generationPromises = tasks.map(async (task) => {
-      const result = await this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt);
-      completedTasks++;
-      if (userId) {
-        this.pdfStatusGateway.sendStatusUpdate(userId, {
-          isGenerating: true,
-          type: 'flashcards',
-          message: `Generated ${task.difficulty} questions...`,
-          progress: { current: completedTasks, total: tasks.length }
-        });
-      }
-      return result;
-    });
+    const generationPromises = tasks.map((task, index) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt, progress, index, totalBatches));
 
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
@@ -83,22 +80,30 @@ export class ParallelGenerationService {
     const totalQuestions = results.reduce((sum, r) => sum + r.questionsCreated, 0);
 
     // Step 3: Quality analysis (after all questions are generated)
-    if (userId) {
-      this.pdfStatusGateway.sendStatusUpdate(userId, {
-        isGenerating: true,
-        type: 'flashcards',
-        message: 'Running quality assurance on generated cards...',
-        progress: { current: tasks.length, total: tasks.length }
-      });
-    }
-
+    progress?.({
+      status: 'running',
+      message: 'Running quality analysis on generated questions...',
+    });
     const qualitySummary = await this.runQualityAnalysis(pdfId);
+    progress?.({
+      status: 'running',
+      message: 'Quality analysis completed',
+    });
 
-    return {
+    const summary = {
       objectivesCount: totalObjectives,
       questionsCount: totalQuestions,
       summary: `Generated ${totalQuestions} questions across ${totalObjectives} objectives. ${qualitySummary}`,
     };
+
+    progress?.({
+      status: 'completed',
+      message: summary.summary,
+      current: totalBatches,
+      total: totalBatches,
+    });
+
+    return summary;
   }
 
   /**
@@ -152,7 +157,14 @@ export class ParallelGenerationService {
   /**
    * Generate questions for a specific difficulty level
    */
-  private async generateQuestionsForDifficulty(difficulty: 'easy' | 'medium' | 'hard', count: number, pdfId: string, pdfFilename: string, gcsPath: string, userPrompt: string): Promise<{ objectivesCreated: number; questionsCreated: number }> {
+  private async generateQuestionsForDifficulty(difficulty: 'easy' | 'medium' | 'hard', count: number, pdfId: string, pdfFilename: string, gcsPath: string, userPrompt: string, progress?: (update: FlashcardGenerationProgress) => void, batchIndex?: number, totalBatches?: number): Promise<{ objectivesCreated: number; questionsCreated: number }> {
+    progress?.({
+      status: 'running',
+      message: `Generating ${count} ${difficulty} questions`,
+      difficulty,
+      current: batchIndex ?? 0,
+      total: totalBatches,
+    });
     // Extract PDF content first
     let pdfContent = '';
     try {
@@ -180,7 +192,7 @@ export class ParallelGenerationService {
 
     if (useADK) {
       try {
-        const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId, this.retrieveService, pdfFilename, gcsPath);
+        const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.testsRepository, pdfId, this.retrieveService, pdfFilename, gcsPath);
 
         const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
         if (!runner) {
@@ -208,11 +220,19 @@ export class ParallelGenerationService {
 
       // Parse and save questions directly (simplified fallback)
       console.log(`[Question Generator ${difficulty}] Generated questions via Gemini fallback`);
-      return { objectivesCreated: 0, questionsCreated: 0 };
+      const fallbackResult = { objectivesCreated: 0, questionsCreated: 0 };
+      progress?.({
+        status: 'running',
+        message: `Fallback Gemini generation completed for ${difficulty}`,
+        difficulty,
+        current: (batchIndex ?? 0) + 1,
+        total: totalBatches,
+      });
+      return fallbackResult;
     }
 
     // Continue with ADK if available
-    const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.prisma, pdfId, this.retrieveService, pdfFilename, gcsPath);
+    const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.testsRepository, pdfId, this.retrieveService, pdfFilename, gcsPath);
 
     const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
     if (!runner) {
@@ -258,6 +278,7 @@ IMPORTANT:
 3. Generate the questions based on the content found.
 4. YOU MUST save the generated questions to the database using the save_objective tool.
 5. Do NOT output the questions as text. Only use the tool to save them.
+6. STOP immediately after saving the ${count} questions.
 `;
 
     // Run agent
@@ -276,25 +297,26 @@ IMPORTANT:
     }
 
     // Check database for results
-    const objectives = await this.prisma.objective.findMany({
-      where: {
-        pdfId,
-        difficulty,
-      },
-      include: {
-        _count: {
-          select: { mcqs: true },
-        },
-      },
-    });
+    const objectives = await this.testsRepository.findObjectivesByPdfId(pdfId);
+    const filteredObjectives = objectives.filter((obj) => obj.difficulty === difficulty);
 
-    const objectivesCreated = objectives.length;
-    const questionsCreated = objectives.reduce((sum, obj) => sum + obj._count.mcqs, 0);
+    const objectivesCreated = filteredObjectives.length;
+    const questionsCreated = filteredObjectives.reduce((sum, obj) => sum + obj.mcqs.length, 0);
 
-    return {
+    const result = {
       objectivesCreated,
       questionsCreated,
     };
+
+    progress?.({
+      status: 'running',
+      message: `Completed ${difficulty} batch (${questionsCreated} questions)`,
+      difficulty,
+      current: (batchIndex ?? 0) + 1,
+      total: totalBatches,
+    });
+
+    return result;
   }
 
   /**
@@ -302,10 +324,7 @@ IMPORTANT:
    */
   private async runQualityAnalysis(pdfId: string): Promise<string> {
     // Fetch all questions for this PDF
-    const objectives = await this.prisma.objective.findMany({
-      where: { pdfId },
-      include: { mcqs: true },
-    });
+    const objectives = await this.testsRepository.findObjectivesByPdfId(pdfId);
 
     // Create quality analyzer agent
     const agent = createQualityAnalyzerAgent();
@@ -354,16 +373,13 @@ IMPORTANT:
    */
   private async findRagDocumentId(pdfFilename: string, gcsPath: string): Promise<string | null> {
     const normalizedPath = gcsPath.replace('gcs://', '');
+    const identifiers: DocumentIdentifierDto[] = [gcsPath ? Object.assign(new DocumentIdentifierDto(), { sourceUri: gcsPath }) : null, normalizedPath ? Object.assign(new DocumentIdentifierDto(), { sourceUri: normalizedPath }) : null, pdfFilename ? Object.assign(new DocumentIdentifierDto(), { title: pdfFilename }) : null].filter(Boolean) as DocumentIdentifierDto[];
 
-    const document = await this.prisma.document.findFirst({
-      where: {
-        status: 'READY',
-        OR: [{ sourceUri: { contains: gcsPath } }, { sourceUri: { contains: normalizedPath } }, { title: { equals: pdfFilename, mode: 'insensitive' } }],
-      },
-      orderBy: { createdAt: 'desc' },
-      select: { id: true },
-    });
+    if (!identifiers.length) {
+      return null;
+    }
 
+    const document = await this.ragRepository.findDocumentByIdentifiers(identifiers, ['READY']);
     return document?.id || null;
   }
 
@@ -378,10 +394,7 @@ IMPORTANT:
         return '';
       }
 
-      const chunks = await this.prisma.chunk.findMany({
-        where: { documentId },
-        orderBy: { chunkIndex: 'asc' },
-      });
+      const chunks = await this.ragRepository.listChunksByDocument(documentId);
 
       const ranked = await this.retrieveService.rankChunks(`${userPrompt} Difficulty: ${difficulty}`, chunks, 8);
       if (!ranked.length) {
@@ -410,7 +423,7 @@ IMPORTANT:
     report: string;
   }> {
     // Fetch PDF info
-    const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!pdf) throw new Error('PDF not found');
 
     const pdfFilename = pdf.filename;

@@ -3,6 +3,7 @@ import { RetrieveService } from '../rag/services/retrieve.service';
 import { CONTENT_ANALYZER_INSTRUCTION, QUESTION_GENERATOR_INSTRUCTION, QUALITY_ANALYZER_INSTRUCTION, ROOT_AGENT_INSTRUCTION, TEST_ANALYZER_INSTRUCTION } from './prompts';
 import { GEMINI_MODEL } from '../constants/models';
 import { createDocumentSearchTool, createGetPdfInfoTool, createSaveObjectiveTool, createWebSearchTool } from './tools';
+import { TestsRepository } from '../tests/tests.repository';
 
 // Model constants
 const GEMINI_CONTENT_ANALYZER_MODEL = GEMINI_MODEL;
@@ -60,13 +61,13 @@ export function createFlashcardOrchestratorAgent(tools: any[]) {
   });
 }
 
-export function createQuestionGeneratorAgentByDifficulty(difficulty: 'easy' | 'medium' | 'hard', prisma: any, pdfId: string, retrieveService: RetrieveService, pdfFilename: string, gcsPath: string) {
+export function createQuestionGeneratorAgentByDifficulty(difficulty: 'easy' | 'medium' | 'hard', testsRepository: TestsRepository, pdfId: string, retrieveService: RetrieveService, pdfFilename: string, gcsPath: string) {
   return new LlmAgent({
     name: `question_generator_${difficulty}`,
     description: `Generates ${difficulty} difficulty questions`,
     model: GEMINI_QUESTION_GENERATOR_MODEL,
     instruction: QUESTION_GENERATOR_INSTRUCTION,
-    tools: [createSaveObjectiveTool(prisma, pdfId), createDocumentSearchTool(retrieveService, pdfFilename, gcsPath), createWebSearchTool()],
+    tools: [createSaveObjectiveTool(testsRepository, pdfId), createDocumentSearchTool(retrieveService, pdfFilename, gcsPath), createWebSearchTool()],
   });
 }
 
@@ -105,10 +106,7 @@ export function createTestAssistanceAgent(question: string, options: string[], r
     name: 'test_assistant',
     description: 'Provides helpful hints and explanations during test taking without revealing answers',
     model: GEMINI_MODEL,
-    // The instruction now receives placeholders or a base prompt that doesn't strictly depend on pdfContent
-    // since the tool is the primary source of knowledge.
-    // However, to fix the user issue, we must ensure the QUESTION is part of the system instruction.
-    instruction: TEST_ASSISTANCE_CHAT_PROMPT(question, options, ''),
+    instruction: TEST_ASSISTANCE_CHAT_PROMPT(question, options, ''), // Removed direct content
     tools: [createDocumentSearchTool(retrieveService, pdfFilename, gcsPath)],
   });
 }

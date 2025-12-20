@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { UploadsController } from './uploads.controller';
 import { UploadsService } from './uploads.service';
-import { RepositoryModule } from '../shared/repositories/repository.module';
-import { QueueModule } from '../queue/queue.module';
+import { PdfTextService } from '../pdfs/pdf-text.service';
+import { RagModule } from '../rag/rag.module';
+import { PdfsRepositoryModule } from '../pdfs/pdfs-repository.module';
 
 @Module({
-  imports: [RepositoryModule, QueueModule],
+  imports: [PdfsRepositoryModule, RagModule],
   controllers: [UploadsController],
-  providers: [UploadsService],
+  providers: [UploadsService, PdfTextService],
 })
 export class UploadsModule {}

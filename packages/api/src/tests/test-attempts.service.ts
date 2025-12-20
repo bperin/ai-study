@@ -1,37 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { StartAttemptResponseDto } from './dto/start-attempt-response.dto';
 import { SubmitTestResultsDto, TestAnalysisResponseDto } from './dto/test-results.dto';
+import { TestsRepository } from './tests.repository';
 
 @Injectable()
 export class TestAttemptsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly testsRepository: TestsRepository,
     private readonly parallelGenerationService: ParallelGenerationService,
   ) {}
 
   async startAttempt(pdfId: string, userId: string): Promise<StartAttemptResponseDto> {
-    const attempt = await this.prisma.testAttempt.create({
-      data: {
-        userId,
-        pdfId,
-        totalQuestions: 0,
-      },
-    });
+    const attempt = await this.testsRepository.createAttempt(userId, pdfId, 0, 0);
 
     return {
       attemptId: attempt.id,
       pdfId: attempt.pdfId,
-      startedAt: attempt.createdAt,
+      startedAt: attempt.startedAt,
     };
   }
 
   async submitTest(body: SubmitTestResultsDto): Promise<TestAnalysisResponseDto & { attemptId: string }> {
-    const attempt = await this.prisma.testAttempt.findUnique({
-      where: { id: body.attemptId },
-      include: { pdf: true },
-    });
+    const attempt = await this.testsRepository.findAttemptById(body.attemptId);
 
     if (!attempt) {
       throw new NotFoundException('Attempt not found');
@@ -75,14 +66,7 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
     }
 
     // Update attempt with feedback and score
-    await this.prisma.testAttempt.update({
-      where: { id: body.attemptId },
-      data: {
-        totalQuestions: body.totalQuestions,
-        percentage: (body.score / body.totalQuestions) * 100,
-        completedAt: new Date(),
-      },
-    });
+    await this.testsRepository.updateAttempt(body.attemptId, body.score, body.totalQuestions, (body.score / body.totalQuestions) * 100, new Date(), undefined, analysis as any);
 
     return {
       attemptId: body.attemptId,

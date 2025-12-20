@@ -1,23 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { Loader2, Sparkles, FileText, XCircle } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
 
 interface GenerationStatusProps {
   userId: string;
 }
 
-type JobType = "flashcards" | "ingestion" | null;
+type StatusUpdate = {
+  isGenerating?: boolean;
+  phase?: string;
+  status?: "running" | "completed" | "failed";
+  message?: string;
+  progress?: number;
+  current?: number;
+  total?: number;
+  pdfId?: string;
+};
 
 export default function GenerationStatus({ userId }: GenerationStatusProps) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [jobType, setJobType] = useState<JobType>(null);
-  const [statusMessage, setStatusMessage] = useState<string>("");
-  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
-  const [hasError, setHasError] = useState(false);
+  const [status, setStatus] = useState<StatusUpdate | null>(null);
+  const [visible, setVisible] = useState(false);
+  const previousGenerating = useRef(false);
+  const hideTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -38,38 +46,23 @@ export default function GenerationStatus({ userId }: GenerationStatusProps) {
       console.log("Received pong:", data);
     });
 
-    socket.on(`status:${userId}`, (data: { isGenerating: boolean; type?: JobType; message?: string; progress?: { current: number; total: number } }) => {
+    socket.on(`status:${userId}`, (data: StatusUpdate) => {
       console.log(`Received status update for ${userId}:`, data);
-      
-      if (data.message && data.message.toLowerCase().includes('failed')) {
-        setHasError(true);
-        setStatusMessage(data.message);
-        // Keep generating true briefly to show error then auto-dismiss
-        setIsGenerating(true);
-        setTimeout(() => {
-          setIsGenerating(false);
-          setHasError(false);
-        }, 5000); // Show error for 5 seconds
-        return;
+      const nextGenerating = data.isGenerating ?? data.status === "running";
+      setIsGenerating(nextGenerating);
+      setStatus(data);
+      setVisible(true);
+      if (hideTimeout.current) {
+        clearTimeout(hideTimeout.current);
+        hideTimeout.current = null;
       }
-
-      setIsGenerating(data.isGenerating);
-      if (data.type) {
-        setJobType(data.type);
+      if (!nextGenerating && data.status && data.status !== "running") {
+        hideTimeout.current = setTimeout(() => setVisible(false), 5000);
       }
-      if (data.message) {
-        setStatusMessage(data.message);
-      }
-      if (data.progress) {
-        setProgress(data.progress);
-      } else {
-        setProgress(null);
-      }
-      
-      if (!data.isGenerating) {
-        // Refresh the page data when generation completes
+      if (previousGenerating.current && !nextGenerating) {
         window.location.reload();
       }
+      previousGenerating.current = nextGenerating;
     });
 
     socket.on("disconnect", () => {
@@ -77,37 +70,54 @@ export default function GenerationStatus({ userId }: GenerationStatusProps) {
     });
 
     return () => {
+      if (hideTimeout.current) {
+        clearTimeout(hideTimeout.current);
+      }
       socket.disconnect();
     };
   }, [userId]);
 
-  if (!isGenerating) return null;
+  const showAlert = status && visible;
+  if (!showAlert) return null;
+
+  const phaseTitle =
+    status?.phase === "chunking"
+      ? "Indexing Your PDF"
+      : status?.phase === "flashcards"
+        ? "Generating Your Cards"
+        : "Working...";
+
+  const derivedProgress =
+    status?.progress ??
+    (status?.current !== undefined && status?.total
+      ? status.total === 0
+        ? 0
+        : Math.min(Math.max(status.current / status.total, 0), 1)
+      : undefined);
+
+  const percentage = derivedProgress !== undefined ? Math.round(derivedProgress * 100) : undefined;
+  const progressLabel =
+    status?.current !== undefined && status?.total ? `${status.current}/${status.total}` : undefined;
 
   return (
     <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg px-4 animate-in slide-in-from-top-4 fade-in duration-300">
-      <Alert className={`bg-background/95 backdrop-blur shadow-lg ring-1 ${hasError ? 'border-destructive/50 ring-destructive/20' : 'border-primary/50 ring-primary/20'}`}>
-        {hasError ? (
-          <XCircle className="h-5 w-5 text-destructive" />
-        ) : jobType === 'ingestion' ? (
-          <FileText className="h-5 w-5 text-primary animate-pulse" />
-        ) : (
-          <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-        )}
-        <AlertTitle className={`${hasError ? 'text-destructive' : 'text-primary'} font-semibold flex items-center gap-2`}>
-          {hasError ? 'Processing Failed' : jobType === 'ingestion' ? 'Processing Document' : 'Generating Your Cards'}
-          {!hasError && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
+      <Alert className="border-primary/50 bg-background/95 backdrop-blur shadow-lg ring-1 ring-primary/20">
+        <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+        <AlertTitle className="text-primary font-semibold flex items-center gap-2">
+          {phaseTitle}
+          {isGenerating && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
         </AlertTitle>
-        <AlertDescription className="text-muted-foreground flex flex-col gap-2 mt-2">
-          <p>
-            {statusMessage || (jobType === 'ingestion'
-              ? 'We are processing your document and preparing it for AI analysis. This may take a moment...'
-              : 'Our AI agents are analyzing your document and creating flashcards. This may take a moment...')}
-          </p>
-          {progress && (
-             <div className="w-full flex flex-col gap-1">
-               <Progress value={(progress.current / progress.total) * 100} className="h-2" />
-               <span className="text-xs text-muted-foreground text-right">{Math.round((progress.current / progress.total) * 100)}%</span>
-             </div>
+        <AlertDescription className="text-muted-foreground space-y-2">
+          <p>{status?.message || "Our AI agents are working in the background. This may take a moment..."}</p>
+          {percentage !== undefined && (
+            <div className="space-y-1">
+              <div className="h-1.5 bg-primary/20 rounded-full overflow-hidden">
+                <div className="h-full bg-primary transition-all" style={{ width: `${percentage}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {percentage}% complete {progressLabel ? `(${progressLabel})` : ""}
+              </p>
+            </div>
           )}
         </AlertDescription>
       </Alert>

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { TestsRepository } from './tests.repository';
 
 export interface LeaderboardEntry {
   userId: string;
@@ -11,28 +11,14 @@ export interface LeaderboardEntry {
 
 @Injectable()
 export class LeaderboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly testsRepository: TestsRepository) {}
 
   /**
    * Get global leaderboard rankings
    */
   async getGlobalLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
     // Get all test attempts with user info
-    const attempts = await this.prisma.testAttempt.findMany({
-      where: {
-        completedAt: {
-          not: null,
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const attempts = await this.testsRepository.findAllCompletedAttempts();
 
     // Group by user and calculate stats
     const userStats = new Map<
@@ -119,26 +105,7 @@ export class LeaderboardService {
    * Get leaderboard for a specific PDF/test
    */
   async getPdfLeaderboard(pdfId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
-    const attempts = await this.prisma.testAttempt.findMany({
-      where: {
-        pdfId,
-        completedAt: {
-          not: null,
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        percentage: 'desc',
-      },
-      take: limit,
-    });
+    const attempts = await this.testsRepository.findCompletedAttemptsByPdf(pdfId, limit);
 
     return attempts.map((attempt, index) => ({
       userId: attempt.user.id,
