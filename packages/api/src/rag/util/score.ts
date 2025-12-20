@@ -34,10 +34,7 @@ export function keywordScore(question: string, chunk: string): number {
   return score;
 }
 
-export function limitContextByLength<T extends { content: string }>(
-  chunks: T[],
-  maxLength = 24000,
-): T[] {
+export function limitContextByLength<T extends { content: string }>(chunks: T[], maxLength = 24000): T[] {
   let total = 0;
   const selected: T[] = [];
   for (const chunk of chunks) {

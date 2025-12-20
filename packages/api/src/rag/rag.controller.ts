@@ -1,16 +1,4 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-  Query,
-  UploadedFile,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IngestService } from './services/ingest.service';
 import { RagService } from './services/rag.service';
@@ -23,7 +11,10 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('v1/documents')
 export class RagController {
-  constructor(private readonly ingestService: IngestService, private readonly ragService: RagService) {}
+  constructor(
+    private readonly ingestService: IngestService,
+    private readonly ragService: RagService,
+  ) {}
 
   @Post()
   async createFromText(@Body() body: CreateTextDocumentDto) {
@@ -66,11 +57,7 @@ export class RagController {
   }
 
   @Get(':documentId/chunks')
-  async listChunks(
-    @Param('documentId') documentId: string,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit = 50,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-  ) {
+  async listChunks(@Param('documentId') documentId: string, @Query('limit', new ParseIntPipe({ optional: true })) limit = 50, @Query('offset', new ParseIntPipe({ optional: true })) offset = 0) {
     return this.ragService.listChunks(documentId, limit, offset);
   }
 

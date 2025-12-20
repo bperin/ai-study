@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { GcsService } from './gcs.service';
 import { PdfTextService } from './pdf-text.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TEST_PLAN_CHAT_PROMPT } from '../ai/prompts';
 import { createAdkRunner } from '../ai/adk.helpers';
+import { PdfsRepository } from './pdfs.repository';
+import { TestsRepository } from '../tests/tests.repository';
+import { RagRepository } from '../rag/rag.repository';
+import { CreatePdfRecordDto } from './dto/create-pdf-record.dto';
+import { CreatePdfSessionDto } from './dto/create-pdf-session.dto';
+import { UpdatePdfSessionDto } from './dto/update-pdf-session.dto';
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
@@ -17,33 +22,31 @@ import { PdfStatusGateway } from '../pdf-status.gateway';
 @Injectable()
 export class PdfsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly pdfsRepository: PdfsRepository,
+    private readonly testsRepository: TestsRepository,
+    private readonly ragRepository: RagRepository,
     private readonly parallelGenerationService: ParallelGenerationService,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
     private readonly pdfStatusGateway: PdfStatusGateway,
-  ) { }
+  ) {}
 
   async generateFlashcards(pdfId: string, userId: string, userPrompt: string) {
     // 1. Get PDF from database
-    const pdf = await this.prisma.pdf.findFirst({
-      where: { id: pdfId, userId },
-    });
+    const pdf = await this.pdfsRepository.findPdfForUser(pdfId, userId);
 
     if (!pdf) {
       throw new NotFoundException('PDF not found');
     }
 
     // Create a session to track this generation event
-    const session = await this.prisma.pdfSession.create({
-      data: {
-        pdfId,
-        userId,
-        userPreferences: { prompt: userPrompt },
-        status: 'generating',
-      },
-    });
+    const sessionDto = new CreatePdfSessionDto();
+    sessionDto.pdfId = pdfId;
+    sessionDto.userId = userId;
+    sessionDto.userPreferences = { prompt: userPrompt };
+    sessionDto.status = 'generating';
+    const session = await this.pdfsRepository.createPdfSession(sessionDto);
 
     // Notify client that generation has started
     this.pdfStatusGateway.sendStatusUpdate(userId, true);
@@ -69,18 +72,12 @@ export class PdfsService {
     setImmediate(async () => {
       try {
         console.log(`[Background] Starting flashcard generation for PDF ${pdfId}`);
-        await this.parallelGenerationService.generateFlashcardsParallel(
-          userPrompt,
-          pdfId,
-          pdf.filename,
-          gcsPathOrContent,
-        );
+        await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, pdf.filename, gcsPathOrContent);
 
         // Update session as completed
-        await this.prisma.pdfSession.update({
-          where: { id: session.id },
-          data: { status: 'completed' },
-        });
+        const updateDto = new UpdatePdfSessionDto();
+        updateDto.status = 'completed';
+        await this.pdfsRepository.updatePdfSession(session.id, updateDto);
         this.pdfStatusGateway.sendStatusUpdate(userId, false);
         console.log(`[Background] Flashcard generation completed for PDF ${pdfId}`);
       } catch (e: any) {
@@ -88,16 +85,11 @@ export class PdfsService {
         console.error(`[Background] Flashcard generation failed for PDF ${pdfId}:`, e);
         try {
           // If we managed to generate some questions, mark as ready instead of failed
-          const questionsCount = await this.prisma.mcq.count({
-            where: { objective: { pdfId } }
-          });
+          const questionsCount = await this.testsRepository.countMcqsByPdfId(pdfId);
 
-          await this.prisma.pdfSession.update({
-            where: { id: session.id },
-            data: {
-              status: questionsCount > 0 ? 'completed' : 'failed',
-            },
-          });
+          const updateDto = new UpdatePdfSessionDto();
+          updateDto.status = questionsCount > 0 ? 'completed' : 'failed';
+          await this.pdfsRepository.updatePdfSession(session.id, updateDto);
         } catch (updateError: any) {
           console.error(`[Background] Failed to update session status to failed: ${updateError.message}`);
         }
@@ -111,62 +103,24 @@ export class PdfsService {
   }
 
   async getObjectives(pdfId: string) {
-    return this.prisma.objective.findMany({
-      where: { pdfId },
-      include: { mcqs: true },
-    });
+    return this.testsRepository.findObjectivesByPdfId(pdfId);
   }
 
   async listPdfs(userId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.prisma.pdf.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          filename: true,
-          gcsPath: true,
-          createdAt: true,
-          objectives: {
-            select: {
-              title: true,
-              difficulty: true,
-              _count: {
-                select: { mcqs: true },
-              },
-            },
-          },
-        },
-      }),
-      this.prisma.pdf.count({ where: { userId } }),
-    ]);
+    const [data, total] = await Promise.all([this.pdfsRepository.listUserPdfsWithObjectives(userId, skip, limit), this.pdfsRepository.countUserPdfs(userId)]);
 
     // Fetch related RAG document statuses
     const bucketName = this.gcsService.getBucketName();
-    const gcsUris = data
-      .map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null))
-      .filter(Boolean) as string[];
+    const gcsUris = data.map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null)).filter(Boolean) as string[];
 
-    const ragDocs = await this.prisma.document.findMany({
-      where: {
-        OR: [{ sourceUri: { in: gcsUris } }, { title: { in: data.map((p) => p.filename) } }],
-      },
-      select: { sourceUri: true, title: true, status: true },
-    });
+    const ragDocs = await this.ragRepository.findDocumentsForSources(
+      data.map((p) => p.filename),
+      gcsUris,
+    );
 
     const pdfIds = data.map((p) => p.id);
-    const attempts = await this.prisma.testAttempt.findMany({
-      where: {
-        pdfId: { in: pdfIds },
-        completedAt: { not: null },
-      },
-      include: {
-        user: { select: { email: true } },
-      },
-    });
+    const attempts = await this.testsRepository.findCompletedAttemptsByPdfIds(pdfIds);
 
     const dataWithStats = data.map((pdf) => {
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
@@ -175,14 +129,13 @@ export class PdfsService {
 
       // Match RAG status
       const fullGcsUri = pdf.gcsPath ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
-      const ragStatus =
-        ragDocs.find((d) => d.sourceUri === fullGcsUri || d.title === pdf.filename)?.status || 'UNKNOWN';
+      const ragStatus = ragDocs.find((d) => d.sourceUri === fullGcsUri || d.title === pdf.filename)?.status || 'UNKNOWN';
 
       if (validAttempts.length === 0) {
         return {
           ...pdf,
           status: ragStatus as any,
-          stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null }
+          stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null },
         };
       }
 
@@ -212,53 +165,19 @@ export class PdfsService {
 
   async listAllPdfs(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.prisma.pdf.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          filename: true,
-          gcsPath: true,
-          createdAt: true,
-          objectives: {
-            select: {
-              title: true,
-              difficulty: true,
-              _count: {
-                select: { mcqs: true },
-              },
-            },
-          },
-        },
-      }),
-      this.prisma.pdf.count(),
-    ]);
+    const [data, total] = await Promise.all([this.pdfsRepository.listAllPdfsWithObjectives(skip, limit), this.pdfsRepository.countAllPdfs()]);
 
     // Fetch related RAG document statuses
     const bucketName = this.gcsService.getBucketName();
-    const gcsUris = data
-      .map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null))
-      .filter(Boolean) as string[];
+    const gcsUris = data.map((p) => (p.gcsPath ? `gcs://${bucketName}/${p.gcsPath}` : null)).filter(Boolean) as string[];
 
-    const ragDocs = await this.prisma.document.findMany({
-      where: {
-        OR: [{ sourceUri: { in: gcsUris } }, { title: { in: data.map((p) => p.filename) } }],
-      },
-      select: { sourceUri: true, title: true, status: true },
-    });
+    const ragDocs = await this.ragRepository.findDocumentsForSources(
+      data.map((p) => p.filename),
+      gcsUris,
+    );
 
     const pdfIds = data.map((p) => p.id);
-    const attempts = await this.prisma.testAttempt.findMany({
-      where: {
-        pdfId: { in: pdfIds },
-        completedAt: { not: null },
-      },
-      include: {
-        user: { select: { email: true } },
-      },
-    });
+    const attempts = await this.testsRepository.findCompletedAttemptsByPdfIds(pdfIds);
 
     const dataWithStats = data.map((pdf) => {
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
@@ -267,14 +186,13 @@ export class PdfsService {
 
       // Match RAG status
       const fullGcsUri = pdf.gcsPath ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
-      const ragStatus =
-        ragDocs.find((d) => d.sourceUri === fullGcsUri || d.title === pdf.filename)?.status || 'UNKNOWN';
+      const ragStatus = ragDocs.find((d) => d.sourceUri === fullGcsUri || d.title === pdf.filename)?.status || 'UNKNOWN';
 
       if (validAttempts.length === 0) {
         return {
           ...pdf,
           status: ragStatus as any,
-          stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null }
+          stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null },
         };
       }
 
@@ -303,64 +221,32 @@ export class PdfsService {
   }
 
   async forkPdf(pdfId: string, userId: string, newTitle?: string) {
-    const originalPdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+    const originalPdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!originalPdf) throw new NotFoundException('PDF not found');
 
     // Create a new PDF record pointing to the same content/storage
-    const newPdf = await this.prisma.pdf.create({
-      data: {
-        filename: newTitle || `${originalPdf.filename} (Copy)`,
-        content: originalPdf.content,
-        gcsPath: originalPdf.gcsPath,
-        userId: userId,
-      },
-    });
+    const dto = new CreatePdfRecordDto();
+    dto.userId = userId;
+    dto.filename = newTitle || `${originalPdf.filename} (Copy)`;
+    dto.content = originalPdf.content;
+    dto.gcsPath = originalPdf.gcsPath;
+    const newPdf = await this.pdfsRepository.createPdf(dto);
 
     return newPdf;
   }
 
   async deletePdf(pdfId: string) {
-    const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!pdf) throw new NotFoundException('PDF not found');
 
-    // Delete in correct order due to foreign key constraints
-    // 1. Delete user answers (linked to test attempts)
-    await this.prisma.userAnswer.deleteMany({
-      where: {
-        attempt: {
-          pdfId,
-        },
-      },
-    });
+    // Delete related data first
+    await this.testsRepository.deletePdfRelatedData(pdfId);
 
-    // 2. Delete test attempts
-    await this.prisma.testAttempt.deleteMany({
-      where: { pdfId },
-    });
+    // Delete PDF sessions
+    await this.pdfsRepository.deleteSessionsByPdf(pdfId);
 
-    // 3. Delete MCQs (linked to objectives)
-    await this.prisma.mcq.deleteMany({
-      where: {
-        objective: {
-          pdfId,
-        },
-      },
-    });
-
-    // 4. Delete objectives
-    await this.prisma.objective.deleteMany({
-      where: { pdfId },
-    });
-
-    // 5. Delete PDF sessions
-    await this.prisma.pdfSession.deleteMany({
-      where: { pdfId },
-    });
-
-    // 6. Finally delete the PDF itself
-    await this.prisma.pdf.delete({
-      where: { id: pdfId },
-    });
+    // Finally delete the PDF itself
+    await this.pdfsRepository.deletePdf(pdfId);
 
     return {
       message: 'PDF and all associated data deleted successfully',
@@ -371,7 +257,7 @@ export class PdfsService {
 
   async chatPlan(message: string, pdfId: string, userId: string, history?: any[]) {
     // Get PDF info
-    const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!pdf) throw new NotFoundException('PDF not found');
 
     // Extract PDF text content for the agent
@@ -389,11 +275,7 @@ export class PdfsService {
 
     const adkRunner = createAdkRunner();
     let useADK = !!adkRunner;
-    console.log(
-      useADK
-        ? '[Chat Service] ✅ ADK available - using ADK agent'
-        : '[Chat Service] ❌ ADK not available - using direct Gemini fallback',
-    );
+    console.log(useADK ? '[Chat Service] ✅ ADK available - using ADK agent' : '[Chat Service] ❌ ADK not available - using direct Gemini fallback');
 
     let response = '';
 
@@ -488,7 +370,7 @@ export class PdfsService {
 
   async autoGenerateTestPlan(pdfId: string, userId: string) {
     // Get PDF info
-    const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!pdf) throw new NotFoundException('PDF not found');
 
     // Extract PDF text content

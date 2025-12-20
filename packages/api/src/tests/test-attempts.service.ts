@@ -1,26 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { StartAttemptResponseDto } from './dto/start-attempt-response.dto';
 import { SubmitTestResultsDto, TestAnalysisResponseDto } from './dto/test-results.dto';
+import { TestsRepository } from './tests.repository';
+import { CreateTestAttemptRecordDto } from './dto/create-test-attempt-record.dto';
+import { UpdateTestAttemptRecordDto } from './dto/update-test-attempt-record.dto';
 
 @Injectable()
 export class TestAttemptsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly testsRepository: TestsRepository,
     private readonly parallelGenerationService: ParallelGenerationService,
   ) {}
 
   async startAttempt(pdfId: string, userId: string): Promise<StartAttemptResponseDto> {
-    const attempt = await this.prisma.testAttempt.create({
-      data: {
-        userId,
-        pdfId,
-        score: 0,
-        total: 0, // Will be updated on completion
-        startedAt: new Date(),
-      },
-    });
+    const createDto = new CreateTestAttemptRecordDto();
+    createDto.userId = userId;
+    createDto.pdfId = pdfId;
+    createDto.total = 0;
+    createDto.score = 0;
+    const attempt = await this.testsRepository.createAttempt(createDto);
 
     return {
       attemptId: attempt.id,
@@ -30,10 +29,7 @@ export class TestAttemptsService {
   }
 
   async submitTest(body: SubmitTestResultsDto): Promise<TestAnalysisResponseDto & { attemptId: string }> {
-    const attempt = await this.prisma.testAttempt.findUnique({
-      where: { id: body.attemptId },
-      include: { pdf: true },
-    });
+    const attempt = await this.testsRepository.findAttemptById(body.attemptId);
 
     if (!attempt) {
       throw new NotFoundException('Attempt not found');
@@ -77,16 +73,13 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
     }
 
     // Update attempt with feedback and score
-    await this.prisma.testAttempt.update({
-      where: { id: body.attemptId },
-      data: {
-        score: body.score,
-        total: body.totalQuestions,
-        percentage: (body.score / body.totalQuestions) * 100,
-        completedAt: new Date(),
-        feedback: analysis as any,
-      },
-    });
+    const updateDto = new UpdateTestAttemptRecordDto();
+    updateDto.score = body.score;
+    updateDto.total = body.totalQuestions;
+    updateDto.percentage = (body.score / body.totalQuestions) * 100;
+    updateDto.completedAt = new Date();
+    updateDto.feedback = analysis as any;
+    await this.testsRepository.updateAttempt(body.attemptId, updateDto);
 
     return {
       attemptId: body.attemptId,

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Chunk } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
 import { EmbedService } from './embed.service';
 import { keywordScore, limitContextByLength } from '../util/score';
 import { cosineSimilarity } from '../util/cosine';
+import { RagRepository } from '../rag.repository';
 
 export interface ScoredChunk extends Chunk {
   score: number;
@@ -14,7 +14,7 @@ export class RetrieveService {
   private readonly defaultTopK = 6;
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly ragRepository: RagRepository,
     private readonly embedService: EmbedService,
   ) {}
 
@@ -30,22 +30,10 @@ export class RetrieveService {
 
     try {
       const vectorSql = `[${questionEmbedding.join(',')}]`;
-      const results: any[] = await this.embedService.isEnabled()
-        ? await this.prisma.$queryRawUnsafe(
-            `SELECT id, "documentId", "chunkIndex", "content", "contentHash", "startChar", "endChar", "embeddingJson", "createdAt",
-             (1 - ("embeddingVec" <=> $1::vector)) as score
-             FROM "Chunk"
-             WHERE "documentId" = $2
-             ORDER BY score DESC
-             LIMIT $3`,
-            vectorSql,
-            chunks[0].documentId,
-            topK * 2 // Fetch more to allow for limitContextByLength
-          )
-        : [];
+      const results: any[] = this.embedService.isEnabled() ? await this.ragRepository.vectorSearch(vectorSql, chunks[0].documentId, topK * 2) : [];
 
       if (results.length > 0) {
-        scored = results.map(r => ({ ...r, score: Number(r.score) } as ScoredChunk));
+        scored = results.map((r) => ({ ...r, score: Number(r.score) }) as ScoredChunk);
       }
     } catch (e) {
       // Fallback to in-memory cosine similarity or keyword search if raw SQL fails
@@ -61,12 +49,16 @@ export class RetrieveService {
           return { ...chunk, score } as ScoredChunk;
         });
       } else {
-        scored = chunks.map((chunk) => ({ ...chunk, score: keywordScore(question, chunk.content) } as ScoredChunk));
+        scored = chunks.map((chunk) => ({ ...chunk, score: keywordScore(question, chunk.content) }) as ScoredChunk);
       }
     }
 
     scored.sort((a, b) => b.score - a.score || a.chunkIndex - b.chunkIndex);
     const limited = scored.slice(0, topK);
     return limitContextByLength(limited);
+  }
+
+  findChunksForDocumentLookup(pdfFilename: string, gcsPath: string) {
+    return this.ragRepository.findChunksForDocumentLookup(pdfFilename, gcsPath);
   }
 }

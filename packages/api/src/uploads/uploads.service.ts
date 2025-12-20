@@ -2,9 +2,10 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
 import { PdfTextService } from '../pdfs/pdf-text.service';
 import { IngestService } from '../rag/services/ingest.service';
+import { PdfsRepository } from '../pdfs/pdfs.repository';
+import { CreatePdfRecordDto } from '../pdfs/dto/create-pdf-record.dto';
 
 @Injectable()
 export class UploadsService {
@@ -13,17 +14,14 @@ export class UploadsService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly pdfsRepository: PdfsRepository,
     private readonly pdfTextService: PdfTextService,
     private readonly ingestService: IngestService,
   ) {
     this.storage = new Storage({
-      projectId:
-        this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') ||
-        'slap-ai-481400',
+      projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'slap-ai-481400',
     });
-    const bucketName =
-      this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
+    const bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
     // Clean up bucket name in case of copy-paste errors (e.g. " -n bucket-name")
     this.bucketName = bucketName.replace(/^-n\s+/, '').trim();
   }
@@ -63,17 +61,15 @@ export class UploadsService {
 
   async confirmUpload(filePath: string, fileName: string, userId: string) {
     // Save PDF metadata to database
-    const pdf = await this.prisma.pdf.create({
-      data: {
-        filename: fileName,
-        userId: userId,
-        gcsPath: filePath, // Store GCS path
-      },
-    });
+    const dto = new CreatePdfRecordDto();
+    dto.userId = userId;
+    dto.filename = fileName;
+    dto.gcsPath = filePath;
+    const pdf = await this.pdfsRepository.createPdf(dto);
 
     // Trigger RAG ingestion (non-blocking)
     const gcsUri = `gcs://${this.bucketName}/${filePath}`;
-    this.ingestService.createFromGcs(fileName, gcsUri).catch(error => {
+    this.ingestService.createFromGcs(fileName, gcsUri).catch((error) => {
       console.error(`[RAG Ingestion] Failed to trigger ingestion for PDF ${pdf.id}: ${error.message}`);
     });
 

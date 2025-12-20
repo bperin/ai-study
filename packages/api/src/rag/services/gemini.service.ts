@@ -18,8 +18,7 @@ export class GeminiService {
     }
   }
 
-  async generateAnswer(systemPrompt: string, context: string, question: string): Promise<{ text: string; model: string }>
-  {
+  async generateAnswer(systemPrompt: string, context: string, question: string): Promise<{ text: string; model: string }> {
     const userPrompt = `Context:\n${context}\n\nQuestion: ${question}\nAnswer:`;
 
     if (!this.vertexAi) {
@@ -58,7 +57,10 @@ export class GeminiService {
       return 'Not found in document.';
     }
 
-    const sentences = context.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter(Boolean);
+    const sentences = context
+      .replace(/\n+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .filter(Boolean);
     const excerpt = sentences.slice(0, 2).join(' ').trim();
     return excerpt || context.slice(0, 400);
   }

@@ -76,7 +76,7 @@ model TestAttempt {
 
   // Performance
   score      Int    @default(0)
-  total      Int
+  total      Int    @default(0)
   percentage Float? // Calculated percentage
 
   // Timing

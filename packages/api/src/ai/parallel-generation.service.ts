@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { GcsService } from '../pdfs/gcs.service';
 import { PdfTextService } from '../pdfs/pdf-text.service';
 import * as pdfParse from 'pdf-parse';
@@ -7,11 +6,11 @@ import { QUESTION_GENERATOR_INSTRUCTION, TEST_ANALYSIS_RESPONSE_SCHEMA, COMPREHE
 import { GEMINI_MODEL } from '../constants/models';
 import { RetrieveService } from '../rag/services/retrieve.service';
 import { createAdkRunner, createAdkSession, isAdkAvailable } from './adk.helpers';
-import {
-  createQualityAnalyzerAgent,
-  createQuestionGeneratorAgentByDifficulty,
-  createTestAnalyzerAgent,
-} from './agents';
+import { createQualityAnalyzerAgent, createQuestionGeneratorAgentByDifficulty, createTestAnalyzerAgent } from './agents';
+import { DocumentIdentifierDto } from '../rag/dto/document-identifier.dto';
+import { TestsRepository } from '../tests/tests.repository';
+import { PdfsRepository } from '../pdfs/pdfs.repository';
+import { RagRepository } from '../rag/rag.repository';
 
 // Model constants
 // @ts-ignore
@@ -25,7 +24,9 @@ interface QuestionGenerationTask {
 @Injectable()
 export class ParallelGenerationService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly testsRepository: TestsRepository,
+    private readonly pdfsRepository: PdfsRepository,
+    private readonly ragRepository: RagRepository,
     private readonly gcsService: GcsService,
     private readonly pdfTextService: PdfTextService,
     private readonly retrieveService: RetrieveService,
@@ -44,18 +45,16 @@ export class ParallelGenerationService {
     // BUT we must preserve the original intent and counts.
     // The previous implementation was creating multiple chunks but the prompt sent to each chunk
     // still contained the FULL user instructions with the TOTAL count, confusing the agent.
-    
+
     // Instead of complex chunking which confuses the agent with conflicting "global" vs "local" counts,
     // we will run one agent per difficulty level as requested.
     // The parallelism comes from running different difficulties at the same time.
-    
+
     // If we really need chunking for > 5 questions of SAME difficulty, we would need to rewrite the
     // user prompt for each chunk to only ask for that chunk's specific questions,
     // which is complex to do reliably with natural language prompts.
-    
-    const generationPromises = tasks.map((task) =>
-      this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt)
-    );
+
+    const generationPromises = tasks.map((task) => this.generateQuestionsForDifficulty(task.difficulty, task.count, pdfId, pdfFilename, gcsPath, userPrompt));
 
     // Wait for all parallel generations to complete
     const results = await Promise.all(generationPromises);
@@ -149,22 +148,11 @@ export class ParallelGenerationService {
 
     // Create specialized agent for this difficulty with PDF content
     let useADK = isAdkAvailable();
-    console.log(
-      useADK
-        ? `[Question Generator ${difficulty}] ✅ ADK available - using ADK agent`
-        : `[Question Generator ${difficulty}] ❌ ADK not available - using direct Gemini fallback`,
-    );
+    console.log(useADK ? `[Question Generator ${difficulty}] ✅ ADK available - using ADK agent` : `[Question Generator ${difficulty}] ❌ ADK not available - using direct Gemini fallback`);
 
     if (useADK) {
       try {
-        const agent = createQuestionGeneratorAgentByDifficulty(
-          difficulty,
-          this.prisma,
-          pdfId,
-          this.retrieveService,
-          pdfFilename,
-          gcsPath,
-        );
+        const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.testsRepository, pdfId, this.retrieveService, pdfFilename, gcsPath);
 
         const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
         if (!runner) {
@@ -196,14 +184,7 @@ export class ParallelGenerationService {
     }
 
     // Continue with ADK if available
-    const agent = createQuestionGeneratorAgentByDifficulty(
-      difficulty,
-      this.prisma,
-      pdfId,
-      this.retrieveService,
-      pdfFilename,
-      gcsPath,
-    );
+    const agent = createQuestionGeneratorAgentByDifficulty(difficulty, this.testsRepository, pdfId, this.retrieveService, pdfFilename, gcsPath);
 
     const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
     if (!runner) {
@@ -267,20 +248,11 @@ IMPORTANT:
     }
 
     // Check database for results
-    const objectives = await this.prisma.objective.findMany({
-      where: {
-        pdfId,
-        difficulty,
-      },
-      include: {
-        _count: {
-          select: { mcqs: true },
-        },
-      },
-    });
+    const objectives = await this.testsRepository.findObjectivesByPdfId(pdfId);
+    const filteredObjectives = objectives.filter((obj) => obj.difficulty === difficulty);
 
-    const objectivesCreated = objectives.length;
-    const questionsCreated = objectives.reduce((sum, obj) => sum + obj._count.mcqs, 0);
+    const objectivesCreated = filteredObjectives.length;
+    const questionsCreated = filteredObjectives.reduce((sum, obj) => sum + obj.mcqs.length, 0);
 
     return {
       objectivesCreated,
@@ -293,10 +265,7 @@ IMPORTANT:
    */
   private async runQualityAnalysis(pdfId: string): Promise<string> {
     // Fetch all questions for this PDF
-    const objectives = await this.prisma.objective.findMany({
-      where: { pdfId },
-      include: { mcqs: true },
-    });
+    const objectives = await this.testsRepository.findObjectivesByPdfId(pdfId);
 
     // Create quality analyzer agent
     const agent = createQualityAnalyzerAgent();
@@ -345,32 +314,20 @@ IMPORTANT:
    */
   private async findRagDocumentId(pdfFilename: string, gcsPath: string): Promise<string | null> {
     const normalizedPath = gcsPath.replace('gcs://', '');
+    const identifiers: DocumentIdentifierDto[] = [gcsPath ? Object.assign(new DocumentIdentifierDto(), { sourceUri: gcsPath }) : null, normalizedPath ? Object.assign(new DocumentIdentifierDto(), { sourceUri: normalizedPath }) : null, pdfFilename ? Object.assign(new DocumentIdentifierDto(), { title: pdfFilename }) : null].filter(Boolean) as DocumentIdentifierDto[];
 
-    const document = await this.prisma.document.findFirst({
-      where: {
-        status: 'READY',
-        OR: [
-          { sourceUri: { contains: gcsPath } },
-          { sourceUri: { contains: normalizedPath } },
-          { title: { equals: pdfFilename, mode: 'insensitive' } },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      select: { id: true },
-    });
+    if (!identifiers.length) {
+      return null;
+    }
 
+    const document = await this.ragRepository.findDocumentByIdentifiers(identifiers, ['READY']);
     return document?.id || null;
   }
 
   /**
    * Build a contextual RAG snippet for the generator using top-ranked chunks
    */
-  private async buildRagContext(
-    userPrompt: string,
-    difficulty: string,
-    pdfFilename: string,
-    gcsPath: string,
-  ): Promise<string> {
+  private async buildRagContext(userPrompt: string, difficulty: string, pdfFilename: string, gcsPath: string): Promise<string> {
     try {
       const documentId = await this.findRagDocumentId(pdfFilename, gcsPath);
       if (!documentId) {
@@ -378,10 +335,7 @@ IMPORTANT:
         return '';
       }
 
-      const chunks = await this.prisma.chunk.findMany({
-        where: { documentId },
-        orderBy: { chunkIndex: 'asc' },
-      });
+      const chunks = await this.ragRepository.listChunksByDocument(documentId);
 
       const ranked = await this.retrieveService.rankChunks(`${userPrompt} Difficulty: ${difficulty}`, chunks, 8);
       if (!ranked.length) {
@@ -389,9 +343,7 @@ IMPORTANT:
         return '';
       }
 
-      const context = ranked
-        .map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`)
-        .join('\n\n');
+      const context = ranked.map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`).join('\n\n');
 
       console.log(`[RAG] Using ${ranked.length} ranked chunks for context (document ${documentId})`);
       return context;
@@ -412,20 +364,14 @@ IMPORTANT:
     report: string;
   }> {
     // Fetch PDF info
-    const pdf = await this.prisma.pdf.findUnique({ where: { id: pdfId } });
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
     if (!pdf) throw new Error('PDF not found');
 
     const pdfFilename = pdf.filename;
     const gcsPath = pdf.gcsPath || pdf.content || '';
 
     // Create analyzer agent with web search capability
-    const agent = createTestAnalyzerAgent(
-      pdfFilename,
-      gcsPath,
-      this.gcsService,
-      this.pdfTextService,
-      this.retrieveService,
-    );
+    const agent = createTestAnalyzerAgent(pdfFilename, gcsPath, this.gcsService, this.pdfTextService, this.retrieveService);
 
     const runner = createAdkRunner({ agent, appName: 'flashcard-generator' });
     if (!runner) {

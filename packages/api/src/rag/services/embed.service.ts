@@ -32,21 +32,21 @@ export class EmbedService {
     if (this.vertexAi) {
       try {
         const model = this.vertexAi.getGenerativeModel({ model: this.modelName });
-        
+
         // Use REST API since embedContent is missing in this SDK version
         // Cast to any to access private fetchToken method which exists at runtime
         const token = await (model as any).fetchToken();
         const endpoint = `https://${this.location}-aiplatform.googleapis.com/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/${this.modelName}:predict`;
-        
+
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            instances: [{ content: text }]
-          })
+            instances: [{ content: text }],
+          }),
         });
 
         if (!response.ok) {

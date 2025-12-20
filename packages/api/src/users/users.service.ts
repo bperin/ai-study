@@ -1,32 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client';
+import { User } from '@prisma/client';
+import { UsersRepository } from './users.repository';
+import { CreateUserRecordDto } from './dto/create-user-record.dto';
+import { UpdateUserRecordDto } from './dto/update-user-record.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
-  async findOne(userWhereUniqueInput: Prisma.UserWhereUniqueInput): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: userWhereUniqueInput,
+  async findOne(criteria: { id?: string; email?: string }): Promise<User | null> {
+    if (criteria.id) {
+      return this.usersRepository.findById(criteria.id);
+    }
+    if (criteria.email) {
+      return this.usersRepository.findByEmail(criteria.email);
+    }
+    throw new Error('Must provide an id or email to find a user');
+  }
+
+  async create(data: CreateUserRecordDto): Promise<User> {
+    return this.usersRepository.createUser({
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      isAdmin: data.isAdmin,
+      provider: data.provider,
     });
   }
 
-  async create(data: Prisma.UserCreateInput): Promise<User> {
-    return this.prisma.user.create({
-      data,
-    });
-  }
-
-  async update(params: { where: Prisma.UserWhereUniqueInput; data: Prisma.UserUpdateInput }): Promise<User> {
-    const { where, data } = params;
-    return this.prisma.user.update({
-      data,
-      where,
+  async update(id: string, data: UpdateUserRecordDto): Promise<User> {
+    return this.usersRepository.updateUser(id, {
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      isAdmin: data.isAdmin,
+      provider: data.provider,
     });
   }
 
   async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany();
+    return this.usersRepository.listAll();
   }
 }
