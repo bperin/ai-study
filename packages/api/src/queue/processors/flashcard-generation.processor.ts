@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ParallelGenerationService } from '../../ai/parallel-generation.service';
+import { ParallelGenerationService, FlashcardGenerationProgress } from '../../ai/parallel-generation.service';
 import { PdfStatusGateway } from '../../pdf-status.gateway';
 import { FlashcardGenerationJobData } from '../queue.service';
 
@@ -26,7 +26,17 @@ export class FlashcardGenerationProcessor extends WorkerHost {
     try {
       await job.updateProgress(10);
 
-      await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, filename, gcsPathOrContent, userId);
+      const emitProgress = (update: FlashcardGenerationProgress) => {
+        this.pdfStatusGateway.sendStatusUpdate(userId, {
+          pdfId,
+          type: 'flashcards',
+          phase: 'flashcards',
+          ...update,
+          isGenerating: update.status === 'running',
+        });
+      };
+
+      await this.parallelGenerationService.generateFlashcardsParallel(userPrompt, pdfId, filename, gcsPathOrContent, emitProgress);
 
       await job.updateProgress(90);
 
@@ -41,7 +51,7 @@ export class FlashcardGenerationProcessor extends WorkerHost {
         }
       }
 
-      this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'flashcards' });
+      this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'flashcards', phase: 'flashcards', pdfId });
 
       await job.updateProgress(100);
 
@@ -49,7 +59,7 @@ export class FlashcardGenerationProcessor extends WorkerHost {
 
       return { pdfId, status: 'completed' };
     } catch (error: any) {
-      this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'flashcards' });
+      this.pdfStatusGateway.sendStatusUpdate(userId, { isGenerating: false, type: 'flashcards', phase: 'flashcards', pdfId });
       this.logger.error(`Flashcard generation failed for PDF ${pdfId}: ${error.message}`);
 
       try {

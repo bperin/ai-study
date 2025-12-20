@@ -8,6 +8,7 @@ import { createAdkRunner } from '../ai/adk.helpers';
 import { PdfsRepository } from './pdfs.repository';
 import { TestsRepository } from '../tests/tests.repository';
 import { RagRepository } from '../rag/rag.repository';
+import { DocumentIdentifierDto } from '../rag/dto/document-identifier.dto';
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
@@ -115,6 +116,49 @@ export class PdfsService {
     return this.testsRepository.findObjectivesByPdfId(pdfId);
   }
 
+  async getRagStatus(pdfId: string) {
+    const pdf = await this.pdfsRepository.findPdfById(pdfId);
+
+    if (!pdf) {
+      throw new NotFoundException('PDF not found');
+    }
+
+    const bucketName = this.gcsService.getBucketName();
+    const identifiers: DocumentIdentifierDto[] = [];
+
+    if (pdf.gcsPath && bucketName) {
+      identifiers.push({ sourceUri: `gcs://${bucketName}/${pdf.gcsPath}` });
+      identifiers.push({ sourceUri: pdf.gcsPath });
+    }
+
+    if (pdf.filename) {
+      identifiers.push({ title: pdf.filename });
+    }
+
+    if (!identifiers.length) {
+      return {
+        pdfId,
+        status: 'NOT_FOUND',
+        document: null,
+      };
+    }
+
+    const document = await this.ragRepository.findDocumentByIdentifiers(identifiers);
+
+    return {
+      pdfId,
+      status: document?.status ?? 'NOT_FOUND',
+      document: document
+        ? {
+            id: document.id,
+            status: document.status,
+            errorMessage: document.errorMessage,
+            updatedAt: document.updatedAt,
+          }
+        : null,
+    };
+  }
+
   async listPdfs(userId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([this.pdfsRepository.listUserPdfsWithObjectives(userId, skip, limit), this.pdfsRepository.countUserPdfs(userId)]);
@@ -132,6 +176,7 @@ export class PdfsService {
     const attempts = await this.testsRepository.findCompletedAttemptsByPdfIds(pdfIds);
 
     const dataWithStats = data.map((pdf) => {
+      const questionCount = pdf.objectives?.reduce((sum, objective) => sum + (objective._count?.mcqs || 0), 0) || 0;
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
       // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
       const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
@@ -143,6 +188,7 @@ export class PdfsService {
       if (validAttempts.length === 0) {
         return {
           ...pdf,
+          questionCount,
           status: ragStatus as any,
           stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null },
         };
@@ -153,6 +199,7 @@ export class PdfsService {
 
       return {
         ...pdf,
+        questionCount,
         status: ragStatus as any,
         stats: {
           attemptCount: validAttempts.length,
@@ -189,6 +236,7 @@ export class PdfsService {
     const attempts = await this.testsRepository.findCompletedAttemptsByPdfIds(pdfIds);
 
     const dataWithStats = data.map((pdf) => {
+      const questionCount = pdf.objectives?.reduce((sum, objective) => sum + (objective._count?.mcqs || 0), 0) || 0;
       const pdfAttempts = attempts.filter((a) => a.pdfId === pdf.id);
       // Filter out 0% attempts to avoid showing bugged/empty submissions in stats
       const validAttempts = pdfAttempts.filter((a) => (a.percentage || 0) > 0);
@@ -200,6 +248,7 @@ export class PdfsService {
       if (validAttempts.length === 0) {
         return {
           ...pdf,
+          questionCount,
           status: ragStatus as any,
           stats: { attemptCount: 0, avgScore: 0, topScorer: null, topScore: null },
         };
@@ -210,6 +259,7 @@ export class PdfsService {
 
       return {
         ...pdf,
+        questionCount,
         status: ragStatus as any,
         stats: {
           attemptCount: validAttempts.length,

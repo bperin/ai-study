@@ -24,7 +24,7 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
     return this.prisma.testAttempt.findUnique({
       where: { id },
       include: {
-        userAnswers: {
+        answers: {
           include: { mcq: { include: { objective: true } } },
           orderBy: { createdAt: 'asc' },
         },
@@ -40,11 +40,11 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
         completedAt: null,
       },
       include: {
-        userAnswers: {
+        answers: {
           include: { mcq: { include: { objective: true } } },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { startedAt: 'desc' },
     });
   }
 
@@ -53,13 +53,13 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
       where: { userId },
       include: {
         _count: {
-          select: { userAnswers: true },
+          select: { answers: true },
         },
         pdf: {
           select: { filename: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { startedAt: 'desc' },
     });
   }
 
@@ -68,7 +68,7 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
       where,
       skip,
       take,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { startedAt: 'desc' },
     });
   }
 
@@ -82,7 +82,7 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
     return this.prisma.testAttempt.create({
       data,
       include: {
-        userAnswers: {
+        answers: {
           include: { mcq: { include: { objective: true } } },
         },
       },
@@ -113,7 +113,7 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
       where: { id },
       data: {
         percentage,
-        totalQuestions,
+        total: totalQuestions,
         completedAt: new Date(),
       },
     });
@@ -138,13 +138,13 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
     return this.prisma.testAttempt.findMany({
       include: {
         _count: {
-          select: { userAnswers: true },
+          select: { answers: true },
         },
         pdf: {
           select: { filename: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { startedAt: 'desc' },
     });
   }
 
@@ -165,12 +165,12 @@ export class TestAttemptRepository implements BaseRepository<TestAttempt, Prisma
       where: { id },
       include: {
         _count: {
-          select: { userAnswers: true },
+          select: { answers: true },
         },
         pdf: {
           select: { filename: true },
         },
-        userAnswers: {
+        answers: {
           include: {
             mcq: {
               include: {

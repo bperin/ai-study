@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { UsersRepository } from './users.repository';
 import { CreateUserRecordDto } from './dto/create-user-record.dto';
 import { UpdateUserRecordDto } from './dto/update-user-record.dto';
@@ -22,8 +22,13 @@ export class UsersService {
     return this.usersRepository.createUser(data.email, data.password);
   }
 
-  async update(id: string, data: UpdateUserRecordDto): Promise<User> {
-    return this.usersRepository.updateUser(id, data.email, data.password, data.name, data.isAdmin, data.provider);
+  async update(params: { where: Prisma.UserWhereUniqueInput; data: Prisma.UserUpdateInput }): Promise<User>;
+  async update(id: string, data: UpdateUserRecordDto): Promise<User>;
+  async update(paramsOrId: any, data?: UpdateUserRecordDto): Promise<User> {
+    if (typeof paramsOrId === 'string') {
+      return this.usersRepository.updateUser(paramsOrId, data?.email, data?.password, data?.name, data?.isAdmin, data?.provider);
+    }
+    return this.usersRepository.update(paramsOrId);
   }
 
   async findAll(): Promise<User[]> {

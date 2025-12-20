@@ -269,7 +269,7 @@ export class PdfsApi extends runtime.BaseAPI {
   /**
    * Check RAG ingestion status for a PDF
    */
-  async pdfsControllerGetRagStatusRaw(requestParameters: PdfsControllerGetRagStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
+  async pdfsControllerGetRagStatusRaw(requestParameters: PdfsControllerGetRagStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
     if (requestParameters.id === null || requestParameters.id === undefined) {
       throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling pdfsControllerGetRagStatus.');
     }
@@ -296,15 +296,14 @@ export class PdfsApi extends runtime.BaseAPI {
       initOverrides,
     );
 
-    return new runtime.JSONApiResponse<any>(response);
+    return new runtime.VoidApiResponse(response);
   }
 
   /**
    * Check RAG ingestion status for a PDF
    */
-  async pdfsControllerGetRagStatus(requestParameters: PdfsControllerGetRagStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
-    const response = await this.pdfsControllerGetRagStatusRaw(requestParameters, initOverrides);
-    return await response.value();
+  async pdfsControllerGetRagStatus(requestParameters: PdfsControllerGetRagStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.pdfsControllerGetRagStatusRaw(requestParameters, initOverrides);
   }
 
   /**

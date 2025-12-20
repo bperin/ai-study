@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Document, Prisma, DocumentStatus } from '@prisma/client';
+import { Document, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BaseRepository } from './base.repository';
 
@@ -64,7 +64,7 @@ export class DocumentRepository implements BaseRepository<Document, Prisma.Docum
     });
   }
 
-  async updateStatus(id: string, status: DocumentStatus, errorMessage?: string): Promise<Document> {
+  async updateStatus(id: string, status: string, errorMessage?: string): Promise<Document> {
     return this.prisma.document.update({
       where: { id },
       data: {
@@ -74,7 +74,7 @@ export class DocumentRepository implements BaseRepository<Document, Prisma.Docum
     });
   }
 
-  async findByStatus(status: DocumentStatus): Promise<Document[]> {
+  async findByStatus(status: string): Promise<Document[]> {
     return this.prisma.document.findMany({
       where: { status },
       orderBy: { createdAt: 'desc' },

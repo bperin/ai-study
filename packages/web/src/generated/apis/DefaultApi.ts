@@ -273,7 +273,7 @@ export class DefaultApi extends runtime.BaseAPI {
 
   /**
    */
-  async ragControllerListChunksRaw(requestParameters: RagControllerListChunksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<object>>> {
+  async ragControllerListChunksRaw(requestParameters: RagControllerListChunksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
     if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
       throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling ragControllerListChunks.');
     }
@@ -292,14 +292,13 @@ export class DefaultApi extends runtime.BaseAPI {
       initOverrides,
     );
 
-    return new runtime.JSONApiResponse<any>(response);
+    return new runtime.VoidApiResponse(response);
   }
 
   /**
    */
-  async ragControllerListChunks(requestParameters: RagControllerListChunksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<object>> {
-    const response = await this.ragControllerListChunksRaw(requestParameters, initOverrides);
-    return await response.value();
+  async ragControllerListChunks(requestParameters: RagControllerListChunksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.ragControllerListChunksRaw(requestParameters, initOverrides);
   }
 
   /**
