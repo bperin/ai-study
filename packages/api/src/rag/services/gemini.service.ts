@@ -4,7 +4,7 @@ import { VertexAI } from '@google-cloud/vertexai';
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
-  private readonly modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-001';
+  private readonly modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
   private readonly projectId = process.env.GCP_PROJECT_ID;
   private readonly location = process.env.VERTEX_LOCATION || 'us-central1';
   private readonly vertexAi?: VertexAI;
