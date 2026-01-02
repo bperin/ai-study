@@ -15,4 +15,4 @@ EOF
 # Apply the CORS configuration to the bucket
 # Note: This assumes gcloud is installed and authenticated, or informs the user to run it
 echo "To apply CORS configuration to your GCS bucket, run the following command:"
-echo "gcloud storage buckets update gs://ai-study-pdfs-1765508603 --cors-file=gcs-cors.json"
+echo "gcloud storage buckets update gs://slap-ai-public-storage --cors-file=gcs-cors.json"
