@@ -1,48 +1,56 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './shared/logging/winston.config';
 import { BullModule } from '@nestjs/bullmq';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { SharedModule } from './shared/shared.module';
+import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { PdfStatusModule } from './pdf-status.module';
-import { PrismaModule } from './prisma/prisma.module';
-import { UsersModule } from './users/users.module';
-import { AuthModule } from './auth/auth.module';
-import { TestsModule } from './tests/tests.module';
-import { UploadsModule } from './uploads/uploads.module';
-import { DocumentsModule } from './documents/documents.module';
-import { AiModule } from './ai/ai.module';
-import { QueueModule } from './queue/queue.module';
+import { UsersModule } from './domain/users/users.module';
+import { AuthModule } from './domain/auth/auth.module';
+import { TestsModule } from './domain/study-tests/tests.module';
+import { UploadsModule } from './domain/uploads/uploads.module';
+import { DocumentsModule } from './domain/documents/documents.module';
+import { GenAiModule } from './infrastructure/genai/genai.module';
+import { QueueModule } from './domain/queue/queue.module';
+import { SystemModule } from './domain/system/system.module';
+import configuration from './config/configuration';
+import { validate } from './config/validate';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [configuration],
+      validate,
     }),
     WinstonModule.forRoot(winstonConfig),
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        password: process.env.REDIS_PASSWORD,
-        maxRetriesPerRequest: null,
-        tls: process.env.REDIS_HOST && process.env.REDIS_HOST !== 'localhost' ? {} : undefined,
-      },
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('redis.host'),
+          port: configService.get<number>('redis.port'),
+          password: configService.get<string>('redis.password'),
+          maxRetriesPerRequest: null,
+          tls: configService.get<string>('redis.host') && configService.get<string>('redis.host') !== 'localhost' ? {} : undefined,
+        },
+      }),
+      inject: [ConfigService],
     }),
     SharedModule,
-    PdfStatusModule,
     PrismaModule,
+    PdfStatusModule,
     UsersModule,
     AuthModule,
     TestsModule,
     UploadsModule,
     DocumentsModule,
-    AiModule,
+    GenAiModule,
     QueueModule,
+    SystemModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

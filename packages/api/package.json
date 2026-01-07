@@ -2,6 +2,7 @@
     "name": "@memorang/api",
     "version": "1.0.0",
     "scripts": {
+        "clean": "rm -rf dist coverage openapi.json packages",
         "prisma": "prisma db push && prisma generate",
         "build": "nest build",
         "build:watch": "nest build --watch",
@@ -22,15 +23,8 @@
         "generate:openapi": "npx ts-node -r dotenv/config scripts/generate-openapi.ts"
     },
     "dependencies": {
-        "@genkit-ai/ai": "^1.25.0",
-        "@genkit-ai/core": "^1.25.0",
-        "@genkit-ai/googleai": "^1.25.0",
-        "@google-cloud/discoveryengine": "^2.5.2",
-        "@google-cloud/storage": "^7.18.0",
-        "@google-cloud/vertexai": "^1.9.0",
         "@google/genai": "^1.32.0",
         "@google/generative-ai": "^0.24.1",
-        "@modelcontextprotocol/sdk": "^1.17.5",
         "@nestjs/bullmq": "^10.2.1",
         "@nestjs/common": "^10.0.0",
         "@nestjs/config": "^3.0.0",
@@ -53,14 +47,14 @@
         "ioredis": "^5.8.2",
         "nest-winston": "^1.10.2",
         "passport-jwt": "^4.0.1",
-        "pdf-parse": "^1.1.1",
         "pg": "^8.16.3",
         "reflect-metadata": "^0.1.13",
         "rxjs": "^7.8.0",
         "socket.io": "^4.8.1",
         "swagger-ui-express": "^5.0.0",
         "winston": "^3.19.0",
-        "zod": "^3.25.76"
+        "zod": "^3.25.76",
+        "zod-to-json-schema": "^3.25.0"
     },
     "devDependencies": {
         "@nestjs/cli": "^10.0.0",

@@ -1,14 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { SwaggerModule } from '@nestjs/swagger';
-import * as fs from 'fs';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
-import { createSwaggerDocument } from './swagger-config';
-import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { AllExceptionsFilter } from './http/http-exception.filter';
+import { SwaggerService } from './http/swagger.service';
+import { createWinstonLogger } from './shared/logging/winston.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: createWinstonLogger(),
+  });
 
   app.useGlobalFilters(new AllExceptionsFilter());
 
@@ -40,18 +41,9 @@ async function bootstrap() {
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
 
-  const document = createSwaggerDocument(app);
-  fs.writeFileSync('./openapi.json', JSON.stringify(document));
-  SwaggerModule.setup('api', app, document);
-
-  // Add health check endpoint for Cloud Run
-  app.getHttpAdapter().get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  app.getHttpAdapter().get('/healthz', (req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
+  // Setup Swagger using SwaggerService
+  const swaggerService = app.get(SwaggerService);
+  swaggerService.setup(app);
 
   const port = process.env.PORT || 3000;
   console.log(`Starting server on port ${port} (from env: ${process.env.PORT})`);
