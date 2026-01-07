@@ -12,11 +12,11 @@ import { SubmitTestResultsDto, TestAnalysisResponseDto } from './dto/test-result
 export class TestAttemptsController {
   constructor(private readonly testAttemptsService: TestAttemptsService) {}
 
-  @Post(':pdfId/start')
+  @Post(':documentId/start')
   @ApiOperation({ summary: 'Start a new test attempt' })
   @ApiResponse({ status: 201, type: StartAttemptResponseDto })
-  startAttempt(@Param('pdfId') pdfId: string, @Request() req: any): Promise<StartAttemptResponseDto> {
-    return this.testAttemptsService.startAttempt(pdfId, req.user.userId);
+  startAttempt(@Param('documentId') documentId: string, @Request() req: any): Promise<StartAttemptResponseDto> {
+    return this.testAttemptsService.startAttempt(documentId, req.user.userId);
   }
 
   @Post('submit')

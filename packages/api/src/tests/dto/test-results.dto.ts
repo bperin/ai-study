@@ -138,7 +138,7 @@ export class TestHistoryItemDto {
   id: string;
 
   @ApiProperty()
-  pdfId: string;
+  documentId: string;
 
   @ApiProperty()
   pdfTitle: string;
@@ -188,7 +188,7 @@ export class TestHistoryItemDto {
 
     return {
       id: attempt.id,
-      pdfId: attempt.pdfId,
+      documentId: attempt.documentId,
       pdfTitle: attempt.pdf?.filename || 'Unknown PDF',
       score: attempt.score,
       total: attempt.total,

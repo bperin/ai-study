@@ -13,9 +13,9 @@ describe('Application Smoke Tests', () => {
       expect(PrismaService).toBeDefined();
     });
 
-    it('should import PdfsService', async () => {
-      const { PdfsService } = await import('../src/pdfs/pdfs.service');
-      expect(PdfsService).toBeDefined();
+    it('should import DocumentsService', async () => {
+      const { DocumentsService } = await import('../src/documents/documents.service');
+      expect(DocumentsService).toBeDefined();
     });
 
     it('should import AuthService', async () => {
@@ -31,7 +31,7 @@ describe('Application Smoke Tests', () => {
     });
 
     it('should have valid ChatMessageDto', async () => {
-      const { ChatMessageDto } = await import('../src/pdfs/dto/chat-message.dto');
+      const { ChatMessageDto } = await import('../src/documents/dto/chat-message.dto');
       expect(ChatMessageDto).toBeDefined();
     });
   });

@@ -1,11 +1,11 @@
 import { Module, Global } from '@nestjs/common';
-import { AdkRunnerService } from './adk-runner.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { GenAiService } from './genai.service';
 
 @Global()
 @Module({
   imports: [PrismaModule],
-  providers: [AdkRunnerService],
-  exports: [AdkRunnerService],
+  providers: [GenAiService],
+  exports: [GenAiService],
 })
 export class AiModule {}

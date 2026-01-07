@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AiStudyPlanService } from '../../ai/ai-study-plan.service';
 import { ToolCallingService } from '../../ai/tool-calling.service';
-import { PdfIngestService } from '../../pdf/pdf-ingest.service';
+import { DocumentIngestService } from '../../pdf/pdf-ingest.service';
 import { InMemorySessionStore } from './in-memory-session.store';
 import { StudySessionSummary } from './interfaces/study-session.interface';
 import { StartSessionDto } from './dto/start-session.dto';
@@ -9,14 +9,14 @@ import { StartSessionDto } from './dto/start-session.dto';
 @Injectable()
 export class TestSessionsService {
   constructor(
-    private readonly pdfIngestService: PdfIngestService,
+    private readonly pdfIngestService: DocumentIngestService,
     private readonly aiStudyPlanService: AiStudyPlanService,
     private readonly toolCallingService: ToolCallingService,
     private readonly sessionStore: InMemorySessionStore,
   ) {}
 
   async startSession(params: { userId: string; token: string; payload: StartSessionDto }): Promise<StudySessionSummary> {
-    const pdf = await this.pdfIngestService.registerLinkedPdf({
+    const pdf = await this.pdfIngestService.registerLinkedDocument({
       userId: params.userId,
       filename: params.payload.filename,
       signedUrl: params.payload.signedPdfUrl,
@@ -33,7 +33,7 @@ export class TestSessionsService {
     const session = this.sessionStore.create({
       userId: params.userId,
       token: params.token,
-      pdfId: pdf.id,
+      documentId: pdf.id,
       difficulty: persistedPlan.difficulty,
       requestedCards: persistedPlan.requestedCards,
       objectives: persistedPlan.objectives.map((objective) => ({

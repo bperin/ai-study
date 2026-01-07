@@ -15,7 +15,7 @@ export class AnswerDto {
 export class SubmitTestDto {
   @ApiProperty()
   @IsString()
-  pdfId: string;
+  documentId: string;
 
   @ApiProperty({ type: [AnswerDto] })
   @IsArray()

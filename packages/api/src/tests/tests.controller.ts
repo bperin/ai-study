@@ -40,19 +40,19 @@ export class TestsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get('leaderboard/pdf/:pdfId')
-  async getPdfLeaderboard(@Param('pdfId') pdfId: string, @Query('limit') limit?: string) {
+  @Get('leaderboard/pdf/:documentId')
+  async getPdfLeaderboard(@Param('documentId') documentId: string, @Query('limit') limit?: string) {
     const limitNum = limit ? parseInt(limit) : 10;
-    return this.leaderboardService.getPdfLeaderboard(pdfId, limitNum);
+    return this.leaderboardService.getPdfLeaderboard(documentId, limitNum);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Post(':pdfId/chat-assistance')
+  @Post(':documentId/chat-assistance')
   @ApiOperation({ summary: 'Get AI assistance during test taking' })
   @ApiResponse({ status: 200, type: ChatAssistanceResponseDto, description: 'AI assistance response' })
-  async getChatAssistance(@Param('pdfId') pdfId: string, @Body() dto: ChatAssistanceDto, @Request() req: { user: { userId: string } }): Promise<ChatAssistanceResponseDto> {
-    return this.testsService.getChatAssistance(dto.message, dto.questionId, pdfId, req.user.userId);
+  async getChatAssistance(@Param('documentId') documentId: string, @Body() dto: ChatAssistanceDto, @Request() req: { user: { userId: string } }): Promise<ChatAssistanceResponseDto> {
+    return this.testsService.getChatAssistance(dto.message, dto.questionId, documentId, req.user.userId);
   }
 
   @ApiBearerAuth()
@@ -75,11 +75,11 @@ export class TestsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get('stats/:pdfId')
+  @Get('stats/:documentId')
   @ApiOperation({ summary: 'Get test stats: attempt count, avg score, top scorer' })
   @ApiResponse({ status: 200, type: TestStatsDto })
-  async getTestStats(@Param('pdfId') pdfId: string): Promise<TestStatsDto> {
-    return this.testsService.getTestStats(pdfId);
+  async getTestStats(@Param('documentId') documentId: string): Promise<TestStatsDto> {
+    return this.testsService.getTestStats(documentId);
   }
 
   @ApiBearerAuth()

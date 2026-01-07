@@ -12,11 +12,11 @@ import { RecordAnswerDto, RecordAnswerResponseDto } from './dto/record-answer.dt
 export class TestTakingController {
   constructor(private readonly testTakingService: TestTakingService) {}
 
-  @Post('start/:pdfId')
+  @Post('start/:documentId')
   @ApiOperation({ summary: 'Start or resume a test session' })
   @ApiResponse({ status: 201, type: TestSessionStateDto })
-  async startSession(@Request() req: any, @Param('pdfId') pdfId: string) {
-    return this.testTakingService.getOrStartSession(req.user.userId, pdfId);
+  async startSession(@Request() req: any, @Param('documentId') documentId: string) {
+    return this.testTakingService.getOrStartSession(req.user.userId, documentId);
   }
 
   @Get(':attemptId')

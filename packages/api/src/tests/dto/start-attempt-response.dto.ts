@@ -5,7 +5,7 @@ export class StartAttemptResponseDto {
   attemptId: string;
 
   @ApiProperty()
-  pdfId: string;
+  documentId: string;
 
   @ApiProperty()
   startedAt: Date;

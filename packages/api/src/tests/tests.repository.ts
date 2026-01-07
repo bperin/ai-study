@@ -10,24 +10,25 @@ export class TestsRepository {
     return this.prisma.mcq.findMany({ where: { id: { in: ids } } });
   }
 
-  async findMcqsByPdfId(pdfId: string): Promise<(Mcq & { objective: Objective })[]> {
+  async findMcqsByDocumentId(documentId: string): Promise<(Mcq & { objective: Objective })[]> {
     return this.prisma.mcq.findMany({
-      where: { objective: { pdfId } },
+      where: { objective: { documentId } },
       include: { objective: true },
     });
   }
 
-  async findMcqById(id: string): Promise<(Mcq & { objective: Objective & { pdf: { content: string | null; gcsPath: string | null; filename: string } } }) | null> {
+  async findMcqById(id: string): Promise<(Mcq & { objective: Objective & { document: { content: string | null; storagePath: string | null; filename: string; ragFileUri: string | null } } }) | null> {
     return this.prisma.mcq.findUnique({
       where: { id },
       include: {
         objective: {
           include: {
-            pdf: {
+            document: {
               select: {
                 content: true,
-                gcsPath: true,
+                storagePath: true,
                 filename: true,
+                ragFileUri: true,
               },
             },
           },
@@ -36,14 +37,14 @@ export class TestsRepository {
     });
   }
 
-  async countMcqsByPdfId(pdfId: string): Promise<number> {
-    return this.prisma.mcq.count({ where: { objective: { pdfId } } });
+  async countMcqsByDocumentId(documentId: string): Promise<number> {
+    return this.prisma.mcq.count({ where: { objective: { documentId } } });
   }
 
   // Objectives
-  async findObjectivesByPdfId(pdfId: string): Promise<(Objective & { mcqs: Mcq[] })[]> {
+  async findObjectivesByDocumentId(documentId: string): Promise<(Objective & { mcqs: Mcq[] })[]> {
     return this.prisma.objective.findMany({
-      where: { pdfId },
+      where: { documentId },
       include: { mcqs: true },
     });
   }
@@ -52,7 +53,7 @@ export class TestsRepository {
   async findAttemptById(id: string): Promise<
     | (TestAttempt & {
         answers: (UserAnswer & { mcq: Mcq & { objective: Objective } })[];
-        pdf: { filename: string; gcsPath: string | null; content: string | null };
+        document: { filename: string; storagePath: string | null; content: string | null; ragFileUri: string | null };
         user: { email: string; id: string };
       })
     | null
@@ -64,11 +65,12 @@ export class TestsRepository {
           include: { mcq: { include: { objective: true } } },
           orderBy: { createdAt: 'asc' },
         },
-        pdf: {
+        document: {
           select: {
             filename: true,
-            gcsPath: true,
+            storagePath: true,
             content: true,
+            ragFileUri: true,
           },
         },
         user: {
@@ -83,7 +85,7 @@ export class TestsRepository {
 
   async findActiveAttempt(
     userId: string,
-    pdfId: string,
+    documentId: string,
   ): Promise<
     | (TestAttempt & {
         answers: (UserAnswer & { mcq: Mcq & { objective: Objective } })[];
@@ -93,7 +95,7 @@ export class TestsRepository {
     return this.prisma.testAttempt.findFirst({
       where: {
         userId,
-        pdfId,
+        documentId,
         completedAt: null,
       },
       include: {
@@ -105,11 +107,11 @@ export class TestsRepository {
     });
   }
 
-  async createAttempt(userId: string, pdfId: string, total: number, score: number = 0, percentage?: number | null): Promise<TestAttempt & { answers: UserAnswer[] }> {
+  async createAttempt(userId: string, documentId: string, total: number, score: number = 0, percentage?: number | null): Promise<TestAttempt & { answers: UserAnswer[] }> {
     return this.prisma.testAttempt.create({
       data: {
         userId,
-        pdfId,
+        documentId,
         total,
         score,
         percentage: percentage ?? null,
@@ -120,11 +122,11 @@ export class TestsRepository {
     });
   }
 
-  async createCompletedAttempt(userId: string, pdfId: string, score: number, total: number, answers: Array<{ mcqId: string; selectedIdx: number; isCorrect: boolean }>): Promise<TestAttempt> {
+  async createCompletedAttempt(userId: string, documentId: string, score: number, total: number, answers: Array<{ mcqId: string; selectedIdx: number; isCorrect: boolean }>): Promise<TestAttempt> {
     return this.prisma.testAttempt.create({
       data: {
         userId,
-        pdfId,
+        documentId,
         score,
         total,
         percentage: total > 0 ? (score / total) * 100 : 0,
@@ -157,18 +159,18 @@ export class TestsRepository {
   }
 
   // History / Leaderboard
-  async findCompletedAttemptsByPdf(pdfId: string, limit: number = 10): Promise<(TestAttempt & { user: { id: string; email: string } })[]> {
+  async findCompletedAttemptsByDocument(documentId: string, limit: number = 10): Promise<(TestAttempt & { user: { id: string; email: string } })[]> {
     return this.prisma.testAttempt.findMany({
-      where: { pdfId, completedAt: { not: null } },
+      where: { documentId, completedAt: { not: null } },
       include: { user: { select: { id: true, email: true } } },
       orderBy: { percentage: 'desc' },
       take: limit,
     });
   }
 
-  async findCompletedAttemptsByPdfIds(pdfIds: string[]): Promise<(TestAttempt & { user: { id: string; email: string } })[]> {
+  async findCompletedAttemptsByDocumentIds(documentIds: string[]): Promise<(TestAttempt & { user: { id: string; email: string } })[]> {
     return this.prisma.testAttempt.findMany({
-      where: { pdfId: { in: pdfIds }, completedAt: { not: null } },
+      where: { documentId: { in: documentIds }, completedAt: { not: null } },
       include: { user: { select: { id: true, email: true } } },
     });
   }
@@ -180,21 +182,21 @@ export class TestsRepository {
     });
   }
 
-  async findUserAttempts(userId: string): Promise<(TestAttempt & { pdf: { filename: string }; answers: (UserAnswer & { mcq: Mcq })[] })[]> {
+  async findUserAttempts(userId: string): Promise<(TestAttempt & { document: { filename: string }; answers: (UserAnswer & { mcq: Mcq })[] })[]> {
     return this.prisma.testAttempt.findMany({
       where: { userId },
       include: {
-        pdf: { select: { filename: true } },
+        document: { select: { filename: true } },
         answers: { include: { mcq: true } },
       },
       orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
     });
   }
 
-  async findAllAttemptsWithDetails(): Promise<(TestAttempt & { pdf: { filename: string }; user: { id: string; email: string }; answers: (UserAnswer & { mcq: Mcq })[] })[]> {
+  async findAllAttemptsWithDetails(): Promise<(TestAttempt & { document: { filename: string }; user: { id: string; email: string }; answers: (UserAnswer & { mcq: Mcq })[] })[]> {
     return this.prisma.testAttempt.findMany({
       include: {
-        pdf: { select: { filename: true } },
+        document: { select: { filename: true } },
         user: { select: { id: true, email: true } },
         answers: { include: { mcq: true } },
       },
@@ -234,20 +236,20 @@ export class TestsRepository {
   }
 
   // Deletion (Admin/Cleanup)
-  async deletePdfRelatedData(pdfId: string) {
+  async deleteDocumentRelatedData(documentId: string) {
     // Transactions would be better here but following existing pattern
-    await this.prisma.userAnswer.deleteMany({ where: { attempt: { pdfId } } });
-    await this.prisma.testAttempt.deleteMany({ where: { pdfId } });
-    await this.prisma.mcq.deleteMany({ where: { objective: { pdfId } } });
-    await this.prisma.objective.deleteMany({ where: { pdfId } });
+    await this.prisma.userAnswer.deleteMany({ where: { attempt: { documentId } } });
+    await this.prisma.testAttempt.deleteMany({ where: { documentId } });
+    await this.prisma.mcq.deleteMany({ where: { objective: { documentId } } });
+    await this.prisma.objective.deleteMany({ where: { documentId } });
   }
 
-  async createObjective(pdfId: string, title: string, difficulty: 'easy' | 'medium' | 'hard', mcqs?: Array<{ question: string; options: string[]; correctIdx: number; explanation?: string | null; hint?: string | null }>): Promise<Objective> {
+  async createObjective(documentId: string, title: string, difficulty: 'easy' | 'medium' | 'hard', mcqs?: Array<{ question: string; options: string[]; correctIdx: number; explanation?: string | null; hint?: string | null }>): Promise<Objective> {
     return this.prisma.objective.create({
       data: {
         title,
         difficulty,
-        pdf: { connect: { id: pdfId } },
+        document: { connect: { id: documentId } },
         mcqs: mcqs?.length
           ? {
               create: mcqs.map((mcq) => ({

@@ -544,16 +544,13 @@ ENSURE: The sum of all questionCount values equals the student's requested total
 
 Return ONLY the JSON object, no other text or markdown formatting.`;
 
-export const TEST_ASSISTANCE_CHAT_PROMPT = (question: string, options: string[], pdfContext: string) => `You are a helpful AI tutor assisting a student who is CURRENTLY looking at a specific test question.
+export const TEST_ASSISTANCE_CHAT_PROMPT = (question: string, options: string[]) => `You are a helpful AI tutor assisting a student who is CURRENTLY looking at a specific test question.
 
 CONTEXT - The student is stuck on this specific question:
 "${question}"
 
 The options they are choosing from are:
 ${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}
-
-RELEVANT STUDY MATERIAL (Use this to formulate your hint):
-${pdfContext ? pdfContext.substring(0, 10000) : 'No direct context available.'}
 
 CRITICAL INSTRUCTIONS:
 1. The student is asking about the question above. Even if they just say "hint" or "I'm stuck", it refers to THIS question.

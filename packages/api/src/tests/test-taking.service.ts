@@ -1,12 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RetrieveService } from '../rag/services/retrieve.service';
-import { createAdkRunner, isAdkAvailable } from '../ai/adk.helpers';
-import { createTestAssistanceAgent } from '../ai/agents';
-import { PdfTextService } from '../pdfs/pdf-text.service';
-import { GcsService } from '../pdfs/gcs.service';
+import * as agents from '../ai/agents';
+import { GcsService } from '../uploads/gcs.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TestsRepository } from './tests.repository';
+import { FileSearchService } from '../uploads/file-search.service';
+import { GenAiService } from '../ai/genai.service';
 
 /**
  * In-memory state for active test sessions
@@ -62,9 +61,9 @@ export class TestTakingService {
   constructor(
     private readonly configService: ConfigService,
     private readonly testsRepository: TestsRepository,
-    private readonly retrieveService: RetrieveService,
-    private readonly pdfTextService: PdfTextService,
+    private readonly fileSearchService: FileSearchService,
     private readonly gcsService: GcsService,
+    private readonly genAiService: GenAiService,
   ) {
     const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
     if (apiKey) {
@@ -75,14 +74,14 @@ export class TestTakingService {
   /**
    * Initialize or Resume a test session
    */
-  async getOrStartSession(userId: string, pdfId: string): Promise<TestSessionState> {
+  async getOrStartSession(userId: string, documentId: string): Promise<TestSessionState> {
     // Check for existing incomplete attempt
-    let attempt = await this.testsRepository.findActiveAttempt(userId, pdfId);
+    let attempt = await this.testsRepository.findActiveAttempt(userId, documentId);
 
     if (!attempt) {
       // Create new attempt
-      const totalQuestions = await this.testsRepository.countMcqsByPdfId(pdfId);
-      const newAttempt = await this.testsRepository.createAttempt(userId, pdfId, totalQuestions, 0);
+      const totalQuestions = await this.testsRepository.countMcqsByPdfId(documentId);
+      const newAttempt = await this.testsRepository.createAttempt(userId, documentId, totalQuestions, 0);
       return this.rehydrateState(newAttempt);
     }
 
@@ -103,7 +102,7 @@ export class TestTakingService {
    * Rehydrate state from DB attempt
    */
   private async rehydrateState(attempt: any): Promise<TestSessionState> {
-    const questions = await this.testsRepository.findMcqsByPdfId(attempt.pdfId);
+    const questions = await this.testsRepository.findMcqsByPdfId(attempt.documentId);
     // @ts-ignore
     const dbAnswers = attempt.answers || [];
 
@@ -187,32 +186,47 @@ export class TestTakingService {
 
     if (!question) throw new NotFoundException('Question not found');
 
-    // Extract PDF text for context
-    let pdfContent = '';
-    if (attempt.pdf.gcsPath) {
-      try {
-        const buffer = await this.gcsService.downloadFile(attempt.pdf.gcsPath);
-        const extracted = await this.pdfTextService.extractText(buffer);
-        pdfContent = extracted.structuredText.substring(0, 50000);
-      } catch (e) {
-        console.error(`[TestTakingService] Failed to extract PDF text:`, e);
-      }
+    const studentPrompt = 'I need a hint for this question. Please help me understand the concept without giving away the answer.';
+    const fallback = async () =>
+      this.generateFallbackAssistance({ question, message: studentPrompt, fileUri: (attempt as any).pdf?.ragFileUri || null });
+
+    try {
+      const result = await agents.runTestAssistance(
+        this.genAiService,
+        studentPrompt,
+        question.question,
+        question.options,
+        (attempt as any).pdf?.ragFileUri || undefined
+      );
+      return result.text;
+    } catch (error) {
+      console.error('[TestTakingService] AI assistance failed, using fallback:', error);
+      return fallback();
+    }
+  }
+
+  private async generateFallbackAssistance(params: { question: any; message: string; fileUri?: string | null }) {
+    const { question, message, fileUri } = params;
+
+    if (fileUri) {
+      const response = await this.fileSearchService.answerQuestionFromFile({
+        fileUri,
+        question: `${question.question}\n\nStudent: ${message}`,
+        systemPrompt: 'Provide tutoring hints using the attached PDF. Do not reveal the correct answer directly.',
+      });
+      return response.text || 'Unable to retrieve assistance.';
     }
 
-    if (!isAdkAvailable()) {
-      return 'AI assistance is currently unavailable.';
-    }
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
 
-    const agent = createTestAssistanceAgent(question.question, question.options, this.retrieveService, attempt.pdf.filename, attempt.pdf.gcsPath || '');
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-    const runner = createAdkRunner({ agent, appName: 'test-assistant' });
-    if (!runner) return 'Failed to initialize AI assistant.';
+    const prompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options) + `\n\nUser: ${message}`;
 
-    const result = await runner.run({
-      agent,
-      prompt: 'I need a hint for this question. Please help me understand the concept without giving away the answer.',
-    });
-    return result.text;
+    const result = await model.generateContent(prompt);
+    return result.response.text();
   }
 
   async recordAnswer(attemptId: string, questionId: string, selectedAnswer: number, timeSpent: number): Promise<any> {

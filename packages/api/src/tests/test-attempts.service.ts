@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ParallelGenerationService } from '../ai/parallel-generation.service';
 import { StartAttemptResponseDto } from './dto/start-attempt-response.dto';
 import { SubmitTestResultsDto, TestAnalysisResponseDto } from './dto/test-results.dto';
 import { TestsRepository } from './tests.repository';
@@ -8,15 +7,14 @@ import { TestsRepository } from './tests.repository';
 export class TestAttemptsService {
   constructor(
     private readonly testsRepository: TestsRepository,
-    private readonly parallelGenerationService: ParallelGenerationService,
   ) {}
 
-  async startAttempt(pdfId: string, userId: string): Promise<StartAttemptResponseDto> {
-    const attempt = await this.testsRepository.createAttempt(userId, pdfId, 0, 0);
+  async startAttempt(documentId: string, userId: string): Promise<StartAttemptResponseDto> {
+    const attempt = await this.testsRepository.createAttempt(userId, documentId, 0, 0);
 
     return {
       attemptId: attempt.id,
-      pdfId: attempt.pdfId,
+      documentId: attempt.documentId,
       startedAt: attempt.startedAt,
     };
   }
@@ -28,18 +26,8 @@ export class TestAttemptsService {
       throw new NotFoundException('Attempt not found');
     }
 
-    let analysis;
-    try {
-      // Analyze results with AI (now with web search and all answers)
-      console.log(`Analyzing test results for PDF: ${attempt.pdfId}`);
-      analysis = await this.parallelGenerationService.analyzeTestResults(attempt.pdfId, body.missedQuestions, body.allAnswers);
-
-      // The analysis already contains the markdown report
-    } catch (error) {
-      console.error('AI analysis failed, using fallback:', error);
-      // Fallback analysis if AI fails
-      const percentage = Math.round((body.score / body.totalQuestions) * 100);
-      analysis = {
+    const percentage = Math.round((body.score / body.totalQuestions) * 100);
+    const analysis = {
         report: `# Test Performance Analysis Report
 
 ## Executive Summary
@@ -62,11 +50,10 @@ ${
 
 ## Next Steps
 Keep practicing and focus on understanding the underlying concepts. Each attempt helps you learn!`,
-      };
-    }
+    };
 
     // Update attempt with feedback and score
-    await this.testsRepository.updateAttempt(body.attemptId, body.score, body.totalQuestions, (body.score / body.totalQuestions) * 100, new Date(), undefined, analysis as any);
+    await this.testsRepository.updateAttempt(body.attemptId, body.score, body.totalQuestions, percentage, new Date(), undefined, analysis as any);
 
     return {
       attemptId: body.attemptId,

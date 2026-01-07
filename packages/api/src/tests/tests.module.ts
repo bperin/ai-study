@@ -7,13 +7,12 @@ import { LeaderboardService } from './leaderboard.service';
 import { TestSessionsModule } from './test-sessions/test-sessions.module';
 import { TestAttemptsController } from './test-attempts.controller';
 import { TestAttemptsService } from './test-attempts.service';
-import { PdfsModule } from '../pdfs/pdfs.module';
-import { RagModule } from '../rag/rag.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { TestsRepositoryModule } from './tests-repository.module';
-import { PdfsRepositoryModule } from '../pdfs/pdfs-repository.module';
+import { DocumentsRepositoryModule } from '../documents/documents-repository.module';
 
 @Module({
-  imports: [TestsRepositoryModule, PdfsRepositoryModule, TestSessionsModule, PdfsModule, RagModule],
+  imports: [TestsRepositoryModule, DocumentsRepositoryModule, TestSessionsModule, DocumentsModule],
   controllers: [TestsController, TestTakingController, TestAttemptsController],
   providers: [TestsService, LeaderboardService, TestTakingService, TestAttemptsService],
 })

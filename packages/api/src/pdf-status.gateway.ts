@@ -10,7 +10,7 @@ export interface PdfStatusUpdate {
   progress?: number | { current: number; total: number };
   current?: number;
   total?: number;
-  pdfId?: string;
+  documentId?: string;
 }
 
 @WebSocketGateway({

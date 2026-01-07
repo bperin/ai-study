@@ -5,7 +5,7 @@ export class CreateTestAttemptRecordDto {
   userId: string;
 
   @ApiProperty()
-  pdfId: string;
+  documentId: string;
 
   @ApiProperty({ description: 'Total number of questions included in this attempt' })
   total: number;

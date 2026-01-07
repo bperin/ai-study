@@ -19,7 +19,7 @@ export class CreateObjectiveMcqRecordDto {
 
 export class CreateObjectiveRecordDto {
   @ApiProperty()
-  pdfId: string;
+  documentId: string;
 
   @ApiProperty()
   title: string;

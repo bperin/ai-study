@@ -18,4 +18,11 @@ export class ConfirmUploadResponseDto {
     example: '2778db4c-ec62-49d4-a0d1-229f6f3c15de',
   })
   userId: string;
+
+  @ApiProperty({
+    description: 'Subject ID the document belongs to',
+    example: '3a3d2e1b-4f5g-6h7i-8j9k...',
+    nullable: true,
+  })
+  subjectId?: string;
 }

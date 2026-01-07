@@ -4,7 +4,7 @@ export interface StudySessionSummary {
   id: string;
   userId: string;
   token: string;
-  pdfId: string;
+  documentId: string;
   createdAt: Date;
   status: SessionStatus;
   difficulty: string;

@@ -23,7 +23,7 @@ export class UploadsController {
   @Post('confirm')
   @ApiResponse({ status: 201, type: ConfirmUploadResponseDto })
   confirmUpload(@Body() body: ConfirmUploadDto, @Request() req): Promise<ConfirmUploadResponseDto> {
-    return this.uploadsService.confirmUpload(body.filePath, body.fileName, req.user.userId);
+    return this.uploadsService.confirmUpload(body.filePath, body.fileName, req.user.userId, body.subjectId);
   }
 
   @Post('test-sign')

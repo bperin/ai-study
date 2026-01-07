@@ -2,9 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TestTakingService } from './test-taking.service';
 import { ConfigService } from '@nestjs/config';
 import { TestsRepository } from './tests.repository';
-import { RetrieveService } from '../rag/services/retrieve.service';
-import { PdfTextService } from '../pdfs/pdf-text.service';
-import { GcsService } from '../pdfs/gcs.service';
+import { FileSearchService } from '../uploads/file-search.service';
+import { GcsService } from '../uploads/gcs.service';
 
 describe('TestTakingService', () => {
   let service: TestTakingService;
@@ -17,15 +16,12 @@ describe('TestTakingService', () => {
     findMcqsByPdfId: jest.fn(),
   };
 
-  const mockRetrieveService = {};
+  const mockFileSearchService = {};
 
   const mockConfig = {
     get: jest.fn().mockReturnValue('test-api-key'),
   };
 
-  const mockPdfTextService = {
-    extractText: jest.fn(),
-  };
 
   const mockGcsService = {
     downloadFile: jest.fn(),
@@ -33,7 +29,7 @@ describe('TestTakingService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TestTakingService, { provide: TestsRepository, useValue: mockTestsRepository }, { provide: ConfigService, useValue: mockConfig }, { provide: RetrieveService, useValue: mockRetrieveService }, { provide: PdfTextService, useValue: mockPdfTextService }, { provide: GcsService, useValue: mockGcsService }],
+      providers: [TestTakingService, { provide: TestsRepository, useValue: mockTestsRepository }, { provide: ConfigService, useValue: mockConfig }, { provide: FileSearchService, useValue: mockFileSearchService }, { provide: GcsService, useValue: mockGcsService }],
     }).compile();
 
     service = module.get<TestTakingService>(TestTakingService);
@@ -49,7 +45,7 @@ describe('TestTakingService', () => {
       const mockAttempt = {
         id: 'attempt-1',
         userId: 'user-1',
-        pdfId: 'pdf-1',
+        documentId: 'pdf-1',
         startedAt: new Date(),
         userAnswers: [],
       };
@@ -70,7 +66,7 @@ describe('TestTakingService', () => {
       mockTestsRepository.createAttempt.mockResolvedValue({
         id: 'new-attempt',
         userId: 'user-1',
-        pdfId: 'pdf-1',
+        documentId: 'pdf-1',
         startedAt: new Date(),
         userAnswers: [],
       });

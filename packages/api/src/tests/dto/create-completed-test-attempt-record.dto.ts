@@ -16,7 +16,7 @@ export class CreateCompletedTestAttemptRecordDto {
   userId: string;
 
   @ApiProperty()
-  pdfId: string;
+  documentId: string;
 
   @ApiProperty()
   score: number;

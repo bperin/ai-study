@@ -12,9 +12,8 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { TestsModule } from './tests/tests.module';
 import { UploadsModule } from './uploads/uploads.module';
-import { PdfsModule } from './pdfs/pdfs.module';
+import { DocumentsModule } from './documents/documents.module';
 import { AiModule } from './ai/ai.module';
-import { RagModule } from './rag/rag.module';
 import { QueueModule } from './queue/queue.module';
 
 @Module({
@@ -39,9 +38,8 @@ import { QueueModule } from './queue/queue.module';
     AuthModule,
     TestsModule,
     UploadsModule,
-    PdfsModule,
+    DocumentsModule,
     AiModule,
-    RagModule,
     QueueModule,
   ],
   controllers: [AppController],

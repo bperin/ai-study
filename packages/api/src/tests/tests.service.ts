@@ -6,25 +6,20 @@ import { AdkRunnerService } from '../ai/adk-runner.service';
 import { TestStatsDto } from './dto/test-stats.dto';
 import { ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
 import { GEMINI_MODEL } from '../constants/models';
-import { GcsService } from '../pdfs/gcs.service';
-import { PdfTextService } from '../pdfs/pdf-text.service';
-import { RetrieveService } from '../rag/services/retrieve.service';
+import { GcsService } from '../uploads/gcs.service';
 import { TestsRepository } from './tests.repository';
-import { PdfsRepository } from '../pdfs/pdfs.repository';
-import { RagRepository } from '../rag/rag.repository';
-import { DocumentIdentifierDto } from '../rag/dto/document-identifier.dto';
+import { DocumentsRepository } from '../documents/documents.repository';
+import { FileSearchService } from '../uploads/file-search.service';
 import * as pdfParse from 'pdf-parse';
 
 @Injectable()
 export class TestsService {
   constructor(
     private readonly testsRepository: TestsRepository,
-    private readonly pdfsRepository: PdfsRepository,
-    private readonly ragRepository: RagRepository,
+    private readonly documentsRepository: DocumentsRepository,
+    private readonly fileSearchService: FileSearchService,
     private adkRunner?: AdkRunnerService,
     private gcsService?: GcsService,
-    private pdfTextService?: PdfTextService,
-    private retrieveService?: RetrieveService,
   ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
@@ -52,7 +47,7 @@ export class TestsService {
     // 3. Create Attempt
     const total = dto.userAnswers.length;
 
-    return this.testsRepository.createCompletedAttempt(userId, dto.pdfId, score, total, answerData);
+    return this.testsRepository.createCompletedAttempt(userId, dto.documentId, score, total, answerData);
   }
 
   async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {
@@ -65,8 +60,8 @@ export class TestsService {
     return TestHistoryResponseDto.fromEntities(attempts);
   }
 
-  async getTestStats(pdfId: string) {
-    const attempts = await this.testsRepository.findCompletedAttemptsByPdf(pdfId);
+  async getTestStats(documentId: string) {
+    const attempts = await this.testsRepository.findCompletedAttemptsByDocument(documentId);
 
     if (attempts.length === 0) {
       return {
@@ -110,11 +105,8 @@ export class TestsService {
     const mcq = await this.testsRepository.findMcqById(questionId);
     if (!mcq) throw new NotFoundException('Question not found');
 
-    // @ts-ignore
-    const pdfContent = mcq.objective?.pdf?.content || ''; // Or handle GCS path if needed (simplified for now as content usually has text)
-
     const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
-    const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options, pdfContent);
+    const systemPrompt = TEST_ASSISTANCE_CHAT_PROMPT(mcq.question, mcq.options);
 
     const chat = model.startChat({
       history: [
@@ -136,13 +128,13 @@ export class TestsService {
   }
 
   private async loadPdfContent(pdf: { gcsPath?: string | null; content?: string | null }) {
-    if (pdf.gcsPath && this.gcsService) {
+    if (pdf.content && pdf.content.length > 0) {
+      return pdf.content.substring(0, 10000);
+    }
+
+    if (pdf.gcsPath && (this as any).gcsService) {
       try {
-        const buffer = await this.gcsService.downloadFile(pdf.gcsPath);
-        if (this.pdfTextService) {
-          const extracted = await this.pdfTextService.extractText(buffer);
-          return extracted.structuredText.substring(0, 10000);
-        }
+        const buffer = await (this as any).gcsService.downloadFile(pdf.gcsPath);
 
         const parsed = await pdfParse(buffer);
         return parsed.text.substring(0, 10000);
@@ -155,55 +147,31 @@ export class TestsService {
     return text.substring(0, 10000);
   }
 
-  private async buildRagContext(message: string, questionText: string, pdf: { filename?: string; gcsPath?: string | null }) {
-    if (!this.retrieveService) {
+  private async buildRagContext(message: string, questionText: string, pdf: { ragFileUri?: string | null }) {
+    if (!pdf.ragFileUri) {
       return '';
     }
 
     try {
-      const bucketName = process.env.GCP_BUCKET_NAME;
-      const gcsUri = pdf.gcsPath && bucketName ? `gcs://${bucketName}/${pdf.gcsPath}` : null;
-
-      const identifierInputs = [gcsUri ? { sourceUri: gcsUri } : null, pdf.filename ? { title: pdf.filename } : null].filter(Boolean);
-
-      if (!identifierInputs.length) {
-        console.log('[AI Tutor][RAG] No identifiers available to look up document; falling back to PDF text');
-        return '';
-      }
-
-      const identifierDtos = identifierInputs.map((ident: any) => {
-        const dto = new DocumentIdentifierDto();
-        dto.sourceUri = ident.sourceUri || null;
-        dto.title = ident.title || null;
-        return dto;
+      const snippets = await this.fileSearchService.retrieveContext({
+        fileUri: pdf.ragFileUri,
+        query: `${message}\n\nQuestion: ${questionText}`,
+        maxSnippets: 4,
       });
 
-      const document = await this.ragRepository.findDocumentByIdentifiers(identifierDtos, ['READY', 'COMPLETED']);
-
-      if (!document) {
-        console.log('[AI Tutor][RAG] No matching document found for PDF; falling back to PDF text');
+      if (!snippets.length) {
         return '';
       }
 
-      const chunks = await this.ragRepository.listChunksByDocument(document.id);
-
-      const ranked = await this.retrieveService.rankChunks(`${message}\n\nQuestion: ${questionText}`, chunks, 6);
-
-      if (!ranked.length) {
-        console.log('[AI Tutor][RAG] No ranked chunks found; falling back to PDF text');
-        return '';
-      }
-
-      console.log(`[AI Tutor][RAG] Using ${ranked.length} ranked chunks for context (document ${document.id})`);
-      return ranked.map((chunk) => `[Chunk ${chunk.chunkIndex}]\n${chunk.content.trim()}`).join('\n\n');
+      return snippets.map((snippet: any, idx: number) => `[Context ${idx + 1}]\n${snippet.content}`).join('\n\n');
     } catch (error) {
-      console.error('[AI Tutor][RAG] Failed to build context; using PDF text instead:', error);
+      console.error('[AI Tutor][RAG] Failed to build File Search context:', error);
       return '';
     }
   }
 
-  async getChatAssistance(message: string, questionId: string, pdfId: string, userId: string) {
-    console.log(`[AI Tutor] Starting chat assistance for user ${userId}, question ${questionId}, PDF ${pdfId}`);
+  async getChatAssistance(message: string, questionId: string, documentId: string, userId: string) {
+    console.log(`[AI Tutor] Starting chat assistance for user ${userId}, question ${questionId}, PDF ${documentId}`);
     console.log(`[AI Tutor] User message: "${message}"`);
 
     try {
@@ -214,16 +182,11 @@ export class TestsService {
         throw new NotFoundException('Question not found');
       }
 
-      const pdf = await this.pdfsRepository.findPdfById(pdfId);
+      const pdf = await this.documentsRepository.findDocumentById(documentId);
 
       if (!pdf) {
         throw new NotFoundException('PDF not found');
       }
-
-      const pdfContent = await this.loadPdfContent(pdf);
-      const ragContext = await this.buildRagContext(message, question.question, pdf);
-      const context = ragContext || pdfContent;
-      const contextSource = ragContext ? 'RAG chunks' : 'PDF text';
 
       // Try using centralized ADK runner first
       if (this.adkRunner && this.adkRunner.isAvailable()) {
@@ -231,7 +194,7 @@ export class TestsService {
           console.log('[AI Tutor] ✅ Using centralized ADK runner');
 
           const { createTestAssistanceAgent } = require('../ai/agents');
-          const agent = createTestAssistanceAgent(question.question, question.options, context);
+          const agent = createTestAssistanceAgent(question.question, question.options, this.fileSearchService, pdf.ragFileUri || undefined);
 
           const responseText = await this.adkRunner.runAgent(agent, userId, message, 'ai-tutor');
 
@@ -249,13 +212,28 @@ export class TestsService {
 
       // Direct Gemini fallback for AI tutor
       console.log('[AI Tutor] 🔄 Using direct Gemini fallback');
+
+      if (pdf.ragFileUri) {
+        const response = await this.fileSearchService.answerQuestionFromFile({
+          fileUri: pdf.ragFileUri,
+          question: `${question.question}\n\nUser: ${message}`,
+          systemPrompt: 'Provide coaching and hints based on the attached PDF without revealing the correct answer.',
+        });
+
+        return {
+          message: response.text,
+          questionContext: question.question,
+          helpful: true,
+        } as ChatAssistanceResponseDto;
+      }
+
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
 
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-      const prompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options, context) + `\n\nContext source: ${contextSource}\nUser: ${message}`;
+      const prompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options) + `\n\nUser: ${message}`;
 
       const result = await model.generateContent(prompt);
       const response = result.response.text();

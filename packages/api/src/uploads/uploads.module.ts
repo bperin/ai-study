@@ -1,13 +1,16 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { UploadsController } from './uploads.controller';
 import { UploadsService } from './uploads.service';
-import { PdfTextService } from '../pdfs/pdf-text.service';
-import { RagModule } from '../rag/rag.module';
-import { PdfsRepositoryModule } from '../pdfs/pdfs-repository.module';
+import { DocumentsRepositoryModule } from '../documents/documents-repository.module';
+import { AiModule } from '../ai/ai.module';
+import { FileSearchService } from './file-search.service';
+import { GcsService } from './gcs.service';
 
+@Global()
 @Module({
-  imports: [PdfsRepositoryModule, RagModule],
+  imports: [DocumentsRepositoryModule, AiModule],
   controllers: [UploadsController],
-  providers: [UploadsService, PdfTextService],
+  providers: [UploadsService, FileSearchService, GcsService],
+  exports: [FileSearchService, GcsService],
 })
 export class UploadsModule {}

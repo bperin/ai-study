@@ -104,8 +104,8 @@ export class LeaderboardService {
   /**
    * Get leaderboard for a specific PDF/test
    */
-  async getPdfLeaderboard(pdfId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
-    const attempts = await this.testsRepository.findCompletedAttemptsByPdf(pdfId, limit);
+  async getPdfLeaderboard(documentId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
+    const attempts = await this.testsRepository.findCompletedAttemptsByPdf(documentId, limit);
 
     return attempts.map((attempt, index) => ({
       userId: attempt.user.id,

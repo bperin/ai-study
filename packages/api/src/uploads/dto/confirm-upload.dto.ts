@@ -8,4 +8,7 @@ export class ConfirmUploadDto {
   @IsString()
   @IsNotEmpty()
   fileName!: string;
+
+  @IsString()
+  subjectId?: string;
 }
