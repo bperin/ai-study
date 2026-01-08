@@ -14,6 +14,7 @@ import { DocumentsModule } from './domain/documents/documents.module';
 import { GenAiModule } from './infrastructure/genai/genai.module';
 import { GenAIModule } from './genai/genai.module';
 import { ArtifactsModule } from './domain/artifacts/artifacts.module';
+import { EvalSessionsModule } from './domain/eval-sessions/eval-sessions.module';
 import { QueueModule } from './domain/queue/queue.module';
 import { SystemModule } from './domain/system/system.module';
 import configuration from './config/configuration';
@@ -51,6 +52,7 @@ import { validate } from './config/validate';
     GenAiModule,
     GenAIModule,
     ArtifactsModule,
+    EvalSessionsModule,
     QueueModule,
     SystemModule,
   ],
