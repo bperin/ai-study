@@ -41,7 +41,7 @@ export class AiStudyPlanService {
         {
           title,
           difficulty,
-          type: 'mcq',
+          type: 'multiple_choice',
           items: [],
         },
       ],

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Mcq } from '@prisma/client';
+import { EvalItem } from '@prisma/client';
 import { SubmitTestDto } from './dto/submit-test.dto';
 import { TestHistoryResponseDto, TestHistoryItemDto } from './dto/test-results.dto';
 import { TestStatsDto } from './dto/test-stats.dto';
@@ -19,20 +19,20 @@ export class TestsService {
   ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
-    const mcqIds = dto.userAnswers.map((a) => a.mcqId);
-    const mcqs = await this.testsRepository.findMcqsByIds(mcqIds);
-    const mcqMap = new Map<string, Mcq>(mcqs.map((m) => [m.id, m]));
+    const evalItemIds = dto.userAnswers.map((a) => a.evalItemId);
+    const evalItems = await this.testsRepository.findEvalItemsByIds(evalItemIds);
+    const evalItemMap = new Map<string, EvalItem>(evalItems.map((item) => [item.id, item]));
 
     let score = 0;
     const answerData = dto.userAnswers.map((answer) => {
-      const mcq = mcqMap.get(answer.mcqId);
-      if (!mcq) throw new Error(`MCQ not found: ${answer.mcqId}`);
+      const evalItem = evalItemMap.get(answer.evalItemId);
+      if (!evalItem) throw new Error(`EvalItem not found: ${answer.evalItemId}`);
 
-      const isCorrect = mcq.correctIdx === answer.selectedIdx;
+      const isCorrect = evalItem.correctIdx === answer.selectedIdx;
       if (isCorrect) score++;
 
       return {
-        mcqId: answer.mcqId,
+        evalItemId: answer.evalItemId,
         selectedIdx: answer.selectedIdx,
         isCorrect,
       };
@@ -40,7 +40,7 @@ export class TestsService {
 
     const total = dto.userAnswers.length;
 
-    return this.testsRepository.createCompletedAttempt(userId, dto.documentId, score, total, answerData);
+    return this.testsRepository.createCompletedAttempt(userId, dto.evalId, score, total, answerData);
   }
 
   async getTestHistory(userId: string): Promise<TestHistoryResponseDto> {
@@ -53,8 +53,8 @@ export class TestsService {
     return TestHistoryResponseDto.fromEntities(attempts);
   }
 
-  async getTestStats(documentId: string): Promise<TestStatsDto> {
-    const attempts = await this.testsRepository.findCompletedAttemptsByDocument(documentId);
+  async getTestStats(evalId: string): Promise<TestStatsDto> {
+    const attempts = await this.testsRepository.findCompletedAttemptsByEval(evalId);
 
     if (attempts.length === 0) {
       return {

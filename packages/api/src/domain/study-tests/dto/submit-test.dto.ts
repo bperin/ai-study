@@ -5,7 +5,7 @@ import { Type } from 'class-transformer';
 export class AnswerDto {
   @ApiProperty()
   @IsString()
-  mcqId: string;
+  evalItemId: string;
 
   @ApiProperty()
   @IsNumber()
@@ -15,7 +15,7 @@ export class AnswerDto {
 export class SubmitTestDto {
   @ApiProperty()
   @IsString()
-  documentId: string;
+  evalId: string;
 
   @ApiProperty({ type: [AnswerDto] })
   @IsArray()
