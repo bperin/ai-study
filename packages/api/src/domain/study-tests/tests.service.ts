@@ -9,7 +9,6 @@ import { GcsService } from '../uploads/gcs.service';
 import { TestsRepository } from './tests.repository';
 import { DocumentsRepository } from '../documents/documents.repository';
 import { FileSearchService } from '../uploads/file-search.service';
-import { TEST_ASSISTANCE_CHAT_PROMPT } from '../../shared/genai/prompts';
 
 @Injectable()
 export class TestsService {

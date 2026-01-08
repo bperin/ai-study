@@ -13,7 +13,6 @@
     "start:prod": "node dist/main.js",
     "dev:fast": "ts-node -r tsconfig-paths/register src/main.ts",
     "dev:hot": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/main.ts",
-    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit --pretty false",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest --passWithNoTests",
     "test:unit": "jest --testPathPattern=\\.spec\\.ts$ --passWithNoTests",
