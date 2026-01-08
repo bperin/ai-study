@@ -1,14 +1,15 @@
-export type SessionStatus = 'pending' | 'ready' | 'persisted';
-
 export interface StudySessionSummary {
   id: string;
   userId: string;
-  token: string;
   documentId: string;
-  createdAt: Date;
-  status: SessionStatus;
   difficulty: string;
-  requestedCards: number;
-  objectives: Array<{ id: string; title: string; cardCount: number }>;
+  requestedItems: number;
+  evals: Array<{
+    id: string;
+    title: string;
+    itemCount: number;
+  }>;
   notes?: string;
+  status: string;
+  createdAt: Date;
 }

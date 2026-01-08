@@ -3,7 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { ArtifactsService } from './artifacts.service';
 import { ArtifactDto } from './dto/artifact.dto';
 import { CreateArtifactDto } from './dto/create-artifact.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
+
 import { ArtifactType, ArtifactStatus } from '@prisma/client';
 
 @ApiTags('artifacts')

@@ -10,9 +10,10 @@ import { TestAttemptsService } from './test-attempts.service';
 import { DocumentsModule } from '../documents/documents.module';
 import { TestsRepositoryModule } from './tests-repository.module';
 import { DocumentsRepositoryModule } from '../documents/documents.repository.module';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
-  imports: [TestsRepositoryModule, DocumentsRepositoryModule, TestSessionsModule, DocumentsModule],
+  imports: [TestsRepositoryModule, DocumentsRepositoryModule, TestSessionsModule, DocumentsModule, UploadsModule],
   controllers: [TestsController, TestTakingController, TestAttemptsController],
   providers: [TestsService, TestTakingService, LeaderboardService, TestAttemptsService],
 })

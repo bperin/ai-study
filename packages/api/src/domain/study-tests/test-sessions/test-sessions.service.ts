@@ -16,7 +16,7 @@ export class TestSessionsService {
   ) {}
 
   async startSession(params: { userId: string; token: string; payload: StartSessionDto }): Promise<StudySessionSummary> {
-    const pdf = await this.documentsService.registerLinkedDocument({
+    const document = await this.documentsService.registerLinkedDocument({
       userId: params.userId,
       filename: params.payload.filename,
       signedUrl: params.payload.signedPdfUrl,
@@ -25,21 +25,22 @@ export class TestSessionsService {
     const plan = this.aiStudyPlanService.buildPlan({
       description: params.payload.testDescription,
       difficulty: params.payload.difficulty,
-      cardTarget: params.payload.cardTarget,
+      itemTarget: params.payload.cardTarget,
+      includeImages: params.payload.includeImages || false,
     });
 
-    const persistedPlan = await this.toolCallingService.persistPlan(pdf.id, plan);
+    const persistedPlan = await this.toolCallingService.persistPlan(document.id, plan);
 
     const session = this.sessionStore.create({
       userId: params.userId,
       token: params.token,
-      documentId: pdf.id,
+      documentId: document.id,
       difficulty: persistedPlan.difficulty,
-      requestedCards: persistedPlan.requestedCards,
-      objectives: persistedPlan.objectives.map((objective) => ({
-        id: objective.id,
-        title: objective.title,
-        cardCount: objective.mcqs.length,
+      requestedItems: persistedPlan.requestedItems,
+      evals: persistedPlan.evals.map((evalItem) => ({
+        id: evalItem.id,
+        title: evalItem.title,
+        itemCount: evalItem.items.length,
       })),
       notes: persistedPlan.notes,
     });

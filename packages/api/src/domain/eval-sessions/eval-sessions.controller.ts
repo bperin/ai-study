@@ -4,7 +4,7 @@ import { EvalSessionsService } from './eval-sessions.service';
 import { EvalSessionDto } from './dto/eval-session.dto';
 import { CreateEvalSessionDto } from './dto/create-eval-session.dto';
 import { UpdateEvalSessionDto } from './dto/update-eval-session.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 
 @ApiTags('eval-sessions')
 @Controller('eval-sessions')
