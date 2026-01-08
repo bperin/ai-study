@@ -9,6 +9,7 @@ import { TEST_ASSISTANCE_HINT_INSTRUCTION } from '../../shared/genai/prompts';
 export class TestHintService {
   private readonly logger = new Logger(TestHintService.name);
   private readonly genAI: GoogleGenAI;
+  private readonly MODEL_NAME = 'gemini-3-flash-preview';
 
   constructor(
     private readonly configService: ConfigService,
@@ -37,17 +38,37 @@ export class TestHintService {
       evalItemId,
       attemptId,
       userId,
-      meta: { type: 'hint' },
+      meta: { 
+        type: 'hint',
+        startTime: new Date().toISOString(),
+      },
     });
 
     try {
+      // Start timing
+      const startTime = Date.now();
+
       // Generate the hint using Gemini
-      const hint = await this.generateHintText(question, options);
+      const { hint, metrics } = await this.generateHintText(question, options);
+
+      // Calculate latency
+      const latencyMs = Date.now() - startTime;
+
+      // Update metrics
+      const updatedMetrics = {
+        ...metrics,
+        latencyMs,
+        endTime: new Date().toISOString(),
+      };
 
       // Update the artifact with the generated hint
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.READY,
         text: hint,
+        meta: {
+          ...artifact.meta,
+          ...updatedMetrics,
+        },
       });
 
       return hint;
@@ -58,10 +79,14 @@ export class TestHintService {
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
         error: error.message,
+        meta: {
+          ...artifact.meta,
+          endTime: new Date().toISOString(),
+          errorDetails: error.stack,
+        },
       });
 
-      // Return a generic hint
-      return "I'm having trouble generating a specific hint right now. Try reviewing the question carefully and thinking about the key concepts it's testing.";
+      throw error;
     }
   }
 
@@ -71,12 +96,33 @@ export class TestHintService {
   private async generateHintText(
     question: string,
     options: string[],
-  ): Promise<string> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  ): Promise<{ hint: string, metrics: any }> {
+    const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     const prompt = TEST_ASSISTANCE_HINT_INSTRUCTION(question, options);
 
+    // Track token usage
+    let inputTokenCount = 0;
+    let outputTokenCount = 0;
+
     const result = await model.generateContent(prompt);
-    return result.response.text();
+    const text = result.response.text();
+
+    // Extract token usage if available
+    if (result.response.promptFeedback?.tokenCount) {
+      inputTokenCount = result.response.promptFeedback.tokenCount;
+    }
+    
+    // Estimate output tokens (rough approximation)
+    outputTokenCount = Math.ceil(text.length / 4);
+
+    return {
+      hint: text,
+      metrics: {
+        model: this.MODEL_NAME,
+        inputTokens: inputTokenCount,
+        outputTokens: outputTokenCount,
+      }
+    };
   }
 }

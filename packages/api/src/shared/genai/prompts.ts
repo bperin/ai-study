@@ -92,6 +92,43 @@ You are a curriculum designer converting analysis into concrete learning intents
 Return ONLY valid JSON per the schema. Each intent must be grounded in the document, include a concise title, description, and difficulty, and propose a question count. No extra text.`;
 
 /**
+ * Eval plan generation - creates a plan based on intents and user preferences
+ */
+export const EVAL_PLAN_INSTRUCTION = `
+You are an educational assessment planner. Create a detailed evaluation plan based on the document intents and user preferences.
+
+Create a plan that respects both the document's learning intents and the user's preferences.
+The plan should include:
+1. A list of topics to cover
+2. Question distribution by difficulty
+3. Question types to include
+4. Time estimates
+5. Whether to include images and how many
+
+Format your response as a valid JSON object with these fields:
+{
+  "title": "Evaluation title",
+  "description": "Brief description of the evaluation",
+  "topics": [
+    { "name": "Topic 1", "weight": 0.3, "questionCount": 5 },
+    ...
+  ],
+  "questionTypes": [
+    { "type": "multiple_choice", "count": 10 },
+    ...
+  ],
+  "difficulty": {
+    "easy": 0.3,
+    "medium": 0.5,
+    "hard": 0.2
+  },
+  "estimatedTime": "30 minutes",
+  "includeImages": true,
+  "imageCount": 2
+}
+`;
+
+/**
  * Eval generation - creates a complete evaluation with items based on intents and plan
  */
 export const EVAL_GENERATION_INSTRUCTION = `
@@ -108,7 +145,37 @@ Requirements:
 The output should include:
 - Evaluation metadata (title, instructions, rubric)
 - A complete set of evaluation items with questions, options, and explanations
-- All content must be grounded in the document`;
+- All content must be grounded in the document
+
+Format your response as a valid JSON object with these fields:
+{
+  "title": "Evaluation title",
+  "description": "Brief description of the evaluation",
+  "instructions": "Instructions for the student taking the evaluation",
+  "rubric": {
+    "scoring": "Scoring criteria",
+    "passingThreshold": 70
+  },
+  "items": [
+    {
+      "type": "multiple_choice",
+      "prompt": "Question text",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctIdx": 0,
+      "hint": "A helpful hint",
+      "explanation": "Explanation of the correct answer",
+      "hasImage": false,
+      "imagePrompt": null,
+      "imageUrl": null,
+      "metadata": {
+        "difficulty": "easy|medium|hard",
+        "topic": "Topic name",
+        "conceptsTested": ["concept1", "concept2"]
+      }
+    }
+  ]
+}
+`;
 
 /**
  * Test analyzer - provides feedback on test attempts

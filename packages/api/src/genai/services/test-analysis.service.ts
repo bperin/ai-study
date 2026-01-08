@@ -9,6 +9,7 @@ import { TEST_ANALYZER_INSTRUCTION } from '../../shared/genai/prompts';
 export class TestAnalysisService {
   private readonly logger = new Logger(TestAnalysisService.name);
   private readonly genAI: GoogleGenAI;
+  private readonly MODEL_NAME = 'gemini-3-flash-preview';
 
   constructor(
     private readonly configService: ConfigService,
@@ -40,16 +41,36 @@ export class TestAnalysisService {
       evalId,
       attemptId,
       userId,
+      meta: {
+        startTime: new Date().toISOString(),
+      },
     });
 
     try {
+      // Start timing
+      const startTime = Date.now();
+
       // Generate the analysis using Gemini
-      const analysis = await this.generateAnalysis(answers, correctAnswers, wrongAnswers);
+      const { analysis, metrics } = await this.generateAnalysis(answers, correctAnswers, wrongAnswers);
+
+      // Calculate latency
+      const latencyMs = Date.now() - startTime;
+
+      // Update metrics
+      const updatedMetrics = {
+        ...metrics,
+        latencyMs,
+        endTime: new Date().toISOString(),
+      };
 
       // Update the artifact with the generated analysis
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.READY,
         json: analysis,
+        meta: {
+          ...artifact.meta,
+          ...updatedMetrics,
+        },
       });
 
       return analysis;
@@ -60,15 +81,14 @@ export class TestAnalysisService {
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
         error: error.message,
+        meta: {
+          ...artifact.meta,
+          endTime: new Date().toISOString(),
+          errorDetails: error.stack,
+        },
       });
 
-      // Return a basic analysis with error information
-      return {
-        summary: `Analysis failed: ${error.message}`,
-        weakAreas: [],
-        studyStrategies: ['Review the material and try again.'],
-        strengths: [],
-      };
+      throw error;
     }
   }
 
@@ -79,8 +99,8 @@ export class TestAnalysisService {
     answers: any[],
     correctAnswers: any[],
     wrongAnswers: any[],
-  ): Promise<any> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  ): Promise<{ analysis: any, metrics: any }> {
+    const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Format the answers for the prompt
     const answersJson = JSON.stringify(answers, null, 2);
@@ -104,8 +124,20 @@ export class TestAnalysisService {
     Analyze these test results and provide personalized feedback.
     `;
 
+    // Track token usage
+    let inputTokenCount = 0;
+    let outputTokenCount = 0;
+
     const result = await model.generateContent(prompt);
     const text = result.response.text();
+
+    // Extract token usage if available
+    if (result.response.promptFeedback?.tokenCount) {
+      inputTokenCount = result.response.promptFeedback.tokenCount;
+    }
+    
+    // Estimate output tokens (rough approximation)
+    outputTokenCount = Math.ceil(text.length / 4);
 
     // Extract JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -114,7 +146,16 @@ export class TestAnalysisService {
     }
 
     try {
-      return JSON.parse(jsonMatch[0]);
+      const analysis = JSON.parse(jsonMatch[0]);
+      
+      return {
+        analysis,
+        metrics: {
+          model: this.MODEL_NAME,
+          inputTokens: inputTokenCount,
+          outputTokens: outputTokenCount,
+        }
+      };
     } catch (error) {
       throw new Error(`Failed to parse JSON from Gemini response: ${error.message}`);
     }

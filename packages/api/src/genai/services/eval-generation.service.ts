@@ -9,6 +9,7 @@ import { EVAL_GENERATION_INSTRUCTION } from '../../shared/genai/prompts';
 export class EvalGenerationService {
   private readonly logger = new Logger(EvalGenerationService.name);
   private readonly genAI: GoogleGenAI;
+  private readonly MODEL_NAME = 'gemini-3-flash-preview';
 
   constructor(
     private readonly configService: ConfigService,
@@ -139,7 +140,7 @@ export class EvalGenerationService {
     intents: any,
     plan: any,
   ): Promise<{ evaluation: any, metrics: any }> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Format the intents and plan for the prompt
     const intentsJson = JSON.stringify(intents, null, 2);
@@ -153,36 +154,6 @@ export class EvalGenerationService {
     
     EVALUATION PLAN:
     ${planJson}
-    
-    Generate a complete evaluation with items based on the document intents and plan.
-    Format your response as a valid JSON object with these fields:
-    {
-      "title": "Evaluation title",
-      "description": "Brief description of the evaluation",
-      "instructions": "Instructions for the student taking the evaluation",
-      "rubric": {
-        "scoring": "Scoring criteria",
-        "passingThreshold": 70
-      },
-      "items": [
-        {
-          "type": "multiple_choice",
-          "prompt": "Question text",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correctIdx": 0,
-          "hint": "A helpful hint",
-          "explanation": "Explanation of the correct answer",
-          "hasImage": false,
-          "imagePrompt": null,
-          "imageUrl": null,
-          "metadata": {
-            "difficulty": "easy|medium|hard",
-            "topic": "Topic name",
-            "conceptsTested": ["concept1", "concept2"]
-          }
-        }
-      ]
-    }
     `;
 
     // Track token usage
@@ -212,7 +183,7 @@ export class EvalGenerationService {
       return {
         evaluation,
         metrics: {
-          model: 'gemini-2.5-flash',
+          model: this.MODEL_NAME,
           inputTokens: inputTokenCount,
           outputTokens: outputTokenCount,
         }

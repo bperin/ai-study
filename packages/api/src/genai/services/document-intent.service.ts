@@ -9,6 +9,7 @@ import { LEARNING_INTENT_ANALYSIS_INSTRUCTION, LEARNING_INTENT_BUILDER_INSTRUCTI
 export class DocumentIntentService {
   private readonly logger = new Logger(DocumentIntentService.name);
   private readonly genAI: GoogleGenAI;
+  private readonly MODEL_NAME = 'gemini-3-flash-preview';
 
   constructor(
     private readonly configService: ConfigService,
@@ -85,8 +86,7 @@ export class DocumentIntentService {
         },
       });
 
-      // Return a basic intent structure as fallback
-      return this.generateFallbackIntents(documentTitle);
+      throw error;
     }
   }
 
@@ -94,7 +94,7 @@ export class DocumentIntentService {
    * Generate intents using Gemini
    */
   private async generateIntents(documentTitle: string, fileSearchStoreName?: string): Promise<{ intents: any, metrics: any }> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Use the prompt from our prompts file
     const prompt = LEARNING_INTENT_ANALYSIS_INSTRUCTION(documentTitle);
@@ -130,7 +130,7 @@ export class DocumentIntentService {
       return {
         intents: structuredIntents,
         metrics: {
-          model: 'gemini-2.5-flash',
+          model: this.MODEL_NAME,
           inputTokens: inputTokenCount,
           outputTokens: outputTokenCount,
           fileSearchStoreName,
@@ -146,7 +146,7 @@ export class DocumentIntentService {
    * Process raw intents through the builder to get structured intents
    */
   private async processIntentsWithBuilder(rawIntents: any, documentTitle: string): Promise<any> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Use the builder prompt
     const prompt = LEARNING_INTENT_BUILDER_INSTRUCTION(documentTitle);
@@ -175,23 +175,5 @@ export class DocumentIntentService {
     } catch (error) {
       throw new Error(`Failed to parse JSON from intent builder response: ${error.message}`);
     }
-  }
-
-  /**
-   * Generate fallback intents when AI generation fails
-   */
-  private generateFallbackIntents(documentTitle: string): any {
-    return {
-      topics: [`Content from ${documentTitle}`],
-      objectives: [
-        { title: 'Understand key concepts', description: 'Comprehend the main ideas presented in the document', difficulty: 'medium' },
-        { title: 'Apply knowledge', description: 'Apply concepts from the document to practical scenarios', difficulty: 'hard' },
-      ],
-      questionTypes: ['multiple_choice', 'short_answer'],
-      keyConcepts: ['Main concepts from document'],
-      recommendedEvalCount: 1,
-      recommendedItemsPerEval: 10,
-      isGenerated: false,
-    };
   }
 }

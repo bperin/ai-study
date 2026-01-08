@@ -4,11 +4,13 @@ import { GoogleGenAI } from '@google/genai';
 import { ArtifactsService } from '../../domain/artifacts/artifacts.service';
 import { EvalSessionsService } from '../../domain/eval-sessions/eval-sessions.service';
 import { ArtifactType, ArtifactStatus } from '@prisma/client';
+import { EVAL_PLAN_INSTRUCTION } from '../../shared/genai/prompts';
 
 @Injectable()
 export class EvalPlanService {
   private readonly logger = new Logger(EvalPlanService.name);
   private readonly genAI: GoogleGenAI;
+  private readonly MODEL_NAME = 'gemini-3-flash-preview';
 
   constructor(
     private readonly configService: ConfigService,
@@ -104,13 +106,7 @@ export class EvalPlanService {
         },
       });
 
-      // Generate a fallback plan
-      const fallbackPlan = this.generateFallbackPlan(documentId);
-      
-      // Update the session with the fallback plan
-      await this.evalSessionsService.updateSessionPlan(sessionId, fallbackPlan);
-
-      return fallbackPlan;
+      throw error;
     }
   }
 
@@ -128,7 +124,7 @@ export class EvalPlanService {
       timeLimitMins?: number;
     }
   ): Promise<{ plan: any, metrics: any }> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Format the intents and constraints for the prompt
     const intentsJson = JSON.stringify(intents, null, 2);
@@ -136,7 +132,7 @@ export class EvalPlanService {
     const constraintsJson = JSON.stringify(constraints, null, 2);
 
     const prompt = `
-    You are an educational assessment planner. Create a detailed evaluation plan based on the following:
+    ${EVAL_PLAN_INSTRUCTION}
     
     DOCUMENT INTENTS:
     ${intentsJson}
@@ -146,36 +142,6 @@ export class EvalPlanService {
     
     CONSTRAINTS:
     ${constraintsJson}
-    
-    Create a plan that respects both the document's learning intents and the user's preferences.
-    The plan should include:
-    1. A list of topics to cover
-    2. Question distribution by difficulty
-    3. Question types to include
-    4. Time estimates
-    5. Whether to include images and how many
-    
-    Format your response as a valid JSON object with these fields:
-    {
-      "title": "Evaluation title",
-      "description": "Brief description of the evaluation",
-      "topics": [
-        { "name": "Topic 1", "weight": 0.3, "questionCount": 5 },
-        ...
-      ],
-      "questionTypes": [
-        { "type": "multiple_choice", "count": 10 },
-        ...
-      ],
-      "difficulty": {
-        "easy": 0.3,
-        "medium": 0.5,
-        "hard": 0.2
-      },
-      "estimatedTime": "30 minutes",
-      "includeImages": true,
-      "imageCount": 2
-    }
     `;
 
     // Track token usage
@@ -205,7 +171,7 @@ export class EvalPlanService {
       return {
         plan,
         metrics: {
-          model: 'gemini-2.5-flash',
+          model: this.MODEL_NAME,
           inputTokens: inputTokenCount,
           outputTokens: outputTokenCount,
         }
@@ -213,32 +179,5 @@ export class EvalPlanService {
     } catch (error) {
       throw new Error(`Failed to parse JSON from Gemini response: ${error.message}`);
     }
-  }
-
-  /**
-   * Generate a fallback plan when AI generation fails
-   */
-  private generateFallbackPlan(documentId: string): any {
-    return {
-      title: 'Basic Evaluation',
-      description: 'A basic evaluation covering key concepts from the document',
-      topics: [
-        { name: 'Key Concepts', weight: 0.6, questionCount: 6 },
-        { name: 'Application', weight: 0.4, questionCount: 4 },
-      ],
-      questionTypes: [
-        { type: 'multiple_choice', count: 10 },
-      ],
-      difficulty: {
-        easy: 0.3,
-        medium: 0.5,
-        hard: 0.2,
-      },
-      estimatedTime: '20 minutes',
-      includeImages: false,
-      imageCount: 0,
-      isGenerated: false,
-      documentId,
-    };
   }
 }
