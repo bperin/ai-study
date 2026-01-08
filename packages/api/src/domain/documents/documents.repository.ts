@@ -116,23 +116,21 @@ export class DocumentsRepository {
       where: { documentId },
       select: { id: true },
     });
-    
+
     // Get all attempts for these evals
     const attempts = await this.prisma.testAttempt.findMany({
-      where: { evalId: { in: evals.map(e => e.id) } },
+      where: { evalId: { in: evals.map((e) => e.id) } },
       select: { sessionId: true },
     });
-    
-    const sessionIds = attempts
-      .filter(attempt => attempt.sessionId)
-      .map(attempt => attempt.sessionId as string);
-    
+
+    const sessionIds = attempts.filter((attempt) => attempt.sessionId).map((attempt) => attempt.sessionId as string);
+
     if (sessionIds.length > 0) {
       await this.prisma.evalSession.deleteMany({
         where: { id: { in: sessionIds } },
       });
     }
-    
+
     return { deletedCount: sessionIds.length };
   }
 

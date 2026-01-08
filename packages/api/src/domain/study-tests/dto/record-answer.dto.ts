@@ -23,14 +23,8 @@ export class RecordAnswerResponseDto {
   currentScore: string;
 
   @ApiProperty()
-  currentStreak: number;
-
-  @ApiProperty()
   progress: string;
 
   @ApiProperty()
-  encouragement: string;
-
-  @ApiProperty()
-  explanation: string;
+  explanation?: string;
 }

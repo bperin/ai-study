@@ -85,7 +85,7 @@ export class TestsRepository {
 
   async createAttempt(userId: string, evalId: string, total: number, score: number = 0, percentage?: number | null) {
     const eval_ = await this.prisma.eval.findUnique({ where: { id: evalId } });
-    
+
     return this.prisma.testAttempt.create({
       data: {
         userId,
@@ -218,24 +218,24 @@ export class TestsRepository {
       where: { documentId },
       select: { id: true },
     });
-    
-    const evalIds = evals.map(e => e.id);
-    
+
+    const evalIds = evals.map((e) => e.id);
+
     // Delete all user answers for attempts on these evals
     await this.prisma.userAnswer.deleteMany({
       where: { attempt: { evalId: { in: evalIds } } },
     });
-    
+
     // Delete all attempts for these evals
     await this.prisma.testAttempt.deleteMany({
       where: { evalId: { in: evalIds } },
     });
-    
+
     // Delete all eval items for these evals
     await this.prisma.evalItem.deleteMany({
       where: { evalId: { in: evalIds } },
     });
-    
+
     // Delete all evals for this document
     await this.prisma.eval.deleteMany({
       where: { documentId },
@@ -265,6 +265,34 @@ export class TestsRepository {
         explanation,
         hint,
       },
+    });
+  }
+
+  // Missing methods that services are calling
+  async findEvalItemsByIds(ids: string[]) {
+    return this.prisma.evalItem.findMany({
+      where: { id: { in: ids } },
+      include: { eval: true },
+    });
+  }
+
+  async countEvalItemsByDocumentId(documentId: string): Promise<number> {
+    return this.prisma.evalItem.count({
+      where: {
+        eval: { documentId },
+      },
+    });
+  }
+
+  async findCompletedAttemptsByDocument(documentId: string, limit: number = 10) {
+    return this.prisma.testAttempt.findMany({
+      where: {
+        eval: { documentId },
+        completedAt: { not: null },
+      },
+      include: { user: { select: { id: true, email: true } } },
+      orderBy: { percentage: 'desc' },
+      take: limit,
     });
   }
 }

@@ -13,3 +13,14 @@ export class TestSessionDto {
   status: string;
   createdAt: Date;
 }
+
+export class TestSessionStateDto {
+  attemptId: string;
+  userId: string;
+  answeredCount: number;
+  totalQuestions: number;
+  correctCount: number;
+  incorrectCount: number;
+  startTime: Date;
+  totalTimeSpent: number;
+}

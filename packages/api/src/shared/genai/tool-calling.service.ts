@@ -17,22 +17,10 @@ export class ToolCallingService {
           documentId,
           evalPlan.title,
           '', // description
-          evalPlan.difficulty
+          evalPlan.difficulty,
         );
 
-        const items = await Promise.all(
-          evalPlan.items.map((item) =>
-            this.testsRepository.createEvalItem(
-              createdEval.id,
-              evalPlan.type,
-              item.prompt,
-              item.options,
-              item.correctIdx,
-              item.explanation,
-              item.hint
-            )
-          )
-        );
+        const items = await Promise.all(evalPlan.items.map((item) => this.testsRepository.createEvalItem(createdEval.id, evalPlan.type, item.prompt, item.options, item.correctIdx, item.explanation, item.hint)));
 
         return {
           id: createdEval.id,
@@ -50,7 +38,7 @@ export class ToolCallingService {
             imagePrompt: item.imagePrompt,
           })),
         };
-      })
+      }),
     );
 
     return {
