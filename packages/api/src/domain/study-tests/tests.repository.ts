@@ -267,4 +267,32 @@ export class TestsRepository {
       },
     });
   }
+
+  // Missing methods that services are calling
+  async findEvalItemsByIds(ids: string[]) {
+    return this.prisma.evalItem.findMany({
+      where: { id: { in: ids } },
+      include: { eval: true },
+    });
+  }
+
+  async countEvalItemsByDocumentId(documentId: string): Promise<number> {
+    return this.prisma.evalItem.count({
+      where: {
+        eval: { documentId },
+      },
+    });
+  }
+
+  async findCompletedAttemptsByDocument(documentId: string, limit: number = 10) {
+    return this.prisma.testAttempt.findMany({
+      where: {
+        eval: { documentId },
+        completedAt: { not: null },
+      },
+      include: { user: { select: { id: true, email: true } } },
+      orderBy: { percentage: 'desc' },
+      take: limit,
+    });
+  }
 }
