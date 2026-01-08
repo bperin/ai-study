@@ -3,7 +3,7 @@
 # Script to create Google Secret Manager secrets from configuration files
 # Usage: ./create-secrets.sh
 
-PROJECT_ID="pro-pulsar-274402"
+PROJECT_ID="slap-ai-481400"
 PREFIX="ai_study"
 
 echo "🔐 Creating secrets in Google Secret Manager with prefix: ${PREFIX}"

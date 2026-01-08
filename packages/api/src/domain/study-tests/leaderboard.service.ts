@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TestsRepository } from './tests.repository';
+import { LeaderboardEntryDto } from './dto/leaderboard-entry.dto';
 
 export interface LeaderboardEntry {
   userId: string;
@@ -104,15 +105,12 @@ export class LeaderboardService {
   /**
    * Get leaderboard for a specific PDF/test
    */
-  async getPdfLeaderboard(documentId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
-    const attempts = await this.testsRepository.findCompletedAttemptsByPdf(documentId, limit);
-
-    return attempts.map((attempt, index) => ({
-      userId: attempt.user.id,
-      userName: attempt.user.email.split('@')[0],
-      averageScore: Math.round(attempt.percentage || 0),
-      totalTests: 1, // For PDF-specific leaderboard, this is just the single attempt
-      rank: index + 1,
-    }));
+  async getLeaderboard(documentId: string, limit: number = 10): Promise<LeaderboardEntryDto[]> {
+    const attempts = await this.testsRepository.findCompletedAttemptsByDocument(documentId, limit);
+    return attempts.map((attempt, index) => {
+      const dto = LeaderboardEntryDto.fromEntity(attempt);
+      dto.rank = index + 1;
+      return dto;
+    });
   }
 }

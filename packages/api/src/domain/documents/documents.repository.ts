@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Document, DocumentSession } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { Prisma, Document, Subject, DocumentSession } from '@prisma/client';
+
 @Injectable()
 export class DocumentsRepository {
   constructor(private readonly prisma: PrismaService) {}

@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { TestAnalysisJobData } from '../queue.service';
 @Processor('test-analysis')
 export class TestAnalysisProcessor extends WorkerHost {

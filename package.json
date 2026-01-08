@@ -1,0 +1,19 @@
+{
+  "name": "ai-study-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/api",
+    "packages/web"
+  ],
+  "scripts": {
+    "api:start": "npm run start --workspace=@memorang/api",
+    "api:dev": "npm run dev --workspace=@memorang/api",
+    "web:dev": "npm run dev --workspace=@memorang/web",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}

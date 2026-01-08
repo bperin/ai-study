@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as agents from '../../shared/genai/agents';
 import { GcsService } from '../uploads/gcs.service';
 import { GEMINI_MODEL } from '../constants/models';
 import { TestsRepository } from './tests.repository';
@@ -74,14 +73,14 @@ export class TestTakingService {
   /**
    * Initialize or Resume a test session
    */
-  async getOrStartSession(userId: string, documentId: string): Promise<TestSessionState> {
+  async getOrStartSession(userId: string, pdfId: string): Promise<TestSessionState> {
     // Check for existing incomplete attempt
-    let attempt = await this.testsRepository.findActiveAttempt(userId, documentId);
+    let attempt = await this.testsRepository.findActiveAttempt(userId, pdfId);
 
     if (!attempt) {
       // Create new attempt
-      const totalQuestions = await this.testsRepository.countMcqsByPdfId(documentId);
-      const newAttempt = await this.testsRepository.createAttempt(userId, documentId, totalQuestions, 0);
+      const totalQuestions = await this.testsRepository.countMcqsByDocumentId(pdfId);
+      const newAttempt = await this.testsRepository.createAttempt(userId, pdfId, totalQuestions, 0);
       return this.rehydrateState(newAttempt);
     }
 
@@ -102,7 +101,7 @@ export class TestTakingService {
    * Rehydrate state from DB attempt
    */
   private async rehydrateState(attempt: any): Promise<TestSessionState> {
-    const questions = await this.testsRepository.findMcqsByPdfId(attempt.documentId);
+    const questions = await this.testsRepository.findObjectivesByDocumentId(attempt.pdfId);
     // @ts-ignore
     const dbAnswers = attempt.answers || [];
 
@@ -127,11 +126,6 @@ export class TestTakingService {
       totalTimeSpent += a.timeSpent;
 
       // Topic scores
-      // Note: If answers come from createAttempt without full relation loaded, a.mcq might be missing or incomplete.
-      // However, rehydrateState is mostly called with attempts fetched with includes.
-      // createAttempt returns answers: UserAnswer[] which don't have mcq relation.
-      // So if this is a fresh attempt with no answers, this loop is empty.
-      // If it has answers, they must have mcq relation loaded.
       if (a.mcq) {
         const topicId = a.mcq.objectiveId;
         const currentScore = topicScores.get(topicId) || { correct: 0, total: 0, objectiveTitle: a.mcq.objective.title };
@@ -157,7 +151,7 @@ export class TestTakingService {
       attemptId: attempt.id,
       userId: attempt.userId,
       currentQuestionIndex: processedAnswers.length,
-      totalQuestions: questions.length, // Or attempt.total if fixed
+      totalQuestions: attempt.total,
       userAnswers: processedAnswers,
       correctCount,
       incorrectCount,
@@ -166,14 +160,11 @@ export class TestTakingService {
       topicScores,
       startTime: attempt.startedAt,
       totalTimeSpent,
-      totalHintsUsed: 0, // Need to track this in DB if we want to restore it
+      totalHintsUsed: 0,
       questionsSkipped: 0,
     };
   }
 
-  /**
-   * Record an answer and update state
-   */
   /**
    * Get AI assistance for a specific question
    */
@@ -191,8 +182,7 @@ export class TestTakingService {
       this.generateFallbackAssistance({ question, message: studentPrompt, fileUri: (attempt as any).pdf?.ragFileUri || null });
 
     try {
-      const result = await agents.runTestAssistance(
-        this.genAiService,
+      const result = await this.genAiService.runTestAssistance(
         studentPrompt,
         question.question,
         question.options,

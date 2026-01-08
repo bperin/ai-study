@@ -13,11 +13,25 @@ export class GcsService {
       throw new Error('GCP_BUCKET_NAME environment variable is not set.');
     }
 
-    // Use default authentication
-    console.log('Using default service account authentication for GCS');
-    this.storage = new Storage({
-      projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'pro-pulsar-274402',
-    });
+    // Use service account key if provided, otherwise fallback to default credentials
+    const saKey = this.configService.get<string>('google.cloud.saKey');
+    const projectId = this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID');
+    
+    const options: any = {
+      projectId: projectId,
+    };
+
+    if (saKey) {
+      try {
+        // Try to parse as JSON string
+        options.credentials = JSON.parse(saKey);
+      } catch (e) {
+        // If not JSON, assume it's a file path
+        options.keyFilename = saKey;
+      }
+    }
+
+    this.storage = new Storage(options);
   }
 
   /**

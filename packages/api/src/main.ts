@@ -7,21 +7,23 @@ import { SwaggerService } from './http/swagger.service';
 import { createWinstonLogger } from './shared/logging/winston.config';
 
 async function bootstrap() {
+  console.log('🚀 Starting bootstrap process...');
+  
   const app = await NestFactory.create(AppModule, {
     logger: createWinstonLogger(),
   });
+  console.log('✅ Nest application instance created.');
 
   app.useGlobalFilters(new AllExceptionsFilter());
+  console.log('✅ Global filters applied.');
 
-  // Increase timeout for long-running AI operations (10 minutes)
-  app.use((req, res, next) => {
-    req.setTimeout(600000); // 10 minutes
-    res.setTimeout(600000); // 10 minutes
-    next();
-  });
+ 
+  console.log('✅ Timeout middleware configured.');
 
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
+  console.log('✅ Body parsers configured.');
+
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
@@ -39,17 +41,24 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   });
+  console.log('✅ CORS enabled.');
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  console.log('✅ Global validation pipes configured.');
 
   // Setup Swagger using SwaggerService
+  console.log('📦 Setting up Swagger...');
   const swaggerService = app.get(SwaggerService);
   swaggerService.setup(app);
+  console.log('✅ Swagger setup complete.');
 
   const port = process.env.PORT || 3000;
-  console.log(`Starting server on port ${port} (from env: ${process.env.PORT})`);
-  console.log(`Environment: NODE_ENV=${process.env.NODE_ENV}`);
+  console.log(`📡 Attempting to listen on port ${port}...`);
 
   await app.listen(port, '0.0.0.0');
   console.log(`✅ Application successfully started and listening on 0.0.0.0:${port}`);
 }
-bootstrap();
+bootstrap().catch(err => {
+  console.error('❌ FATAL ERROR DURING BOOTSTRAP:', err);
+  process.exit(1);
+});

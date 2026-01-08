@@ -17,13 +17,96 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  pdfs         Pdf[]
+  testAttempts TestAttempt[]
   subjects     Subject[]
   documents    Document[]
   evalSessions EvalSession[]
+  docSessions  DocumentSession[]
   evals        Eval[]
+}
+
+model Pdf {
+  id        String   @id @default(uuid())
+  filename  String
+  content   String?  @db.Text
+  gcsPath   String?
+  ragFileUri String?
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  objectives   Objective[]
   testAttempts TestAttempt[]
 }
 
+model Objective {
+  id         String @id @default(uuid())
+  title      String
+  difficulty String
+
+  pdfId      String
+  pdf        Pdf    @relation(fields: [pdfId], references: [id])
+
+  mcqs       Mcq[]
+}
+
+model Mcq {
+  id          String   @id @default(uuid())
+  question    String
+  options     String[]
+  correctIdx  Int
+  explanation String?
+  hint        String?
+  externalLink String?
+
+  hasPicture    Boolean @default(false)
+  pictureUrl    String?
+  picturePrompt String?
+
+  objectiveId String
+  objective   Objective @relation(fields: [objectiveId], references: [id])
+
+  userAnswers UserAnswer[]
+}
+
+model TestAttempt {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  pdfId     String
+  pdf       Pdf      @relation(fields: [pdfId], references: [id])
+  score     Int      @default(0)
+  total     Int
+  percentage Float?
+  totalTime  Int?     // seconds
+  feedback   Json?
+  summary    String?  @db.Text
+  sessionId  String?
+
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+
+  answers   UserAnswer[]
+}
+
+model UserAnswer {
+  id          String   @id @default(uuid())
+  attemptId   String
+  attempt     TestAttempt @relation(fields: [attemptId], references: [id])
+  mcqId       String
+  mcq         Mcq      @relation(fields: [mcqId], references: [id])
+  selectedIdx Int
+  isCorrect   Boolean
+  timeSpent   Int?     // seconds
+  hintsUsed   Int?     @default(0)
+
+  createdAt   DateTime @default(now())
+}
+
+// Keep the newer models as well if they are used elsewhere
 model Subject {
   id          String   @id @default(uuid())
   name        String
@@ -50,6 +133,7 @@ model Document {
   storagePath String?
   ragFileName String?
   ragStatus   String @default("PENDING")
+  ragFileUri  String?
   storeId     String?
   fileId      String?
 
@@ -62,7 +146,8 @@ model Document {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  evals Eval[]
+  evals       Eval[]
+  docSessions DocumentSession[]
 }
 
 model Eval {
@@ -89,8 +174,21 @@ model Eval {
   updatedAt DateTime @updatedAt
 
   items    EvalItem[]
-  attempts TestAttempt[]
-  sessions EvalSession[]
+}
+
+model DocumentSession {
+  id              String   @id @default(uuid())
+  status          String   @default("generating")
+  userPreferences Json?
+  
+  documentId      String
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model EvalItem {
@@ -113,15 +211,10 @@ model EvalItem {
   explanation String?
 
   metadata Json?
-
-  testResponses TestResponse[]
 }
 
 model EvalSession {
   id String @id @default(uuid())
-
-  evalId String
-  eval   Eval   @relation(fields: [evalId], references: [id])
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -141,48 +234,4 @@ model EvalSession {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model TestAttempt {
-  id String @id @default(uuid())
-
-  evalId String
-  eval   Eval   @relation(fields: [evalId], references: [id])
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  status String @default("in_progress")
-
-  score      Float?
-  maxScore   Float?
-  percentage Float?
-
-  startedAt   DateTime @default(now())
-  completedAt DateTime?
-  durationSec Int?
-
-  feedback Json?
-  summary  String? @db.Text
-
-  responses TestResponse[]
-}
-
-model TestResponse {
-  id String @id @default(uuid())
-
-  testAttemptId String
-  testAttempt   TestAttempt @relation(fields: [testAttemptId], references: [id])
-
-  evalItemId String
-  evalItem   EvalItem @relation(fields: [evalItemId], references: [id])
-
-  response   Json
-  isCorrect  Boolean?
-
-  timeSpentSec Int  @default(0)
-  hintsUsed    Int  @default(0)
-  confidence   Int?
-
-  createdAt DateTime @default(now())
 }

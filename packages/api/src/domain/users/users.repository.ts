@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { User, Prisma } from '@prisma/client';
 import { CreateUserRecordDto } from './dto/create-user-record.dto';
 import { UpdateUserRecordDto } from './dto/update-user-record.dto';
 
@@ -25,7 +25,6 @@ export class UsersRepository {
       data: {
         email: data.email,
         password: data.password,
-        name: data.name,
         isAdmin: data.isAdmin ?? false,
       },
     });
@@ -37,9 +36,7 @@ export class UsersRepository {
       data: {
         email: data.email,
         password: data.password,
-        name: data.name,
         isAdmin: data.isAdmin,
-        provider: data.provider,
       },
     });
   }

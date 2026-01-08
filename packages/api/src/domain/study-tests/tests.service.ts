@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { Mcq } from '@prisma/client';
 import { SubmitTestDto } from './dto/submit-test.dto';
 import { TestHistoryResponseDto, TestHistoryItemDto } from './dto/test-results.dto';
-import { AdkRunnerService } from '../../shared/genai/adk-runner.service';
 import { TestStatsDto } from './dto/test-stats.dto';
 import { ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
 import { GEMINI_MODEL } from '../constants/models';
@@ -11,7 +10,6 @@ import { GcsService } from '../uploads/gcs.service';
 import { TestsRepository } from './tests.repository';
 import { DocumentsRepository } from '../documents/documents.repository';
 import { FileSearchService } from '../uploads/file-search.service';
-import * as pdfParse from 'pdf-parse';
 
 @Injectable()
 export class TestsService {
@@ -20,7 +18,6 @@ export class TestsService {
     private readonly testsRepository: TestsRepository,
     private readonly documentsRepository: DocumentsRepository,
     private readonly fileSearchService: FileSearchService,
-    private adkRunner?: AdkRunnerService,
     private gcsService?: GcsService,
   ) {}
 
@@ -134,17 +131,6 @@ export class TestsService {
       return pdf.content.substring(0, 10000);
     }
 
-    if (pdf.gcsPath && (this as any).gcsService) {
-      try {
-        const buffer = await (this as any).gcsService.downloadFile(pdf.gcsPath);
-
-        const parsed = await pdfParse(buffer);
-        return parsed.text.substring(0, 10000);
-      } catch (error) {
-        console.error('[AI Tutor] Failed to extract PDF content for chat assistance:', error);
-      }
-    }
-
     const text = pdf.content || '';
     return text.substring(0, 10000);
   }
@@ -188,28 +174,6 @@ export class TestsService {
 
       if (!pdf) {
         throw new NotFoundException('PDF not found');
-      }
-
-      // Try using centralized ADK runner first
-      if (this.adkRunner && this.adkRunner.isAvailable()) {
-        try {
-          console.log('[AI Tutor] ✅ Using centralized ADK runner');
-
-          const { createTestAssistanceAgent } = require('../ai/agents');
-          const agent = createTestAssistanceAgent(question.question, question.options, this.fileSearchService, pdf.ragFileUri || undefined);
-
-          const responseText = await this.adkRunner.runAgent(agent, userId, message, 'ai-tutor');
-
-          return {
-            message: responseText,
-            questionContext: question.question,
-            helpful: true,
-          } as ChatAssistanceResponseDto;
-        } catch (adkError) {
-          console.error('[AI Tutor] ❌ Centralized ADK runner failed, falling back to direct Gemini:', adkError);
-        }
-      } else {
-        console.log('[AI Tutor] ❌ ADK not available - using direct Gemini fallback');
       }
 
       // Direct Gemini fallback for AI tutor

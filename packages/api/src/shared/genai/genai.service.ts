@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
+import { GEMINI_MODEL } from './constants';
 
 import {
   INTENT_QUESTION_GENERATOR_INSTRUCTION,
@@ -41,7 +42,7 @@ export class GenAiService {
   private readonly client: GoogleGenAI;
 
   constructor(private readonly configService: ConfigService) {
-    this.modelName = this.configService.get<string>('GEMINI_MODEL');
+    this.modelName = this.configService.get<string>('GEMINI_MODEL') || GEMINI_MODEL;
     this.apiKey = this.configService.get<string>('GOOGLE_API_KEY');
 
     if (!this.apiKey) {
@@ -123,7 +124,7 @@ export class GenAiService {
     const isStoreName = fileUri && fileUri.startsWith('projects/');
 
     return this.generateContent({
-      model: GEMINI_MODEL,
+      model: this.modelName,
       systemInstruction: TEST_ASSISTANCE_HINT_INSTRUCTION(question, options),
       contents: userPrompt,
       fileUri: !isStoreName ? fileUri : undefined,

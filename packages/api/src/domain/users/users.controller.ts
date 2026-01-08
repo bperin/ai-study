@@ -1,7 +1,7 @@
 import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AdminGuard } from '../auth/admin.guard';
+import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
+import { AdminGuard } from '../../shared/admin.guard';
 import { ApiBearerAuth, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { UserResponseDto } from './dto/user-response.dto';
 

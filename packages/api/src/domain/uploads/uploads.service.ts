@@ -18,9 +18,18 @@ export class UploadsService {
     private readonly fileSearchService: FileSearchService,
     private readonly genAiService: GenAiService,
   ) {
-    this.storage = new Storage({
-      projectId: this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID') || 'slap-ai-481400',
-    });
+    const saKey = this.configService.get<string>('google.cloud.saKey');
+    const projectId = this.configService.get<string>('GOOGLE_CLOUD_PROJECT_ID');
+    const options: any = { projectId };
+
+    if (saKey) {
+      try {
+        options.credentials = JSON.parse(saKey);
+      } catch (e) {
+        options.keyFilename = saKey;
+      }
+    }
+    this.storage = new Storage(options);
     const bucketName = this.configService.get<string>('GCP_BUCKET_NAME') ?? 'missing-bucket';
     this.bucketName = bucketName.replace(/^-n\s+/, '').trim();
   }

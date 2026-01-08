@@ -38,12 +38,11 @@ export class TestsController {
     return this.leaderboardService.getUserRank(req.user.userId);
   }
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Get('leaderboard/pdf/:documentId')
-  async getPdfLeaderboard(@Param('documentId') documentId: string, @Query('limit') limit?: string) {
-    const limitNum = limit ? parseInt(limit) : 10;
-    return this.leaderboardService.getPdfLeaderboard(documentId, limitNum);
+  @Get('leaderboard/:documentId')
+  @ApiOperation({ summary: 'Get leaderboard for a specific document' })
+  async getLeaderboard(@Param('documentId') documentId: string, @Query('limit') limit?: string) {
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    return this.leaderboardService.getLeaderboard(documentId, limitNum);
   }
 
   @ApiBearerAuth()
