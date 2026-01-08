@@ -6,15 +6,10 @@ import * as path from 'path';
 @Injectable()
 export class SwaggerService {
   setup(app: INestApplication) {
-    const config = new DocumentBuilder()
-      .setTitle('Dash AI API')
-      .setDescription('The Dash AI API description')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
+    const config = new DocumentBuilder().setTitle('Dash AI API').setDescription('The Dash AI API description').setVersion('1.0').addBearerAuth().build();
 
     const document = SwaggerModule.createDocument(app, config);
-    
+
     // Write OpenAPI spec to file
     try {
       const outputPath = path.resolve(process.cwd(), 'openapi.json');

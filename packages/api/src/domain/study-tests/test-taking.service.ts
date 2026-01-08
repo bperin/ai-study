@@ -1,10 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { GcsService } from '../uploads/gcs.service';
-import { GEMINI_MODEL } from '../constants/models';
+import { Injectable } from '@nestjs/common';
 import { TestsRepository } from './tests.repository';
-import { FileSearchService } from '../uploads/file-search.service';
-import { GenAiService } from '../../shared/genai/genai.service';
 
 /**
  * In-memory state for active test sessions
@@ -57,18 +52,7 @@ export interface TestSessionState {
  */
 @Injectable()
 export class TestTakingService {
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly testsRepository: TestsRepository,
-    private readonly fileSearchService: FileSearchService,
-    private readonly gcsService: GcsService,
-    private readonly genAiService: GenAiService,
-  ) {
-    const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
-    if (apiKey) {
-      process.env.GOOGLE_GENAI_API_KEY = apiKey;
-    }
-  }
+  constructor(private readonly testsRepository: TestsRepository) {}
 
   /**
    * Initialize or Resume a test session
@@ -101,7 +85,6 @@ export class TestTakingService {
    * Rehydrate state from DB attempt
    */
   private async rehydrateState(attempt: any): Promise<TestSessionState> {
-    const questions = await this.testsRepository.findObjectivesByDocumentId(attempt.pdfId);
     // @ts-ignore
     const dbAnswers = attempt.answers || [];
 
@@ -163,60 +146,6 @@ export class TestTakingService {
       totalHintsUsed: 0,
       questionsSkipped: 0,
     };
-  }
-
-  /**
-   * Get AI assistance for a specific question
-   */
-  async getQuestionAssistance(attemptId: string, questionId: string): Promise<string> {
-    const attempt = await this.testsRepository.findAttemptById(attemptId);
-
-    if (!attempt) throw new NotFoundException('Attempt not found');
-
-    const question = await this.testsRepository.findMcqById(questionId);
-
-    if (!question) throw new NotFoundException('Question not found');
-
-    const studentPrompt = 'I need a hint for this question. Please help me understand the concept without giving away the answer.';
-    const fallback = async () =>
-      this.generateFallbackAssistance({ question, message: studentPrompt, fileUri: (attempt as any).pdf?.ragFileUri || null });
-
-    try {
-      const result = await this.genAiService.runTestAssistance(
-        studentPrompt,
-        question.question,
-        question.options,
-        (attempt as any).pdf?.ragFileUri || undefined
-      );
-      return result.text;
-    } catch (error) {
-      console.error('[TestTakingService] AI assistance failed, using fallback:', error);
-      return fallback();
-    }
-  }
-
-  private async generateFallbackAssistance(params: { question: any; message: string; fileUri?: string | null }) {
-    const { question, message, fileUri } = params;
-
-    if (fileUri) {
-      const response = await this.fileSearchService.answerQuestionFromFile({
-        fileUri,
-        question: `${question.question}\n\nStudent: ${message}`,
-        systemPrompt: 'Provide tutoring hints using the attached PDF. Do not reveal the correct answer directly.',
-      });
-      return response.text || 'Unable to retrieve assistance.';
-    }
-
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
-    const { TEST_ASSISTANCE_CHAT_PROMPT } = require('../ai/prompts');
-
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-
-    const prompt = TEST_ASSISTANCE_CHAT_PROMPT(question.question, question.options) + `\n\nUser: ${message}`;
-
-    const result = await model.generateContent(prompt);
-    return result.response.text();
   }
 
   async recordAnswer(attemptId: string, questionId: string, selectedAnswer: number, timeSpent: number): Promise<any> {
@@ -364,11 +293,8 @@ export class TestTakingService {
 
     const percentage = (state.correctCount / state.totalQuestions) * 100;
 
-    // Generate detailed feedback
-    const feedback = await this.generateDetailedFeedback(state);
-
     // Update test attempt in database
-    await this.testsRepository.updateAttempt(attemptId, state.correctCount, state.totalQuestions, percentage, new Date(), feedback.aiSummary, feedback as any);
+    await this.testsRepository.updateAttempt(attemptId, state.correctCount, state.totalQuestions, percentage, new Date());
 
     return {
       score: {
@@ -376,194 +302,6 @@ export class TestTakingService {
         total: state.totalQuestions,
         percentage,
       },
-      feedback,
     };
-  }
-
-  /**
-   * Generate detailed AI-powered feedback
-   */
-  private async generateDetailedFeedback(state: TestSessionState): Promise<any> {
-    // Analyze performance by topic
-    const byObjective = Array.from(state.topicScores.entries()).map(([_, score]) => ({
-      objectiveTitle: score.objectiveTitle,
-      correct: score.correct,
-      total: score.total,
-      percentage: (score.correct / score.total) * 100,
-    }));
-
-    // Identify strengths and weaknesses
-    const strengths = byObjective.filter((obj) => obj.percentage >= 80).map((obj) => obj.objectiveTitle);
-
-    const weaknesses = byObjective.filter((obj) => obj.percentage < 60).map((obj) => obj.objectiveTitle);
-
-    // Get wrong answers with details
-    const wrongAnswers = state.userAnswers
-      .filter((a) => !a.isCorrect)
-      .map((a) => ({
-        question: a.questionText,
-        yourAnswer: `Option ${a.selectedAnswer + 1}`,
-        correctAnswer: `Option ${a.correctAnswer + 1}`,
-      }));
-
-    // Generate AI summary report
-    const aiSummary = await this.generateAISummaryReport(state, byObjective, strengths, weaknesses);
-
-    return {
-      strengths,
-      weaknesses,
-      byObjective,
-      wrongAnswers,
-      longestStreak: state.longestStreak,
-      averageTimePerQuestion: Math.round(state.totalTimeSpent / state.totalQuestions),
-      encouragement: this.generateFinalEncouragement(state),
-      aiSummary, // Add AI-generated summary report
-    };
-  }
-
-  /**
-   * Generate AI-powered summary report with web search and resource links
-   */
-  // @ts-ignore
-  private async generateAISummaryReport(state: TestSessionState, byObjective: any[], strengths: string[], weaknesses: string[]): Promise<string> {
-    try {
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODEL,
-        tools: [
-          {
-            googleSearchRetrieval: {
-              dynamicRetrievalConfig: {
-                mode: 'MODE_DYNAMIC',
-                dynamicThreshold: 0.7,
-              },
-            },
-          },
-        ],
-      });
-
-      const percentage = (state.correctCount / state.totalQuestions) * 100;
-
-      const prompt = `Generate a personalized test summary report for a student who just completed a flashcard test. Use web search to find relevant study resources and include specific links.
-
-Test Results:
-- Score: ${state.correctCount}/${state.totalQuestions} (${percentage.toFixed(1)}%)
-- Longest streak: ${state.longestStreak} correct answers in a row
-- Average time per question: ${Math.round(state.totalTimeSpent / state.totalQuestions)} seconds
-- Total time: ${Math.round(state.totalTimeSpent / 60)} minutes
-
-Performance by Topic:
-${byObjective.map((obj) => `- ${obj.objectiveTitle}: ${obj.correct}/${obj.total} (${obj.percentage.toFixed(1)}%)`).join('\n')}
-
-Strong Areas: ${strengths.length > 0 ? strengths.join(', ') : 'Building foundation'}
-Areas for Improvement: ${weaknesses.length > 0 ? weaknesses.join(', ') : 'Great performance across all topics'}
-
-Generate a comprehensive summary that includes:
-
-1. **Performance Analysis** (1-2 paragraphs):
-   - Acknowledge their performance with specific insights
-   - Highlight strongest areas and learning patterns
-   - Identify areas needing improvement
-
-2. **Study Recommendations** with web-sourced links:
-   - For each weak area, search for and suggest 2-3 specific educational resources
-   - Include direct links to Khan Academy, Coursera, educational YouTube channels, or reputable study sites
-   - Provide brief descriptions of why each resource is helpful
-
-3. **Next Steps** (encouraging tone):
-   - Actionable study plan based on their performance
-   - Motivational message to keep them engaged
-
-Format the response in markdown with clickable links. Search the web for current, high-quality educational resources related to their weak topics.`;
-
-      const result = await model.generateContent(prompt);
-      return result.response.text();
-    } catch (error) {
-      console.error('Error generating AI summary with web search:', error);
-      // Fallback to enhanced summary without web search
-      return await this.generateFallbackSummaryWithLinks(state, byObjective, strengths, weaknesses);
-    }
-  }
-
-  /**
-   * Fallback summary generator with curated educational links
-   */
-  private async generateFallbackSummaryWithLinks(state: TestSessionState, byObjective: any[], strengths: string[], weaknesses: string[]): Promise<string> {
-    const percentage = (state.correctCount / state.totalQuestions) * 100;
-
-    // Curated educational resources by topic
-    const resourceMap: Record<string, string[]> = {
-      biology: ['[Khan Academy Biology](https://www.khanacademy.org/science/biology) - Comprehensive biology lessons', '[Crash Course Biology](https://www.youtube.com/playlist?list=PL3EED4C1D684D3ADF) - Engaging video series', '[Biology Online](https://www.biologyonline.com/) - Detailed biology reference'],
-      cell: ['[Khan Academy Cell Biology](https://www.khanacademy.org/science/biology/structure-of-a-cell) - Cell structure and function', '[Cells Alive!](https://www.cellsalive.com/) - Interactive cell animations', '[Nature Cell Biology](https://www.nature.com/ncb/) - Advanced cell biology research'],
-      genetics: ['[Khan Academy Genetics](https://www.khanacademy.org/science/biology/classical-genetics) - Genetics fundamentals', '[Genetics Home Reference](https://ghr.nlm.nih.gov/) - NIH genetics resource', '[Learn.Genetics](https://learn.genetics.utah.edu/) - University of Utah genetics tutorials'],
-      chemistry: ['[Khan Academy Chemistry](https://www.khanacademy.org/science/chemistry) - Complete chemistry course', '[ChemLibreTexts](https://chem.libretexts.org/) - Open-access chemistry textbook', '[Crash Course Chemistry](https://www.youtube.com/playlist?list=PL8dPuuaLjXtPHzzYuWy6fYEaX9mQQ8oGr) - Chemistry video series'],
-      physics: ['[Khan Academy Physics](https://www.khanacademy.org/science/physics) - Physics fundamentals', '[Physics Classroom](https://www.physicsclassroom.com/) - Interactive physics tutorials', '[MIT OpenCourseWare Physics](https://ocw.mit.edu/courses/physics/) - University-level physics courses'],
-    };
-
-    let summary = `## Performance Summary\n\n`;
-    summary += `Great work completing this test! You scored **${state.correctCount} out of ${state.totalQuestions}** questions (${percentage.toFixed(1)}%). `;
-
-    if (percentage >= 80) {
-      summary += `This shows strong mastery of the material. `;
-    } else if (percentage >= 60) {
-      summary += `You're making good progress and building a solid foundation. `;
-    } else {
-      summary += `Every attempt helps you learn - keep building your understanding! `;
-    }
-
-    if (state.longestStreak > 3) {
-      summary += `Your longest streak of ${state.longestStreak} correct answers shows you can maintain focus and apply concepts consistently.\n\n`;
-    } else {
-      summary += `Focus on building consistency in your understanding.\n\n`;
-    }
-
-    if (strengths.length > 0) {
-      summary += `### 🎯 Strong Areas\nYou demonstrated solid understanding in: **${strengths.join(', ')}**. These are great foundations to build upon!\n\n`;
-    }
-
-    if (weaknesses.length > 0) {
-      summary += `### 📚 Study Recommendations\n\n`;
-      weaknesses.forEach((weakness) => {
-        summary += `**${weakness}:**\n`;
-
-        // Find matching resources
-        const topicKey = Object.keys(resourceMap).find((key) => weakness.toLowerCase().includes(key) || key.includes(weakness.toLowerCase().split(' ')[0]));
-
-        const resources = topicKey ? resourceMap[topicKey] : resourceMap['biology']; // Default to biology
-        resources.forEach((resource) => {
-          summary += `- ${resource}\n`;
-        });
-        summary += `\n`;
-      });
-    }
-
-    summary += `### 🚀 Next Steps\n`;
-    summary += `1. Review the topics where you scored below 70%\n`;
-    summary += `2. Use the recommended resources above for targeted study\n`;
-    summary += `3. Retake this test in a few days to track your improvement\n`;
-    summary += `4. Focus on understanding concepts rather than memorizing facts\n\n`;
-    summary += `Keep up the excellent work! Consistent practice leads to mastery. 💪`;
-
-    return summary;
-  }
-
-  /**
-   * Generate final encouragement message
-   */
-  private generateFinalEncouragement(state: TestSessionState): string {
-    const percentage = (state.correctCount / state.totalQuestions) * 100;
-
-    if (percentage >= 90) {
-      return "Outstanding performance! You've mastered this material! 🌟";
-    } else if (percentage >= 80) {
-      return 'Great job! You have a strong understanding of the material. Keep it up! 💪';
-    } else if (percentage >= 70) {
-      return "Good work! With a bit more review, you'll master this content. 📚";
-    } else if (percentage >= 60) {
-      return "You're making progress! Focus on the weak areas and you'll improve quickly. 🎯";
-    } else {
-      return "Keep learning! Every attempt helps you understand better. Don't give up! 🚀";
-    }
   }
 }

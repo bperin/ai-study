@@ -3,27 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
 import { GEMINI_MODEL } from './constants';
 
-import {
-  INTENT_QUESTION_GENERATOR_INSTRUCTION,
-  LEARNING_INTENT_ANALYSIS_INSTRUCTION,
-  LEARNING_INTENT_BUILDER_INSTRUCTION,
-  QUESTION_ARTIFACT_EVAL_INSTRUCTION,
-  SUBJECT_MATTER_EXPERT_QUESTION_INSTRUCTION,
-  TEST_ASSISTANCE_HINT_INSTRUCTION,
-} from './prompts';
+import { INTENT_QUESTION_GENERATOR_INSTRUCTION, LEARNING_INTENT_ANALYSIS_INSTRUCTION, LEARNING_INTENT_BUILDER_INSTRUCTION, QUESTION_ARTIFACT_EVAL_INSTRUCTION, SUBJECT_MATTER_EXPERT_QUESTION_INSTRUCTION, TEST_ASSISTANCE_HINT_INSTRUCTION } from './prompts';
 
-import {
-  IntentQuestionsJsonSchema,
-  IntentQuestionsSchema,
-  LearningIntentAnalysisJsonSchema,
-  LearningIntentAnalysisSchema,
-  LearningIntentJsonSchema,
-  LearningIntentSchema,
-  QuestionArtifactEvalJsonSchema,
-  QuestionArtifactEvalSchema,
-  QuestionArtifactJsonSchema,
-  QuestionArtifactSchema
-} from './schemas';
+import { IntentQuestionsJsonSchema, IntentQuestionsSchema, LearningIntentAnalysisJsonSchema, LearningIntentAnalysisSchema, LearningIntentJsonSchema, LearningIntentSchema, QuestionArtifactEvalJsonSchema, QuestionArtifactEvalSchema, QuestionArtifactJsonSchema, QuestionArtifactSchema } from './schemas';
 
 export interface GenerateOptions {
   model?: string;
@@ -59,13 +41,13 @@ export class GenAiService {
   private async generateContent(options: GenerateOptions): Promise<{ text: string }> {
     const modelId = options.model || this.modelName;
     const geminiTools: any[] = [];
-    
+
     // Add File Search tool if a store name is provided
     if (options.fileSearchStoreName) {
       geminiTools.push({
         fileSearch: {
-          fileSearchStoreNames: [options.fileSearchStoreName]
-        }
+          fileSearchStoreNames: [options.fileSearchStoreName],
+        },
       });
     }
 
@@ -73,14 +55,14 @@ export class GenAiService {
     // Configuring the request
     const contents: any[] = [];
     const parts: any[] = [];
-    
+
     if (typeof options.contents === 'string') {
       parts.push({ text: options.contents });
     } else {
       // Assuming options.contents is already an array of parts
       // But we need to make sure they match the expected format
       if (Array.isArray(options.contents)) {
-          options.contents.forEach((c: any) => parts.push(c));
+        options.contents.forEach((c: any) => parts.push(c));
       }
     }
 
@@ -92,7 +74,7 @@ export class GenAiService {
         },
       });
     }
-    
+
     contents.push({ role: 'user', parts });
 
     const systemInstruction = options.systemInstruction ? { parts: [{ text: options.systemInstruction }] } : undefined;
@@ -105,7 +87,7 @@ export class GenAiService {
         systemInstruction,
         tools: geminiTools.length > 0 ? geminiTools : undefined,
         responseJsonSchema: options.responseJsonSchema,
-      }
+      },
     });
 
     const finalText = response.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
@@ -115,12 +97,7 @@ export class GenAiService {
   /**
    * Provides helpful hints during test taking
    */
-  async runTestAssistance(
-    userPrompt: string,
-    question: string,
-    options: string[],
-    fileUri?: string,
-  ) {
+  async runTestAssistance(userPrompt: string, question: string, options: string[], fileUri?: string) {
     const isStoreName = fileUri && fileUri.startsWith('projects/');
 
     return this.generateContent({
@@ -171,13 +148,7 @@ export class GenAiService {
     return { ...response, data };
   }
 
-  async generateIntentQuestionArtifact(params: {
-    fileSearchStoreName: string;
-    intentTitle: string;
-    intentDescription: string;
-    difficulty?: 'easy' | 'medium' | 'hard';
-    questionCount?: number;
-  }) {
+  async generateIntentQuestionArtifact(params: { fileSearchStoreName: string; intentTitle: string; intentDescription: string; difficulty?: 'easy' | 'medium' | 'hard'; questionCount?: number }) {
     const request = `Intent: ${params.intentTitle}\nDescription: ${params.intentDescription}\nDifficulty: ${params.difficulty || 'medium'}\nQuestion count: ${params.questionCount || 5}`;
 
     const response = await this.generateContent({
@@ -217,13 +188,7 @@ export class GenAiService {
     return { ...response, data };
   }
 
-  async generateIntentQuestions(params: {
-    fileSearchStoreName: string;
-    intentTitle: string;
-    intentDescription: string;
-    difficulty?: 'easy' | 'medium' | 'hard';
-    questionCount?: number;
-  }) {
+  async generateIntentQuestions(params: { fileSearchStoreName: string; intentTitle: string; intentDescription: string; difficulty?: 'easy' | 'medium' | 'hard'; questionCount?: number }) {
     const request = `Intent: ${params.intentTitle}\nDescription: ${params.intentDescription}\nDifficulty: ${params.difficulty || 'medium'}\nQuestion count: ${params.questionCount || 5}`;
 
     const response = await this.generateContent({
@@ -244,11 +209,7 @@ export class GenAiService {
     return { ...response, data };
   }
 
-  async generateSubjectMatterExpertQuestions(params: {
-    userPrompt: string;
-    fileSearchStoreName: string;
-    focusArea?: string;
-  }) {
+  async generateSubjectMatterExpertQuestions(params: { userPrompt: string; fileSearchStoreName: string; focusArea?: string }) {
     const request = `${params.userPrompt}${params.focusArea ? `\nFocus area: ${params.focusArea}` : ''}`;
 
     const response = await this.generateContent({

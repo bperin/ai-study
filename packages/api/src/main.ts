@@ -10,7 +10,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
   console.log(`✅ Application successfully started and listening on 0.0.0.0:${port}`);
 }
-bootstrap().catch(err => {
+bootstrap().catch((err) => {
   console.error('❌ FATAL ERROR DURING BOOTSTRAP:', err);
   process.exit(1);
 });

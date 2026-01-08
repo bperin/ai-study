@@ -13,7 +13,6 @@ import { DocumentResponseDto, PaginatedDocumentResponseDto } from './dto/documen
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
-
   @Get(':id/rag-status')
   @ApiOperation({ summary: 'Check RAG ingestion status for a PDF' })
   getRagStatus(@Param('id') documentId: string) {
@@ -73,5 +72,5 @@ export class DocumentsController {
   @ApiResponse({ status: 200, description: 'Auto-generated test plan' })
   async autoGenerateTestPlan(@Param('id') documentId: string, @Request() req: any) {
     return this.documentsService.autoGenerateTestPlan(documentId, req.user.userId);
-}
+  }
 }

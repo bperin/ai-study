@@ -5,7 +5,6 @@ import { DocumentsRepositoryModule } from '../documents/documents.repository.mod
 import { GenAiModule } from '../../infrastructure/genai/genai.module';
 import { FileSearchService } from './file-search.service';
 
-
 @Global()
 @Module({
   imports: [DocumentsRepositoryModule, GenAiModule],

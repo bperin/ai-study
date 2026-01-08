@@ -7,9 +7,7 @@ import { TestAnalysisJobData } from '../queue.service';
 export class TestAnalysisProcessor extends WorkerHost {
   private readonly logger = new Logger(TestAnalysisProcessor.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {
+  constructor(private readonly prisma: PrismaService) {
     super();
   }
 

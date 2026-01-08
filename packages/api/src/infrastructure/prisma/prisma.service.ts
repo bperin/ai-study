@@ -16,8 +16,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
 
     const isAccelerate = url && (url.startsWith('prisma://') || url.startsWith('prisma+postgres://'));
-    const logLevels: any[] =
-      process.env.NODE_ENV === 'production' ? ['info', 'warn', 'error'] : ['query', 'info', 'warn', 'error'];
+    const logLevels: any[] = process.env.NODE_ENV === 'production' ? ['info', 'warn', 'error'] : ['query', 'info', 'warn', 'error'];
 
     const options = isAccelerate
       ? {

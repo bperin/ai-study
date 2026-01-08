@@ -11,7 +11,7 @@ export const LearningIntentAnalysisSchema = z.object({
       difficulty: z.enum(['easy', 'medium', 'hard']),
       keyTopics: z.array(z.string()),
       rationale: z.string(),
-    })
+    }),
   ),
 });
 
@@ -24,7 +24,7 @@ export const LearningIntentSchema = z.object({
       difficulty: z.enum(['easy', 'medium', 'hard']),
       keyTopics: z.array(z.string()),
       questionCount: z.number(),
-    })
+    }),
   ),
   totalIntents: z.number(),
   totalQuestions: z.number(),
@@ -43,7 +43,7 @@ export const QuestionArtifactSchema = z.object({
       hint: z.string(),
       difficulty: z.enum(['easy', 'medium', 'hard']),
       grounding: z.string(),
-    })
+    }),
   ),
 });
 
@@ -57,7 +57,7 @@ export const QuestionArtifactEvalSchema = z.object({
       question: z.string(),
       status: z.enum(['approved', 'needs_revision', 'rejected']),
       notes: z.string(),
-    })
+    }),
   ),
 });
 
@@ -72,7 +72,7 @@ export const IntentQuestionsSchema = z.object({
       explanation: z.string(),
       hint: z.string(),
       difficulty: z.enum(['easy', 'medium', 'hard']),
-    })
+    }),
   ),
 });
 

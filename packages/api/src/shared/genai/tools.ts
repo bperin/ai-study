@@ -38,19 +38,19 @@ export const createSaveObjectiveTool = (testsRepository: TestsRepository, docume
     required: ['title', 'difficulty', 'questions'],
   },
   execute: async (args: any) => {
-    // This is a placeholder for the actual implementation which would likely involve 
-    // calling the repository to save the data. 
+    // This is a placeholder for the actual implementation which would likely involve
+    // calling the repository to save the data.
     // In a real scenario, we might delegate this to a service method or implement logic here.
     // For now, we'll return a success message mimicking a successful save.
-    
+
     // NOTE: In a cleaner architecture, we might pass a service callback instead of the repository directly
     // to avoid coupling tool definitions with database logic, but following the inferred pattern:
     try {
-        // Implementation would go here using testsRepository
-        // For example: await testsRepository.saveObjective(documentId, args);
-        return { success: true, message: `Saved objective: ${args.title} with ${args.questions?.length} questions` };
+      // Implementation would go here using testsRepository
+      // For example: await testsRepository.saveObjective(documentId, args);
+      return { success: true, message: `Saved objective: ${args.title} with ${args.questions?.length} questions` };
     } catch (error) {
-        return { success: false, error: (error as Error).message };
+      return { success: false, error: (error as Error).message };
     }
   },
 });

@@ -11,16 +11,7 @@ export class ToolCallingService {
       return plan;
     }
 
-    const objectives = await Promise.all(
-      plan.objectives.map((objective) =>
-        this.testsRepository.createObjective(
-          documentId,
-          objective.title,
-          objective.difficulty,
-          objective.mcqs,
-        ),
-      ),
-    );
+    const objectives = await Promise.all(plan.objectives.map((objective) => this.testsRepository.createObjective(documentId, objective.title, objective.difficulty, objective.mcqs)));
 
     return {
       ...plan,

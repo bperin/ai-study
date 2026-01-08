@@ -41,10 +41,10 @@ export class DocumentResponseDto {
   @ApiProperty({ required: false, description: 'Total number of questions available for this document' })
   questionCount?: number;
 
-  @ApiProperty({ 
-    type: [SampleQuestionDto], 
-    required: false, 
-    description: 'Sample questions to preview the test content' 
+  @ApiProperty({
+    type: [SampleQuestionDto],
+    required: false,
+    description: 'Sample questions to preview the test content',
   })
   sampleQuestions?: SampleQuestionDto[];
 }

@@ -33,7 +33,7 @@ export class GcsService {
     return buffer;
   }
 
- async createSignedUploadUrl(fileName: string, contentType: string): Promise<{ url: string; signedUrl: string }> {
+  async createSignedUploadUrl(fileName: string, contentType: string): Promise<{ url: string; signedUrl: string }> {
     const bucket = this.storage.bucket(this.bucketName);
     const file = bucket.file(fileName);
 

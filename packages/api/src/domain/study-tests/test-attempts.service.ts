@@ -5,9 +5,7 @@ import { TestsRepository } from './tests.repository';
 
 @Injectable()
 export class TestAttemptsService {
-  constructor(
-    private readonly testsRepository: TestsRepository,
-  ) {}
+  constructor(private readonly testsRepository: TestsRepository) {}
 
   async startAttempt(documentId: string, userId: string): Promise<StartAttemptResponseDto> {
     const attempt = await this.testsRepository.createAttempt(userId, documentId, 0, 0);
@@ -28,7 +26,7 @@ export class TestAttemptsService {
 
     const percentage = Math.round((body.score / body.totalQuestions) * 100);
     const analysis = {
-        report: `# Test Performance Analysis Report
+      report: `# Test Performance Analysis Report
 
 ## Executive Summary
 You scored ${body.score} out of ${body.totalQuestions} (${percentage}%). ${percentage >= 80 ? 'Great job! You have a strong understanding of the material.' : percentage >= 60 ? 'Good effort! Review the areas you missed to improve further.' : 'Keep studying! Focus on understanding the core concepts.'}

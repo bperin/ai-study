@@ -198,7 +198,7 @@ export class DocumentsService {
 
     let pdfContent = '';
     if (pdf.storagePath) {
-        // PDF text extraction skipped
+      // PDF text extraction skipped
     }
 
     const autoGenPrompt = `Based on the PDF content, automatically generate a comprehensive test plan. Create a balanced mix of easy, medium, and hard questions covering the main topics. Respond with a complete test plan in JSON format.`;

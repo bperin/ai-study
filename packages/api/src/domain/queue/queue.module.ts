@@ -7,12 +7,7 @@ import { DocumentsModule } from '../documents/documents.module';
 import { PdfStatusModule } from '../../pdf-status.module';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: 'flashcard-generation' }),
-    BullModule.registerQueue({ name: 'test-analysis' }),
-    forwardRef(() => DocumentsModule),
-    PdfStatusModule,
-  ],
+  imports: [BullModule.registerQueue({ name: 'flashcard-generation' }), BullModule.registerQueue({ name: 'test-analysis' }), forwardRef(() => DocumentsModule), PdfStatusModule],
   controllers: [QueueController],
   providers: [QueueService, TestAnalysisProcessor],
   exports: [QueueService, BullModule],
