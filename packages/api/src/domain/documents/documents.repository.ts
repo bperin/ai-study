@@ -111,9 +111,15 @@ export class DocumentsRepository {
   }
 
   async deleteSessionsByDocument(documentId: string) {
-    // Delete all sessions related to attempts on this document
-    const attempts = await this.prisma.testAttempt.findMany({
+    // Get all evals for this document
+    const evals = await this.prisma.eval.findMany({
       where: { documentId },
+      select: { id: true },
+    });
+    
+    // Get all attempts for these evals
+    const attempts = await this.prisma.testAttempt.findMany({
+      where: { evalId: { in: evals.map(e => e.id) } },
       select: { sessionId: true },
     });
     

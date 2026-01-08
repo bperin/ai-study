@@ -1,24 +1,25 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, Min } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 export class StartSessionDto {
-  @IsUrl()
-  signedPdfUrl: string;
-
   @IsString()
-  @IsNotEmpty()
   filename: string;
 
   @IsString()
-  @IsNotEmpty()
-  testDescription: string;
+  signedPdfUrl: string;
 
-  @IsOptional()
   @IsString()
+  @IsOptional()
+  testDescription?: string;
+
+  @IsString()
+  @IsOptional()
   difficulty?: string;
 
+  @IsNumber()
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(50)
   cardTarget?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  includeImages?: boolean;
 }
