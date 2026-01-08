@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { SubmitTestDto } from './dto/submit-test.dto';
 import { TestsService } from './tests.service';
 import { LeaderboardService } from './leaderboard.service';
-import { TestHistoryResponseDto, TestHistoryItemDto, SubmitTestResultsDto, TestAnalysisResponseDto } from './dto/test-results.dto';
+import { TestHistoryResponseDto, TestHistoryItemDto, SubmitTestResultsDto } from './dto/test-results.dto';
 import { TestStatsDto } from './dto/test-stats.dto';
 import { ChatAssistanceDto, ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
 import { StartAttemptResponseDto } from './dto/start-attempt-response.dto';
@@ -116,9 +116,9 @@ export class TestsController {
   @Post('attempts/submit')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Submit test results for analysis' })
-  @ApiResponse({ status: 200, description: 'Test results submitted successfully', type: TestAnalysisResponseDto })
-  async submitTestResults(@Body() body: SubmitTestResultsDto): Promise<TestAnalysisResponseDto & { attemptId: string }> {
+  @ApiOperation({ summary: 'Submit test results' })
+  @ApiResponse({ status: 200, description: 'Test results submitted successfully' })
+  async submitTestResults(@Body() body: SubmitTestResultsDto): Promise<{ attemptId: string; score: number; percentage: number }> {
     return this.testsService.submitTestResults(body);
   }
 
