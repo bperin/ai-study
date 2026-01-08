@@ -27,7 +27,7 @@ export interface SubmitTestDto {
    * @type {string}
    * @memberof SubmitTestDto
    */
-  documentId: string;
+  pdfId: string;
   /**
    *
    * @type {Array<AnswerDto>}
@@ -41,7 +41,7 @@ export interface SubmitTestDto {
  */
 export function instanceOfSubmitTestDto(value: object): boolean {
   let isInstance = true;
-  isInstance = isInstance && 'documentId' in value;
+  isInstance = isInstance && 'pdfId' in value;
   isInstance = isInstance && 'userAnswers' in value;
 
   return isInstance;
@@ -56,7 +56,7 @@ export function SubmitTestDtoFromJSONTyped(json: any, ignoreDiscriminator: boole
     return json;
   }
   return {
-    documentId: json['documentId'],
+    pdfId: json['pdfId'],
     userAnswers: (json['userAnswers'] as Array<any>).map(AnswerDtoFromJSON),
   };
 }
@@ -69,7 +69,7 @@ export function SubmitTestDtoToJSON(value?: SubmitTestDto | null): any {
     return null;
   }
   return {
-    documentId: value.documentId,
+    pdfId: value.pdfId,
     userAnswers: (value.userAnswers as Array<any>).map(AnswerDtoToJSON),
   };
 }

@@ -2,7 +2,7 @@
 /* eslint-disable */
 export * from './AuthApi';
 export * from './DefaultApi';
-export * from './DocumentsApi';
+export * from './PdfsApi';
 export * from './TestAttemptsApi';
 export * from './TestTakingApi';
 export * from './TestsApi';

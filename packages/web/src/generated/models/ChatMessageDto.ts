@@ -30,7 +30,7 @@ export interface ChatMessageDto {
    * @type {string}
    * @memberof ChatMessageDto
    */
-  documentId: string;
+  pdfId: string;
   /**
    *
    * @type {Array<string>}
@@ -45,7 +45,7 @@ export interface ChatMessageDto {
 export function instanceOfChatMessageDto(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && 'message' in value;
-  isInstance = isInstance && 'documentId' in value;
+  isInstance = isInstance && 'pdfId' in value;
 
   return isInstance;
 }
@@ -60,7 +60,7 @@ export function ChatMessageDtoFromJSONTyped(json: any, ignoreDiscriminator: bool
   }
   return {
     message: json['message'],
-    documentId: json['documentId'],
+    pdfId: json['pdfId'],
     conversationHistory: !exists(json, 'conversationHistory') ? undefined : json['conversationHistory'],
   };
 }
@@ -74,7 +74,7 @@ export function ChatMessageDtoToJSON(value?: ChatMessageDto | null): any {
   }
   return {
     message: value.message,
-    documentId: value.documentId,
+    pdfId: value.pdfId,
     conversationHistory: value.conversationHistory,
   };
 }

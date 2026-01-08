@@ -30,7 +30,7 @@ export interface StartAttemptResponseDto {
    * @type {string}
    * @memberof StartAttemptResponseDto
    */
-  documentId: string;
+  pdfId: string;
   /**
    *
    * @type {Date}
@@ -45,7 +45,7 @@ export interface StartAttemptResponseDto {
 export function instanceOfStartAttemptResponseDto(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && 'attemptId' in value;
-  isInstance = isInstance && 'documentId' in value;
+  isInstance = isInstance && 'pdfId' in value;
   isInstance = isInstance && 'startedAt' in value;
 
   return isInstance;
@@ -61,7 +61,7 @@ export function StartAttemptResponseDtoFromJSONTyped(json: any, ignoreDiscrimina
   }
   return {
     attemptId: json['attemptId'],
-    documentId: json['documentId'],
+    pdfId: json['pdfId'],
     startedAt: new Date(json['startedAt']),
   };
 }
@@ -75,7 +75,7 @@ export function StartAttemptResponseDtoToJSON(value?: StartAttemptResponseDto | 
   }
   return {
     attemptId: value.attemptId,
-    documentId: value.documentId,
+    pdfId: value.pdfId,
     startedAt: value.startedAt.toISOString(),
   };
 }

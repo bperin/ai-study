@@ -17,7 +17,7 @@ import type { StartAttemptResponseDto, SubmitTestResultsDto, TestAnalysisRespons
 import { StartAttemptResponseDtoFromJSON, StartAttemptResponseDtoToJSON, SubmitTestResultsDtoFromJSON, SubmitTestResultsDtoToJSON, TestAnalysisResponseDtoFromJSON, TestAnalysisResponseDtoToJSON } from '../models/index';
 
 export interface TestAttemptsControllerStartAttemptRequest {
-  documentId: string;
+  pdfId: string;
 }
 
 export interface TestAttemptsControllerSubmitAttemptRequest {
@@ -32,8 +32,8 @@ export class TestAttemptsApi extends runtime.BaseAPI {
    * Start a new test attempt
    */
   async testAttemptsControllerStartAttemptRaw(requestParameters: TestAttemptsControllerStartAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StartAttemptResponseDto>> {
-    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
-      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling testAttemptsControllerStartAttempt.');
+    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
+      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testAttemptsControllerStartAttempt.');
     }
 
     const queryParameters: any = {};
@@ -50,7 +50,7 @@ export class TestAttemptsApi extends runtime.BaseAPI {
     }
     const response = await this.request(
       {
-        path: `/tests/attempts/{documentId}/start`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
+        path: `/tests/attempts/{pdfId}/start`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,

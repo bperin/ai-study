@@ -25,12 +25,6 @@ export interface AuthResponseDto {
    * @memberof AuthResponseDto
    */
   accessToken: string;
-  /**
-   *
-   * @type {string}
-   * @memberof AuthResponseDto
-   */
-  refreshToken: string;
 }
 
 /**
@@ -39,7 +33,6 @@ export interface AuthResponseDto {
 export function instanceOfAuthResponseDto(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && 'accessToken' in value;
-  isInstance = isInstance && 'refreshToken' in value;
 
   return isInstance;
 }
@@ -54,7 +47,6 @@ export function AuthResponseDtoFromJSONTyped(json: any, ignoreDiscriminator: boo
   }
   return {
     accessToken: json['access_token'],
-    refreshToken: json['refresh_token'],
   };
 }
 
@@ -67,6 +59,5 @@ export function AuthResponseDtoToJSON(value?: AuthResponseDto | null): any {
   }
   return {
     access_token: value.accessToken,
-    refresh_token: value.refreshToken,
   };
 }

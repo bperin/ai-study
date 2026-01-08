@@ -13,19 +13,19 @@
  */
 
 import * as runtime from '../runtime';
-import type { ConfirmUploadResponseDto, UploadUrlResponseDto } from '../models/index';
-import { ConfirmUploadResponseDtoFromJSON, ConfirmUploadResponseDtoToJSON, UploadUrlResponseDtoFromJSON, UploadUrlResponseDtoToJSON } from '../models/index';
+import type { ConfirmUploadDto, ConfirmUploadResponseDto, CreateUploadUrlDto, UploadUrlResponseDto } from '../models/index';
+import { ConfirmUploadDtoFromJSON, ConfirmUploadDtoToJSON, ConfirmUploadResponseDtoFromJSON, ConfirmUploadResponseDtoToJSON, CreateUploadUrlDtoFromJSON, CreateUploadUrlDtoToJSON, UploadUrlResponseDtoFromJSON, UploadUrlResponseDtoToJSON } from '../models/index';
 
 export interface UploadsControllerConfirmUploadRequest {
-  body: object;
+  confirmUploadDto: ConfirmUploadDto;
 }
 
 export interface UploadsControllerCreateSignedUploadUrlRequest {
-  body: object;
+  createUploadUrlDto: CreateUploadUrlDto;
 }
 
 export interface UploadsControllerTestSignRequest {
-  body: object;
+  createUploadUrlDto: CreateUploadUrlDto;
 }
 
 /**
@@ -35,8 +35,8 @@ export class UploadsApi extends runtime.BaseAPI {
   /**
    */
   async uploadsControllerConfirmUploadRaw(requestParameters: UploadsControllerConfirmUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConfirmUploadResponseDto>> {
-    if (requestParameters.body === null || requestParameters.body === undefined) {
-      throw new runtime.RequiredError('body', 'Required parameter requestParameters.body was null or undefined when calling uploadsControllerConfirmUpload.');
+    if (requestParameters.confirmUploadDto === null || requestParameters.confirmUploadDto === undefined) {
+      throw new runtime.RequiredError('confirmUploadDto', 'Required parameter requestParameters.confirmUploadDto was null or undefined when calling uploadsControllerConfirmUpload.');
     }
 
     const queryParameters: any = {};
@@ -59,7 +59,7 @@ export class UploadsApi extends runtime.BaseAPI {
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: requestParameters.body as any,
+        body: ConfirmUploadDtoToJSON(requestParameters.confirmUploadDto),
       },
       initOverrides,
     );
@@ -77,8 +77,8 @@ export class UploadsApi extends runtime.BaseAPI {
   /**
    */
   async uploadsControllerCreateSignedUploadUrlRaw(requestParameters: UploadsControllerCreateSignedUploadUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UploadUrlResponseDto>> {
-    if (requestParameters.body === null || requestParameters.body === undefined) {
-      throw new runtime.RequiredError('body', 'Required parameter requestParameters.body was null or undefined when calling uploadsControllerCreateSignedUploadUrl.');
+    if (requestParameters.createUploadUrlDto === null || requestParameters.createUploadUrlDto === undefined) {
+      throw new runtime.RequiredError('createUploadUrlDto', 'Required parameter requestParameters.createUploadUrlDto was null or undefined when calling uploadsControllerCreateSignedUploadUrl.');
     }
 
     const queryParameters: any = {};
@@ -101,7 +101,7 @@ export class UploadsApi extends runtime.BaseAPI {
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: requestParameters.body as any,
+        body: CreateUploadUrlDtoToJSON(requestParameters.createUploadUrlDto),
       },
       initOverrides,
     );
@@ -119,8 +119,8 @@ export class UploadsApi extends runtime.BaseAPI {
   /**
    */
   async uploadsControllerTestSignRaw(requestParameters: UploadsControllerTestSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters.body === null || requestParameters.body === undefined) {
-      throw new runtime.RequiredError('body', 'Required parameter requestParameters.body was null or undefined when calling uploadsControllerTestSign.');
+    if (requestParameters.createUploadUrlDto === null || requestParameters.createUploadUrlDto === undefined) {
+      throw new runtime.RequiredError('createUploadUrlDto', 'Required parameter requestParameters.createUploadUrlDto was null or undefined when calling uploadsControllerTestSign.');
     }
 
     const queryParameters: any = {};
@@ -143,7 +143,7 @@ export class UploadsApi extends runtime.BaseAPI {
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
-        body: requestParameters.body as any,
+        body: CreateUploadUrlDtoToJSON(requestParameters.createUploadUrlDto),
       },
       initOverrides,
     );
