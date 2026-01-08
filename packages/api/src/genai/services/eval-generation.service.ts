@@ -36,10 +36,16 @@ export class EvalGenerationService {
       documentId,
       evalId,
       userId,
-      meta: { planId: plan.id },
+      meta: { 
+        planId: plan.id,
+        startTime: new Date().toISOString(),
+      },
     });
 
     try {
+      // Start timing
+      const startTime = Date.now();
+
       // Get the document intents
       const intents = await this.artifactsService.getDocumentIntents(documentId);
       if (!intents) {
@@ -47,13 +53,65 @@ export class EvalGenerationService {
       }
 
       // Generate the evaluation using Gemini
-      const evaluation = await this.generateEvalContent(intents, plan);
+      const { evaluation, metrics } = await this.generateEvalContent(intents, plan);
 
-      // Update the artifact with the generated evaluation
+      // Calculate latency
+      const latencyMs = Date.now() - startTime;
+
+      // Update metrics
+      const updatedMetrics = {
+        ...metrics,
+        latencyMs,
+        endTime: new Date().toISOString(),
+      };
+
+      // Update the artifact with the generated evaluation and metrics
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.READY,
         json: evaluation,
+        meta: {
+          ...artifact.meta,
+          ...updatedMetrics,
+        },
       });
+
+      // For each item in the evaluation, create an EVAL_ITEM artifact
+      if (evaluation.items && Array.isArray(evaluation.items)) {
+        for (let i = 0; i < evaluation.items.length; i++) {
+          const item = evaluation.items[i];
+          
+          // Create an artifact for the item
+          await this.artifactsService.createArtifact({
+            type: ArtifactType.EVAL_ITEM,
+            status: ArtifactStatus.READY,
+            documentId,
+            evalId,
+            userId,
+            json: item,
+            meta: {
+              itemIndex: i,
+              generatedAt: new Date().toISOString(),
+              model: metrics.model,
+            },
+          });
+
+          // If the item has an image prompt, create an IMAGE artifact
+          if (item.hasImage && item.imagePrompt) {
+            await this.artifactsService.createArtifact({
+              type: ArtifactType.IMAGE,
+              status: ArtifactStatus.PENDING, // Will be processed separately
+              documentId,
+              evalId,
+              userId,
+              text: item.imagePrompt,
+              meta: {
+                itemIndex: i,
+                requestedAt: new Date().toISOString(),
+              },
+            });
+          }
+        }
+      }
 
       return evaluation;
     } catch (error) {
@@ -63,6 +121,11 @@ export class EvalGenerationService {
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
         error: error.message,
+        meta: {
+          ...artifact.meta,
+          endTime: new Date().toISOString(),
+          errorDetails: error.stack,
+        },
       });
 
       throw error;
@@ -75,7 +138,7 @@ export class EvalGenerationService {
   private async generateEvalContent(
     intents: any,
     plan: any,
-  ): Promise<any> {
+  ): Promise<{ evaluation: any, metrics: any }> {
     const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Format the intents and plan for the prompt
@@ -122,8 +185,20 @@ export class EvalGenerationService {
     }
     `;
 
+    // Track token usage
+    let inputTokenCount = 0;
+    let outputTokenCount = 0;
+
     const result = await model.generateContent(prompt);
     const text = result.response.text();
+
+    // Extract token usage if available
+    if (result.response.promptFeedback?.tokenCount) {
+      inputTokenCount = result.response.promptFeedback.tokenCount;
+    }
+    
+    // Estimate output tokens (rough approximation)
+    outputTokenCount = Math.ceil(text.length / 4);
 
     // Extract JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -132,7 +207,16 @@ export class EvalGenerationService {
     }
 
     try {
-      return JSON.parse(jsonMatch[0]);
+      const evaluation = JSON.parse(jsonMatch[0]);
+      
+      return {
+        evaluation,
+        metrics: {
+          model: 'gemini-2.5-flash',
+          inputTokens: inputTokenCount,
+          outputTokens: outputTokenCount,
+        }
+      };
     } catch (error) {
       throw new Error(`Failed to parse JSON from Gemini response: ${error.message}`);
     }

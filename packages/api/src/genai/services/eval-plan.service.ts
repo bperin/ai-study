@@ -38,10 +38,16 @@ export class EvalPlanService {
       status: ArtifactStatus.GENERATING,
       documentId,
       userId,
-      meta: { sessionId },
+      meta: { 
+        sessionId,
+        startTime: new Date().toISOString(),
+      },
     });
 
     try {
+      // Start timing
+      const startTime = Date.now();
+
       // Get the session details
       const session = await this.evalSessionsService.getSessionById(sessionId);
 
@@ -52,7 +58,7 @@ export class EvalPlanService {
       }
 
       // Generate the plan using Gemini
-      const plan = await this.generatePlan(intents, session.userPreferences, {
+      const { plan, metrics } = await this.generatePlan(intents, session.userPreferences, {
         difficulty: session.difficulty,
         totalItems: session.totalItems,
         includeImages: session.includeImages,
@@ -60,10 +66,24 @@ export class EvalPlanService {
         timeLimitMins: session.timeLimitMins,
       });
 
-      // Update the artifact with the generated plan
+      // Calculate latency
+      const latencyMs = Date.now() - startTime;
+
+      // Update metrics
+      const updatedMetrics = {
+        ...metrics,
+        latencyMs,
+        endTime: new Date().toISOString(),
+      };
+
+      // Update the artifact with the generated plan and metrics
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.READY,
         json: plan,
+        meta: {
+          ...artifact.meta,
+          ...updatedMetrics,
+        },
       });
 
       // Update the session with the proposed plan
@@ -77,6 +97,11 @@ export class EvalPlanService {
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
         error: error.message,
+        meta: {
+          ...artifact.meta,
+          endTime: new Date().toISOString(),
+          errorDetails: error.stack,
+        },
       });
 
       // Generate a fallback plan
@@ -102,7 +127,7 @@ export class EvalPlanService {
       imageCount?: number;
       timeLimitMins?: number;
     }
-  ): Promise<any> {
+  ): Promise<{ plan: any, metrics: any }> {
     const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Format the intents and constraints for the prompt
@@ -153,8 +178,20 @@ export class EvalPlanService {
     }
     `;
 
+    // Track token usage
+    let inputTokenCount = 0;
+    let outputTokenCount = 0;
+
     const result = await model.generateContent(prompt);
     const text = result.response.text();
+
+    // Extract token usage if available
+    if (result.response.promptFeedback?.tokenCount) {
+      inputTokenCount = result.response.promptFeedback.tokenCount;
+    }
+    
+    // Estimate output tokens (rough approximation)
+    outputTokenCount = Math.ceil(text.length / 4);
 
     // Extract JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -163,7 +200,16 @@ export class EvalPlanService {
     }
 
     try {
-      return JSON.parse(jsonMatch[0]);
+      const plan = JSON.parse(jsonMatch[0]);
+      
+      return {
+        plan,
+        metrics: {
+          model: 'gemini-2.5-flash',
+          inputTokens: inputTokenCount,
+          outputTokens: outputTokenCount,
+        }
+      };
     } catch (error) {
       throw new Error(`Failed to parse JSON from Gemini response: ${error.message}`);
     }
