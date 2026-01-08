@@ -1,23 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { TestAttempt, UserAnswer, EvalItem, Eval } from '@prisma/client';
 
 @Injectable()
 export class TestsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   // EvalItems
-  async findEvalItemsByIds(ids: string[]): Promise<EvalItem[]> {
+  async findEvalItemsByIds(ids: string[]) {
     return this.prisma.evalItem.findMany({ where: { id: { in: ids } } });
   }
 
-  async findEvalItemsByEvalId(evalId: string): Promise<EvalItem[]> {
+  async findEvalItemsByEvalId(evalId: string) {
     return this.prisma.evalItem.findMany({
       where: { evalId },
     });
   }
 
-  async findEvalItemById(id: string): Promise<(EvalItem & { eval: Eval & { document: { content: string | null; storagePath: string | null; filename: string; ragFileUri: string | null } } }) | null> {
+  async findEvalItemById(id: string) {
     return this.prisma.evalItem.findUnique({
       where: { id },
       include: {
@@ -42,7 +41,7 @@ export class TestsRepository {
   }
 
   // Evals
-  async findEvalsByDocumentId(documentId: string): Promise<(Eval & { items: EvalItem[] })[]> {
+  async findEvalsByDocumentId(documentId: string) {
     return this.prisma.eval.findMany({
       where: { documentId },
       include: { items: true },
@@ -50,14 +49,7 @@ export class TestsRepository {
   }
 
   // Attempts
-  async findAttemptById(id: string): Promise<
-    | (TestAttempt & {
-        answers: (UserAnswer & { evalItem: EvalItem & { eval: Eval } })[];
-        document: { filename: string; storagePath: string | null; content: string | null; ragFileUri: string | null };
-        user: { email: string; id: string };
-      })
-    | null
-  > {
+  async findAttemptById(id: string) {
     return this.prisma.testAttempt.findUnique({
       where: { id },
       include: {
@@ -83,15 +75,7 @@ export class TestsRepository {
     });
   }
 
-  async findActiveAttempt(
-    userId: string,
-    documentId: string,
-  ): Promise<
-    | (TestAttempt & {
-        answers: (UserAnswer & { evalItem: EvalItem & { eval: Eval } })[];
-      })
-    | null
-  > {
+  async findActiveAttempt(userId: string, documentId: string) {
     return this.prisma.testAttempt.findFirst({
       where: {
         userId,
@@ -107,7 +91,7 @@ export class TestsRepository {
     });
   }
 
-  async createAttempt(userId: string, documentId: string, evalId: string, total: number, score: number = 0, percentage?: number | null): Promise<TestAttempt & { answers: UserAnswer[] }> {
+  async createAttempt(userId: string, documentId: string, evalId: string, total: number, score: number = 0, percentage?: number | null) {
     return this.prisma.testAttempt.create({
       data: {
         userId,
@@ -123,7 +107,7 @@ export class TestsRepository {
     });
   }
 
-  async createCompletedAttempt(userId: string, documentId: string, evalId: string, score: number, total: number, answers: Array<{ evalItemId: string; selectedIdx: number; isCorrect: boolean }>): Promise<TestAttempt> {
+  async createCompletedAttempt(userId: string, documentId: string, evalId: string, score: number, total: number, answers: Array<{ evalItemId: string; selectedIdx: number; isCorrect: boolean }>) {
     return this.prisma.testAttempt.create({
       data: {
         userId,
@@ -145,7 +129,7 @@ export class TestsRepository {
     });
   }
 
-  async updateAttempt(id: string, score?: number, total?: number, percentage?: number | null, completedAt?: Date | null, summary?: string | null, feedback?: any | null): Promise<TestAttempt> {
+  async updateAttempt(id: string, score?: number, total?: number, percentage?: number | null, completedAt?: Date | null, summary?: string | null, feedback?: any | null) {
     const payload: Record<string, any> = {};
     if (score !== undefined) payload.score = score;
     if (total !== undefined) payload.total = total;
@@ -161,7 +145,7 @@ export class TestsRepository {
   }
 
   // History / Leaderboard
-  async findCompletedAttemptsByDocument(documentId: string, limit: number = 10): Promise<(TestAttempt & { user: { id: string; email: string } })[]> {
+  async findCompletedAttemptsByDocument(documentId: string, limit: number = 10) {
     return this.prisma.testAttempt.findMany({
       where: { documentId, completedAt: { not: null } },
       include: { user: { select: { id: true, email: true } } },
@@ -170,21 +154,21 @@ export class TestsRepository {
     });
   }
 
-  async findCompletedAttemptsByDocumentIds(documentIds: string[]): Promise<(TestAttempt & { user: { id: string; email: string } })[]> {
+  async findCompletedAttemptsByDocumentIds(documentIds: string[]) {
     return this.prisma.testAttempt.findMany({
       where: { documentId: { in: documentIds }, completedAt: { not: null } },
       include: { user: { select: { id: true, email: true } } },
     });
   }
 
-  async findAllCompletedAttempts(): Promise<(TestAttempt & { user: { id: string; email: string } })[]> {
+  async findAllCompletedAttempts() {
     return this.prisma.testAttempt.findMany({
       where: { completedAt: { not: null } },
       include: { user: { select: { id: true, email: true } } },
     });
   }
 
-  async findUserAttempts(userId: string): Promise<(TestAttempt & { document: { filename: string }; answers: (UserAnswer & { evalItem: EvalItem })[] })[]> {
+  async findUserAttempts(userId: string) {
     return this.prisma.testAttempt.findMany({
       where: { userId },
       include: {
@@ -195,7 +179,7 @@ export class TestsRepository {
     });
   }
 
-  async findAllAttemptsWithDetails(): Promise<(TestAttempt & { document: { filename: string }; user: { id: string; email: string }; answers: (UserAnswer & { evalItem: EvalItem })[] })[]> {
+  async findAllAttemptsWithDetails() {
     return this.prisma.testAttempt.findMany({
       include: {
         document: { select: { filename: true } },
@@ -207,13 +191,13 @@ export class TestsRepository {
   }
 
   // Answers
-  async findUserAnswer(attemptId: string, evalItemId: string): Promise<UserAnswer | null> {
+  async findUserAnswer(attemptId: string, evalItemId: string) {
     return this.prisma.userAnswer.findFirst({
       where: { attemptId, evalItemId },
     });
   }
 
-  async createUserAnswer(attemptId: string, evalItemId: string, selectedIdx: number, isCorrect: boolean, timeSpent?: number | null): Promise<UserAnswer> {
+  async createUserAnswer(attemptId: string, evalItemId: string, selectedIdx: number, isCorrect: boolean, timeSpent?: number | null) {
     return this.prisma.userAnswer.create({
       data: {
         attemptId,
@@ -225,7 +209,7 @@ export class TestsRepository {
     });
   }
 
-  async updateUserAnswer(id: string, selectedIdx?: number, isCorrect?: boolean, timeSpent?: number | null): Promise<UserAnswer> {
+  async updateUserAnswer(id: string, selectedIdx?: number, isCorrect?: boolean, timeSpent?: number | null) {
     const payload: Record<string, any> = {};
     if (selectedIdx !== undefined) payload.selectedIdx = selectedIdx;
     if (isCorrect !== undefined) payload.isCorrect = isCorrect;
@@ -246,7 +230,7 @@ export class TestsRepository {
     await this.prisma.eval.deleteMany({ where: { documentId } });
   }
 
-  async createEval(documentId: string, title: string, description: string, difficulty: string): Promise<Eval> {
+  async createEval(documentId: string, title: string, description: string, difficulty: string) {
     return this.prisma.eval.create({
       data: {
         title,
@@ -258,7 +242,7 @@ export class TestsRepository {
     });
   }
 
-  async createEvalItem(evalId: string, type: string, prompt: string, options: string[], correctIdx: number, explanation?: string | null, hint?: string | null): Promise<EvalItem> {
+  async createEvalItem(evalId: string, type: string, prompt: string, options: string[], correctIdx: number, explanation?: string | null, hint?: string | null) {
     return this.prisma.evalItem.create({
       data: {
         evalId,
