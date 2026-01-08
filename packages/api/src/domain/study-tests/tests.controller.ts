@@ -104,13 +104,13 @@ export class TestsController {
 
   // === Test Attempt Management (consolidated from TestAttemptsController) ===
 
-  @Post('attempts/:documentId/start')
+  @Post('attempts/:evalId/start')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Start a new test attempt' })
   @ApiResponse({ status: 201, description: 'Test attempt started successfully', type: StartAttemptResponseDto })
-  async startAttempt(@Request() req: any, @Param('documentId') documentId: string): Promise<StartAttemptResponseDto> {
-    return this.testsService.startAttempt(documentId, req.user.id);
+  async startAttempt(@Request() req: any, @Param('evalId') evalId: string): Promise<StartAttemptResponseDto> {
+    return this.testsService.startAttempt(evalId, req.user.id);
   }
 
   @Post('attempts/submit')
@@ -124,13 +124,13 @@ export class TestsController {
 
   // === Interactive Test Taking (consolidated from TestTakingController) ===
 
-  @Post('taking/start/:documentId')
+  @Post('taking/start/:evalId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Start or resume interactive test session' })
   @ApiResponse({ status: 200, description: 'Test session started/resumed successfully', type: TestSessionStateDto })
-  async getOrStartSession(@Request() req: any, @Param('documentId') documentId: string): Promise<TestSessionStateDto> {
-    return this.testsService.getOrStartSession(req.user.id, documentId);
+  async getOrStartSession(@Request() req: any, @Param('evalId') evalId: string): Promise<TestSessionStateDto> {
+    return this.testsService.getOrStartSession(req.user.id, evalId);
   }
 
   @Get('taking/:attemptId')

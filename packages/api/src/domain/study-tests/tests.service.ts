@@ -96,21 +96,20 @@ export class TestsService {
 
   // === Test Attempt Management (consolidated from TestAttemptsService) ===
 
-  async startAttempt(documentId: string, userId: string): Promise<StartAttemptResponseDto> {
-    // Find the eval for this document
-    const evals = await this.testsRepository.findEvalsByDocumentId(documentId);
-    if (evals.length === 0) {
-      throw new NotFoundException('No test available for this document');
+  async startAttempt(evalId: string, userId: string): Promise<StartAttemptResponseDto> {
+    // Verify the eval exists
+    const eval = await this.testsRepository.findEvalById(evalId);
+    if (!eval) {
+      throw new NotFoundException('Eval not found');
     }
 
-    const eval = evals[0]; // Take the first eval for now
-    const totalQuestions = await this.testsRepository.countEvalItemsByEvalId(eval.id);
+    const totalQuestions = await this.testsRepository.countEvalItemsByEvalId(evalId);
 
-    const attempt = await this.testsRepository.createAttempt(userId, eval.id, totalQuestions, 0);
+    const attempt = await this.testsRepository.createAttempt(userId, evalId, totalQuestions, 0);
 
     return {
       attemptId: attempt.id,
-      evalId: eval.id,
+      evalId: evalId,
       startedAt: attempt.startedAt,
     };
   }
@@ -159,22 +158,20 @@ Keep practicing and focus on understanding the underlying concepts. Each attempt
 
   // === Interactive Test Taking (simplified from TestTakingService) ===
 
-  async getOrStartSession(userId: string, documentId: string): Promise<TestSessionStateDto> {
-    // Find the eval for this document
-    const evals = await this.testsRepository.findEvalsByDocumentId(documentId);
-    if (evals.length === 0) {
-      throw new NotFoundException('No test available for this document');
+  async getOrStartSession(userId: string, evalId: string): Promise<TestSessionStateDto> {
+    // Verify the eval exists
+    const eval = await this.testsRepository.findEvalById(evalId);
+    if (!eval) {
+      throw new NotFoundException('Eval not found');
     }
 
-    const eval = evals[0];
-
     // Check for existing incomplete attempt
-    let attempt = await this.testsRepository.findActiveAttempt(userId, eval.id);
+    let attempt = await this.testsRepository.findActiveAttempt(userId, evalId);
 
     if (!attempt) {
       // Create new attempt
-      const totalQuestions = await this.testsRepository.countEvalItemsByEvalId(eval.id);
-      attempt = await this.testsRepository.createAttempt(userId, eval.id, totalQuestions, 0);
+      const totalQuestions = await this.testsRepository.countEvalItemsByEvalId(evalId);
+      attempt = await this.testsRepository.createAttempt(userId, evalId, totalQuestions, 0);
     }
 
     return this.buildSessionState(attempt);
