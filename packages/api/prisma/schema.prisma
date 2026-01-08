@@ -20,6 +20,13 @@ enum ArtifactType {
 
   HINT
   SUMMARY
+  OUTLINE
+  INTENTS
+  PLAN
+  PROMPT
+  HINT
+  QUALITY_METRICS
+  OTHER
 }
 
 enum ReviewVerdict {
@@ -87,7 +94,7 @@ model Eval {
 
   title       String
   description String?
-  status      String  @default("draft")
+  status      String  @default("draft") // draft, published, archived
 
   difficulty   String?
   instructions String? @db.Text
@@ -99,8 +106,10 @@ model Eval {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  publishedAt DateTime?
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   items     EvalItem[]
   attempts  TestAttempt[]
@@ -124,6 +133,26 @@ model EvalItem {
   userAnswers UserAnswer[]
   artifacts   Artifact[]
   reviews     EvalItemReview[]
+}
+
+model PromptTemplate {
+  id String @id @default(uuid())
+
+  key         String  @unique
+  version     Int     @default(1)
+  isActive    Boolean @default(false)
+  title       String
+  description String?
+
+  template String @db.Text
+  metadata Json?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, version])
+  @@index([key, isActive])
 }
 
 model TestAttempt {
@@ -164,6 +193,27 @@ model UserAnswer {
   hintsUsed   Int     @default(0)
 
   createdAt DateTime @default(now())
+}
+
+model EvalItemReview {
+  id String @id @default(uuid())
+
+  evalItemId String
+  evalItem   EvalItem @relation(fields: [evalItemId], references: [id], onDelete: Cascade)
+
+  reviewerId String
+  reviewer   User   @relation(fields: [reviewerId], references: [id])
+
+  isCorrect   Boolean
+  feedback    String? @db.Text
+  difficulty  String? // easy, medium, hard
+  quality     Int?    // 1-5 rating
+  tags        String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([evalItemId, reviewerId])
 }
 
 model Artifact {
