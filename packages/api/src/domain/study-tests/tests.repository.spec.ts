@@ -43,7 +43,7 @@ describe('TestsRepository', () => {
   });
 
   it('finds MCQs via Prisma', async () => {
-    await repository.findMcqsByIds(['mcq-1']);
+    await repository.findEvalItemsByEvalId(['mcq-1']);
     expect(prisma.mcq.findMany).toHaveBeenCalledWith({ where: { id: { in: ['mcq-1'] } } });
   });
 });
