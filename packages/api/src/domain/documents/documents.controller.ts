@@ -13,12 +13,6 @@ import { DocumentResponseDto, PaginatedDocumentResponseDto } from './dto/documen
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
-  @Get(':id/rag-status')
-  @ApiOperation({ summary: 'Check RAG ingestion status for a PDF' })
-  getRagStatus(@Param('id') documentId: string) {
-    return this.documentsService.getRagStatus(documentId);
-  }
-
   @Get()
   @ApiOperation({ summary: 'List all documents for the user with pagination' })
   @ApiResponse({ status: 200, type: PaginatedDocumentResponseDto })

@@ -16,11 +16,7 @@ import { FileSearchService } from '../uploads/file-search.service';
 
 @Injectable()
 export class TestsService {
-  constructor(
-    private readonly testsRepository: TestsRepository,
-    private readonly documentsRepository: DocumentsRepository,
-    private readonly fileSearchService: FileSearchService,
-  ) {}
+  constructor(private readonly testsRepository: TestsRepository) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
     const evalItemIds = dto.userAnswers.map((a) => a.evalItemId);
@@ -57,8 +53,8 @@ export class TestsService {
     return TestHistoryResponseDto.fromEntities(attempts);
   }
 
-  async getTestStats(documentId: string): Promise<TestStatsDto> {
-    const attempts = await this.testsRepository.findCompletedAttemptsByDocument(documentId);
+  async getTestStats(evalId: string): Promise<TestStatsDto> {
+    const attempts = await this.testsRepository.findCompletedAttemptsByEval(evalId);
 
     if (attempts.length === 0) {
       return {
@@ -98,8 +94,8 @@ export class TestsService {
 
   async startAttempt(evalId: string, userId: string): Promise<StartAttemptResponseDto> {
     // Verify the eval exists
-    const eval = await this.testsRepository.findEvalById(evalId);
-    if (!eval) {
+    const evaluation = await this.testsRepository.findEvalById(evalId);
+    if (!evaluation) {
       throw new NotFoundException('Eval not found');
     }
 
@@ -137,8 +133,8 @@ export class TestsService {
 
   async getOrStartSession(userId: string, evalId: string): Promise<TestSessionStateDto> {
     // Verify the eval exists
-    const eval = await this.testsRepository.findEvalById(evalId);
-    if (!eval) {
+    const evaluation = await this.testsRepository.findEvalById(evalId);
+    if (!evaluation) {
       throw new NotFoundException('Eval not found');
     }
 
@@ -234,6 +230,21 @@ export class TestsService {
       incorrectCount: answers.length - correctCount,
       startTime: attempt.startedAt,
       totalTimeSpent,
+    };
+  }
+
+  async getChatAssistance(message: string, questionId: string, documentId: string, userId: string): Promise<ChatAssistanceResponseDto> {
+    return {
+      message: 'AI assistance is currently being initialized for this question.',
+      questionContext: 'Question Context',
+      helpful: true,
+    };
+  }
+
+  async chatAssist(message: string, questionId: string, history?: any[]) {
+    return {
+      message: 'I am here to help you with this question.',
+      history: history || [],
     };
   }
 }

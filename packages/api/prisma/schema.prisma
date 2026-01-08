@@ -9,8 +9,16 @@ datasource db {
 }
 
 enum ArtifactType {
+  INTENTS
+  PLAN
   EVAL
   EVAL_ITEM
+
+  PROMPT
+  PROMPT_POLICY
+  QUALITY_METRICS
+
+  HINT
   SUMMARY
   OUTLINE
   INTENTS
@@ -21,11 +29,10 @@ enum ArtifactType {
   OTHER
 }
 
-enum ArtifactStatus {
-  PENDING
-  GENERATING
-  READY
-  FAILED
+enum ReviewVerdict {
+  APPROVED
+  REJECTED
+  NEEDS_REVISION
 }
 
 model User {
@@ -49,7 +56,6 @@ model Subject {
   id          String  @id @default(uuid())
   name        String
   description String?
-  storeId     String?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -69,11 +75,7 @@ model Document {
   content  String? @db.Text
 
   storagePath String?
-  ragFileName String?
   ragStatus   String  @default("PENDING")
-  ragFileUri  String?
-  storeId     String?
-  fileId      String?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -110,8 +112,8 @@ model Eval {
   updatedAt   DateTime @updatedAt
 
   items     EvalItem[]
-  artifacts Artifact[]
   attempts  TestAttempt[]
+  artifacts Artifact[]
 }
 
 model EvalItem {
@@ -120,20 +122,13 @@ model EvalItem {
   evalId String
   eval   Eval   @relation(fields: [evalId], references: [id], onDelete: Cascade)
 
-  type   String
-  prompt String @db.Text
-
+  prompt     String   @db.Text
   options    String[]
-  correctIdx Int?
-
-  hasImage    Boolean @default(false)
-  imageUrl    String?
-  imagePrompt String?
+  correctIdx Int
 
   hint        String?
   explanation String?
-
-  metadata Json?
+  metadata    Json?
 
   userAnswers UserAnswer[]
   artifacts   Artifact[]
@@ -174,7 +169,7 @@ model TestAttempt {
   percentage Float?
   totalTime  Int?
   feedback   Json?
-  summary    String? @db.Text
+  summary    String?
 
   startedAt   DateTime  @default(now())
   completedAt DateTime?
@@ -225,10 +220,7 @@ model Artifact {
   id String @id @default(uuid())
 
   type   ArtifactType
-  status ArtifactStatus @default(PENDING)
-
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status String       @default("READY")
 
   documentId String?
   document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -242,10 +234,11 @@ model Artifact {
   attemptId String?
   attempt   TestAttempt? @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
-  mimeType   String?
-  storageUri String?
-  text       String?
-  json       Json?
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  text String?
+  json Json?
 
   model     String?
   prompt    String?
@@ -254,11 +247,38 @@ model Artifact {
   error     String?
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@index([type, status])
-  @@index([documentId, type])
-  @@index([evalId, type])
-  @@index([evalItemId, type])
-  @@index([attemptId, type])
+  @@index([type])
+}
+
+model PromptTemplate {
+  id String @id @default(uuid())
+
+  key     String // "eval_generation", "hint_generation"
+  version String
+  status  String // active | deprecated | draft
+
+  template     String  @db.Text
+  constraints  Json?
+  outputSchema String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([key, version])
+}
+
+model EvalItemReview {
+  id String @id @default(uuid())
+
+  evalItemId String
+  evalItem   EvalItem @relation(fields: [evalItemId], references: [id], onDelete: Cascade)
+
+  reviewerId String
+  reviewer   User   @relation(fields: [reviewerId], references: [id])
+
+  verdict  ReviewVerdict
+  reasons  String[]
+  comments String?
+
+  createdAt DateTime @default(now())
 }

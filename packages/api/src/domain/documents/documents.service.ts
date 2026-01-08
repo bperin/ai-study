@@ -21,27 +21,6 @@ export class DocumentsService {
     private readonly pdfStatusGateway: PdfStatusGateway,
   ) {}
 
-  async getRagStatus(documentId: string) {
-    const pdf = await this.documentsRepository.findDocumentById(documentId);
-
-    if (!pdf) {
-      throw new NotFoundException('PDF not found');
-    }
-
-    return {
-      documentId,
-      status: (pdf as any).ragStatus || 'NOT_FOUND',
-      document: (pdf as any).storeId
-        ? {
-            id: (pdf as any).fileId || (pdf as any).storeId,
-            status: (pdf as any).ragStatus || 'READY',
-            errorMessage: null,
-            updatedAt: pdf.createdAt,
-          }
-        : null,
-    };
-  }
-
   async listDocuments(userId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([this.documentsRepository.listUserDocumentsWithObjectives(userId, skip, limit), this.documentsRepository.countUserDocuments(userId)]);

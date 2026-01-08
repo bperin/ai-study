@@ -16,6 +16,13 @@ export class TestsRepository {
     });
   }
 
+  async findEvalById(id: string) {
+    return this.prisma.eval.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+  }
+
   async findEvalItemById(id: string) {
     return this.prisma.evalItem.findUnique({
       where: { id },
@@ -84,8 +91,6 @@ export class TestsRepository {
   }
 
   async createAttempt(userId: string, evalId: string, total: number, score: number = 0, percentage?: number | null) {
-    const eval_ = await this.prisma.eval.findUnique({ where: { id: evalId } });
-
     return this.prisma.testAttempt.create({
       data: {
         userId,
@@ -95,7 +100,10 @@ export class TestsRepository {
         percentage: percentage ?? null,
       },
       include: {
-        answers: true,
+        answers: {
+          include: { evalItem: { include: { eval: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
   }
@@ -117,7 +125,12 @@ export class TestsRepository {
           })),
         },
       },
-      include: { answers: true },
+      include: {
+        answers: {
+          include: { evalItem: { include: { eval: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
   }
 
@@ -265,14 +278,6 @@ export class TestsRepository {
         explanation,
         hint,
       },
-    });
-  }
-
-  // Missing methods that services are calling
-  async findEvalItemsByIds(ids: string[]) {
-    return this.prisma.evalItem.findMany({
-      where: { id: { in: ids } },
-      include: { eval: true },
     });
   }
 

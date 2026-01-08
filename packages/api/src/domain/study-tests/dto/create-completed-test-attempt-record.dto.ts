@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class CompletedAttemptAnswerRecordDto {
   @ApiProperty()
-  mcqId: string;
+  evalItemId: string;
 
   @ApiProperty()
   selectedIdx: number;
@@ -16,7 +16,7 @@ export class CreateCompletedTestAttemptRecordDto {
   userId: string;
 
   @ApiProperty()
-  documentId: string;
+  evalId: string;
 
   @ApiProperty()
   score: number;

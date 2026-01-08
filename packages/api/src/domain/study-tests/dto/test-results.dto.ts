@@ -178,10 +178,10 @@ export class TestHistoryItemDto {
 
     const answers = attempt.answers
       ? attempt.answers.map((a: any) => ({
-          questionId: a.mcqId,
-          questionText: a.mcq?.question || 'Unknown Question',
-          selectedAnswer: a.mcq?.options[a.selectedIdx] || 'Unknown Answer',
-          correctAnswer: a.mcq?.options[a.mcq.correctIdx] || 'Unknown Correct Answer',
+          questionId: a.evalItemId,
+          questionText: a.evalItem?.prompt || 'Unknown Question',
+          selectedAnswer: a.evalItem?.options[a.selectedIdx] || 'Unknown Answer',
+          correctAnswer: a.evalItem?.options[a.evalItem.correctIdx] || 'Unknown Correct Answer',
           isCorrect: a.isCorrect,
         }))
       : undefined;

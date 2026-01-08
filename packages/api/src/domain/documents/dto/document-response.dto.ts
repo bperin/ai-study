@@ -5,7 +5,7 @@ export class SampleQuestionDto {
   id: string;
 
   @ApiProperty()
-  question: string;
+  prompt: string;
 
   @ApiProperty({ type: [String] })
   options: string[];
@@ -23,9 +23,9 @@ export class DocumentResponseDto {
 
   @ApiProperty({
     type: [Object],
-    example: [{ title: 'Objective Title', difficulty: 'easy', _count: { mcqs: 5 } }],
+    example: [{ title: 'Eval Title', difficulty: 'easy', _count: { evalItems: 5 } }],
   })
-  objectives: { title: string; difficulty: string; _count: { mcqs: number } }[];
+  evals: { title: string; difficulty: string; _count: { evalItems: number } }[];
 
   @ApiProperty({ required: false })
   stats?: {

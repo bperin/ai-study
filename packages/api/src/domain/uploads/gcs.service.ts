@@ -41,19 +41,26 @@ export class GcsService {
     return buffer;
   }
 
-  async createSignedUploadUrl(fileName: string, contentType: string): Promise<{ url: string; signedUrl: string }> {
+  async generateUploadUrl(fileName: string, contentType: string, userId: string): Promise<any> {
+    const fileId = Math.random().toString(36).substring(2, 15);
+    const filePath = `uploads/${userId}/${fileId}-${fileName}`;
     const bucket = this.storage.bucket(this.bucketName);
-    const file = bucket.file(fileName);
+    const file = bucket.file(filePath);
 
-    const [signedUrl] = await file.getSignedUrl({
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const [uploadUrl] = await file.getSignedUrl({
       version: 'v4',
       action: 'write',
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      expires: expiresAt,
       contentType: contentType,
     });
 
-    const url = `https://storage.googleapis.com/${this.bucketName}/${fileName}`;
-    return { url, signedUrl };
+    return {
+      uploadUrl,
+      filePath,
+      expiresAt: expiresAt.toISOString(),
+      maxSizeBytes: 104857600, // 100MB
+    };
   }
 
   async confirmUpload(filePath: string, fileName: string, userId: string, subjectId?: string) {
