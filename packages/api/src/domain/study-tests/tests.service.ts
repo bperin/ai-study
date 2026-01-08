@@ -16,8 +16,7 @@ export class TestsService {
   constructor(
     private readonly testsRepository: TestsRepository,
     private readonly documentsRepository: DocumentsRepository,
-    private readonly fileSearchService: FileSearchService,
-    private gcsService?: GcsService,
+    private readonly fileSearchService: FileSearchService 
   ) {}
 
   async submitTest(userId: string, dto: SubmitTestDto) {
