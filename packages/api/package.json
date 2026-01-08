@@ -4,6 +4,7 @@
   "scripts": {
     "clean": "rm -rf dist coverage openapi.json packages",
     "prisma": "prisma db push && prisma generate",
+    "prisma:generate": "prisma generate",
     "build": "nest build",
     "build:watch": "nest build --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
