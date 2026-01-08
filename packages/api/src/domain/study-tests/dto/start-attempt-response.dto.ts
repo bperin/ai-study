@@ -5,7 +5,7 @@ export class StartAttemptResponseDto {
   attemptId: string;
 
   @ApiProperty()
-  documentId: string;
+  evalId: string;
 
   @ApiProperty()
   startedAt: Date;

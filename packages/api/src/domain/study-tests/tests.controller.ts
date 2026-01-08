@@ -4,9 +4,12 @@ import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { SubmitTestDto } from './dto/submit-test.dto';
 import { TestsService } from './tests.service';
 import { LeaderboardService } from './leaderboard.service';
-import { TestHistoryResponseDto, TestHistoryItemDto } from './dto/test-results.dto';
+import { TestHistoryResponseDto, TestHistoryItemDto, SubmitTestResultsDto } from './dto/test-results.dto';
 import { TestStatsDto } from './dto/test-stats.dto';
 import { ChatAssistanceDto, ChatAssistanceResponseDto } from './dto/chat-assistance.dto';
+import { StartAttemptResponseDto } from './dto/start-attempt-response.dto';
+import { RecordAnswerDto, RecordAnswerResponseDto } from './dto/record-answer.dto';
+import { TestSessionStateDto } from './dto/test-session.dto';
 
 @ApiTags('tests')
 @Controller('tests')
@@ -97,5 +100,63 @@ export class TestsController {
   @ApiResponse({ status: 200, description: 'AI assistance response' })
   async chatAssist(@Body() body: { message: string; questionId: string; history?: any[] }) {
     return this.testsService.chatAssist(body.message, body.questionId, body.history);
+  }
+
+  // === Test Attempt Management (consolidated from TestAttemptsController) ===
+
+  @Post('attempts/:evalId/start')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Start a new test attempt' })
+  @ApiResponse({ status: 201, description: 'Test attempt started successfully', type: StartAttemptResponseDto })
+  async startAttempt(@Request() req: any, @Param('evalId') evalId: string): Promise<StartAttemptResponseDto> {
+    return this.testsService.startAttempt(evalId, req.user.id);
+  }
+
+  @Post('attempts/submit')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit test results' })
+  @ApiResponse({ status: 200, description: 'Test results submitted successfully' })
+  async submitTestResults(@Body() body: SubmitTestResultsDto): Promise<{ attemptId: string; score: number; percentage: number }> {
+    return this.testsService.submitTestResults(body);
+  }
+
+  // === Interactive Test Taking (consolidated from TestTakingController) ===
+
+  @Post('taking/start/:evalId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Start or resume interactive test session' })
+  @ApiResponse({ status: 200, description: 'Test session started/resumed successfully', type: TestSessionStateDto })
+  async getOrStartSession(@Request() req: any, @Param('evalId') evalId: string): Promise<TestSessionStateDto> {
+    return this.testsService.getOrStartSession(req.user.id, evalId);
+  }
+
+  @Get('taking/:attemptId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current test session state' })
+  @ApiResponse({ status: 200, description: 'Session state retrieved successfully', type: TestSessionStateDto })
+  async getSessionState(@Param('attemptId') attemptId: string): Promise<TestSessionStateDto> {
+    return this.testsService.getSessionState(attemptId);
+  }
+
+  @Post('taking/:attemptId/answer')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Record an answer for a question' })
+  @ApiResponse({ status: 200, description: 'Answer recorded successfully', type: RecordAnswerResponseDto })
+  async recordAnswer(@Param('attemptId') attemptId: string, @Body() body: RecordAnswerDto): Promise<RecordAnswerResponseDto> {
+    return this.testsService.recordAnswer(attemptId, body.questionId, body.selectedAnswer, body.timeSpent);
+  }
+
+  @Post('taking/:attemptId/complete')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Complete the test' })
+  @ApiResponse({ status: 200, description: 'Test completed successfully' })
+  async completeTest(@Param('attemptId') attemptId: string): Promise<any> {
+    return this.testsService.completeTest(attemptId);
   }
 }
