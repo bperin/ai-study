@@ -14,6 +14,6 @@ import { DocumentsRepositoryModule } from '../documents/documents.repository.mod
 @Module({
   imports: [TestsRepositoryModule, DocumentsRepositoryModule, TestSessionsModule, DocumentsModule],
   controllers: [TestsController, TestTakingController, TestAttemptsController],
-  providers: [TestsService, LeaderboardService, TestTakingService, TestAttemptsService],
+  providers: [TestsService, TestTakingService, LeaderboardService, TestAttemptsService],
 })
 export class TestsModule {}
