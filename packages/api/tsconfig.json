@@ -1,5 +1,5 @@
 {
-    "extends": "../../tsconfig.json",
+   
     "compilerOptions": {
         "module": "commonjs",
         "declaration": true,
@@ -11,7 +11,7 @@
         "moduleResolution": "node",
         "sourceMap": true,
         "outDir": "./dist",
-        "baseUrl": "./",
+        "baseUrl": "./src-broken",
         "incremental": true,
         "skipLibCheck": true,
         "strictNullChecks": false,

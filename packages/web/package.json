@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
+        "clean": "rm -rf .next out",
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
@@ -11,7 +12,6 @@
         "codegen": "cp ../api/openapi.json ./openapi.json && openapi-generator-cli generate -i /local/openapi.json -g typescript-fetch -o /local/src/generated --additional-properties=typescriptThreePlus=true,modelPropertyNaming=camelCase --skip-validate-spec && rm openapi.json && npm run format"
     },
     "dependencies": {
-        "@google/generative-ai": "^0.1.0",
         "@radix-ui/react-avatar": "^1.1.11",
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",

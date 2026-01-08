@@ -1,1 +1,0 @@
-# Placeholder for RAG smoke test script

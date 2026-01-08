@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@google/genai": ["src/types/google-genai.d.ts"]
+    }
+  },
+  "exclude": [
+    "dist",
+    "coverage",
+    "test",
+    "scripts",
+    "prisma.config.ts",
+    "test-connection.ts",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}
