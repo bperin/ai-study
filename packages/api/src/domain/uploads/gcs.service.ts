@@ -47,6 +47,67 @@ export class GcsService {
     const url = `https://storage.googleapis.com/${this.bucketName}/${fileName}`;
     return { url, signedUrl };
   }
+
+  async confirmUpload(filePath: string, fileName: string, userId: string, subjectId?: string) {
+    const document = await this.documentsRepository.createDocument(userId, fileName, filePath, null, null, subjectId);
+
+    let mimeType: string | undefined;
+
+    try {
+      const gcsObject = this.storage.bucket(this.bucketName).file(filePath);
+      const [metadata] = await gcsObject.getMetadata();
+      mimeType = metadata?.contentType;
+    } catch (error: any) {
+      this.logger.warn(`Failed to process document metadata for ${document.id}: ${error.message}`);
+    }
+
+    try {
+      let existingStoreId: string | undefined;
+      if (subjectId) {
+        const subject = await this.documentsRepository.findSubjectById(subjectId);
+        if (subject?.storeId) {
+          existingStoreId = subject.storeId;
+        }
+      }
+
+      const uploadResult = await this.fileSearchService.uploadFromGcs(filePath, fileName, existingStoreId);
+
+      // If we created a new store and have a subject, save the storeId on the subject
+      if (subjectId && !existingStoreId && uploadResult.storeId) {
+        await this.documentsRepository.updateSubject(subjectId, { storeId: uploadResult.storeId });
+      }
+
+      await this.documentsRepository.updateDocument(document.id, {
+        fileId: uploadResult.fileId,
+        ragFileName: uploadResult.displayName || fileName,
+        storeId: uploadResult.storeId,
+        ragStatus: uploadResult.state || 'ACTIVE',
+        mimeType: mimeType || 'application/pdf',
+        storagePath: filePath,
+      });
+
+      void this.runLearningIntentPipeline({
+        documentId: document.id,
+        documentTitle: document.title || document.filename,
+        fileSearchStoreName: uploadResult.storeId,
+      });
+    } catch (error: any) {
+      this.logger.error(`Failed to upload document ${document.id} to Gemini File Search: ${error.message}`);
+      await this.documentsRepository.updateDocument(document.id, {
+        ragStatus: 'FAILED',
+        storagePath: filePath,
+        mimeType: mimeType || 'application/pdf',
+      });
+    }
+
+    return {
+      id: document.id,
+      filename: document.filename,
+      userId: document.userId,
+      subjectId: (document as any).subjectId,
+    };
+  }
+
   getBucketName(): string {
     return this.bucketName;
   }
