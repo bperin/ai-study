@@ -33,7 +33,7 @@ export interface TestHistoryItemDto {
    * @type {string}
    * @memberof TestHistoryItemDto
    */
-  pdfId: string;
+  documentId: string;
   /**
    *
    * @type {string}
@@ -102,7 +102,7 @@ export interface TestHistoryItemDto {
 export function instanceOfTestHistoryItemDto(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && 'id' in value;
-  isInstance = isInstance && 'pdfId' in value;
+  isInstance = isInstance && 'documentId' in value;
   isInstance = isInstance && 'pdfTitle' in value;
   isInstance = isInstance && 'score' in value;
   isInstance = isInstance && 'total' in value;
@@ -122,7 +122,7 @@ export function TestHistoryItemDtoFromJSONTyped(json: any, ignoreDiscriminator: 
   }
   return {
     id: json['id'],
-    pdfId: json['pdfId'],
+    documentId: json['documentId'],
     pdfTitle: json['pdfTitle'],
     score: json['score'],
     total: json['total'],
@@ -145,7 +145,7 @@ export function TestHistoryItemDtoToJSON(value?: TestHistoryItemDto | null): any
   }
   return {
     id: value.id,
-    pdfId: value.pdfId,
+    documentId: value.documentId,
     pdfTitle: value.pdfTitle,
     score: value.score,
     total: value.total,

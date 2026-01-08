@@ -30,7 +30,7 @@ export interface TestTakingControllerRecordAnswerRequest {
 }
 
 export interface TestTakingControllerStartSessionRequest {
-  pdfId: string;
+  documentId: string;
 }
 
 /**
@@ -170,8 +170,8 @@ export class TestTakingApi extends runtime.BaseAPI {
    * Start or resume a test session
    */
   async testTakingControllerStartSessionRaw(requestParameters: TestTakingControllerStartSessionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestSessionStateDto>> {
-    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testTakingControllerStartSession.');
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling testTakingControllerStartSession.');
     }
 
     const queryParameters: any = {};
@@ -188,7 +188,7 @@ export class TestTakingApi extends runtime.BaseAPI {
     }
     const response = await this.request(
       {
-        path: `/tests/taking/start/{pdfId}`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
+        path: `/tests/taking/start/{documentId}`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,

@@ -21,7 +21,7 @@ export interface TestsControllerGetAttemptDetailsRequest {
 }
 
 export interface TestsControllerGetChatAssistanceRequest {
-  pdfId: string;
+  documentId: string;
   chatAssistanceDto: ChatAssistanceDto;
 }
 
@@ -29,13 +29,13 @@ export interface TestsControllerGetGlobalLeaderboardRequest {
   limit: string;
 }
 
-export interface TestsControllerGetPdfLeaderboardRequest {
-  pdfId: string;
+export interface TestsControllerGetLeaderboardRequest {
+  documentId: string;
   limit: string;
 }
 
 export interface TestsControllerGetTestStatsRequest {
-  pdfId: string;
+  documentId: string;
 }
 
 export interface TestsControllerSubmitTestRequest {
@@ -164,8 +164,8 @@ export class TestsApi extends runtime.BaseAPI {
    * Get AI assistance during test taking
    */
   async testsControllerGetChatAssistanceRaw(requestParameters: TestsControllerGetChatAssistanceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatAssistanceResponseDto>> {
-    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testsControllerGetChatAssistance.');
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling testsControllerGetChatAssistance.');
     }
 
     if (requestParameters.chatAssistanceDto === null || requestParameters.chatAssistanceDto === undefined) {
@@ -188,7 +188,7 @@ export class TestsApi extends runtime.BaseAPI {
     }
     const response = await this.request(
       {
-        path: `/tests/{pdfId}/chat-assistance`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
+        path: `/tests/{documentId}/chat-assistance`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
         method: 'POST',
         headers: headerParameters,
         query: queryParameters,
@@ -210,7 +210,7 @@ export class TestsApi extends runtime.BaseAPI {
 
   /**
    */
-  async testsControllerGetGlobalLeaderboardRaw(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<object>>> {
+  async testsControllerGetGlobalLeaderboardRaw(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
     if (requestParameters.limit === null || requestParameters.limit === undefined) {
       throw new runtime.RequiredError('limit', 'Required parameter requestParameters.limit was null or undefined when calling testsControllerGetGlobalLeaderboard.');
     }
@@ -241,14 +241,53 @@ export class TestsApi extends runtime.BaseAPI {
       initOverrides,
     );
 
-    return new runtime.JSONApiResponse<any>(response);
+    return new runtime.VoidApiResponse(response);
   }
 
   /**
    */
-  async testsControllerGetGlobalLeaderboard(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<object>> {
-    const response = await this.testsControllerGetGlobalLeaderboardRaw(requestParameters, initOverrides);
-    return await response.value();
+  async testsControllerGetGlobalLeaderboard(requestParameters: TestsControllerGetGlobalLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.testsControllerGetGlobalLeaderboardRaw(requestParameters, initOverrides);
+  }
+
+  /**
+   * Get leaderboard for a specific document
+   */
+  async testsControllerGetLeaderboardRaw(requestParameters: TestsControllerGetLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling testsControllerGetLeaderboard.');
+    }
+
+    if (requestParameters.limit === null || requestParameters.limit === undefined) {
+      throw new runtime.RequiredError('limit', 'Required parameter requestParameters.limit was null or undefined when calling testsControllerGetLeaderboard.');
+    }
+
+    const queryParameters: any = {};
+
+    if (requestParameters.limit !== undefined) {
+      queryParameters['limit'] = requestParameters.limit;
+    }
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/tests/leaderboard/{documentId}`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.VoidApiResponse(response);
+  }
+
+  /**
+   * Get leaderboard for a specific document
+   */
+  async testsControllerGetLeaderboard(requestParameters: TestsControllerGetLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    await this.testsControllerGetLeaderboardRaw(requestParameters, initOverrides);
   }
 
   /**
@@ -283,53 +322,6 @@ export class TestsApi extends runtime.BaseAPI {
    */
   async testsControllerGetMyRank(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
     await this.testsControllerGetMyRankRaw(initOverrides);
-  }
-
-  /**
-   */
-  async testsControllerGetPdfLeaderboardRaw(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<object>>> {
-    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testsControllerGetPdfLeaderboard.');
-    }
-
-    if (requestParameters.limit === null || requestParameters.limit === undefined) {
-      throw new runtime.RequiredError('limit', 'Required parameter requestParameters.limit was null or undefined when calling testsControllerGetPdfLeaderboard.');
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters.limit !== undefined) {
-      queryParameters['limit'] = requestParameters.limit;
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    if (this.configuration && this.configuration.accessToken) {
-      const token = this.configuration.accessToken;
-      const tokenString = await token('bearer', []);
-
-      if (tokenString) {
-        headerParameters['Authorization'] = `Bearer ${tokenString}`;
-      }
-    }
-    const response = await this.request(
-      {
-        path: `/tests/leaderboard/pdf/{pdfId}`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
-        method: 'GET',
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse<any>(response);
-  }
-
-  /**
-   */
-  async testsControllerGetPdfLeaderboard(requestParameters: TestsControllerGetPdfLeaderboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<object>> {
-    const response = await this.testsControllerGetPdfLeaderboardRaw(requestParameters, initOverrides);
-    return await response.value();
   }
 
   /**
@@ -373,8 +365,8 @@ export class TestsApi extends runtime.BaseAPI {
    * Get test stats: attempt count, avg score, top scorer
    */
   async testsControllerGetTestStatsRaw(requestParameters: TestsControllerGetTestStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TestStatsDto>> {
-    if (requestParameters.pdfId === null || requestParameters.pdfId === undefined) {
-      throw new runtime.RequiredError('pdfId', 'Required parameter requestParameters.pdfId was null or undefined when calling testsControllerGetTestStats.');
+    if (requestParameters.documentId === null || requestParameters.documentId === undefined) {
+      throw new runtime.RequiredError('documentId', 'Required parameter requestParameters.documentId was null or undefined when calling testsControllerGetTestStats.');
     }
 
     const queryParameters: any = {};
@@ -391,7 +383,7 @@ export class TestsApi extends runtime.BaseAPI {
     }
     const response = await this.request(
       {
-        path: `/tests/stats/{pdfId}`.replace(`{${'pdfId'}}`, encodeURIComponent(String(requestParameters.pdfId))),
+        path: `/tests/stats/{documentId}`.replace(`{${'documentId'}}`, encodeURIComponent(String(requestParameters.documentId))),
         method: 'GET',
         headers: headerParameters,
         query: queryParameters,

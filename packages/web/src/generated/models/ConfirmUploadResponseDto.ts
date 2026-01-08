@@ -37,6 +37,12 @@ export interface ConfirmUploadResponseDto {
    * @memberof ConfirmUploadResponseDto
    */
   userId: string;
+  /**
+   * Subject ID the document belongs to
+   * @type {string}
+   * @memberof ConfirmUploadResponseDto
+   */
+  subjectId: string | null;
 }
 
 /**
@@ -47,6 +53,7 @@ export function instanceOfConfirmUploadResponseDto(value: object): boolean {
   isInstance = isInstance && 'id' in value;
   isInstance = isInstance && 'filename' in value;
   isInstance = isInstance && 'userId' in value;
+  isInstance = isInstance && 'subjectId' in value;
 
   return isInstance;
 }
@@ -63,6 +70,7 @@ export function ConfirmUploadResponseDtoFromJSONTyped(json: any, ignoreDiscrimin
     id: json['id'],
     filename: json['filename'],
     userId: json['userId'],
+    subjectId: json['subjectId'],
   };
 }
 
@@ -77,5 +85,6 @@ export function ConfirmUploadResponseDtoToJSON(value?: ConfirmUploadResponseDto 
     id: value.id,
     filename: value.filename,
     userId: value.userId,
+    subjectId: value.subjectId,
   };
 }
