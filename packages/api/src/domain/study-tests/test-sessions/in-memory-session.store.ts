@@ -1,35 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { StudySessionSummary } from './interfaces/study-session.interface';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class InMemorySessionStore {
-  private readonly sessions = new Map<string, StudySessionSummary>();
+  private sessions: Map<string, any> = new Map();
 
-  create(session: Omit<StudySessionSummary, 'id' | 'createdAt' | 'status'>): StudySessionSummary {
-    const id = randomUUID();
-    const createdAt = new Date();
-    const summary: StudySessionSummary = {
+  create(data: {
+    userId: string;
+    token: string;
+    documentId: string;
+    difficulty: string;
+    requestedItems: number;
+    evals: Array<{
+      id: string;
+      title: string;
+      itemCount: number;
+    }>;
+    notes?: string;
+  }) {
+    const id = uuidv4();
+    const session = {
       id,
-      createdAt,
-      status: 'pending',
-      ...session,
+      ...data,
+      status: 'created',
+      createdAt: new Date(),
     };
-    this.sessions.set(id, summary);
-    return summary;
+    this.sessions.set(id, session);
+    return session;
   }
 
-  updateStatus(id: string, status: StudySessionSummary['status']): StudySessionSummary | null {
-    const existing = this.sessions.get(id);
-    if (!existing) {
-      return null;
+  get(id: string) {
+    return this.sessions.get(id);
+  }
+
+  updateStatus(id: string, status: string) {
+    const session = this.sessions.get(id);
+    if (session) {
+      session.status = status;
+      this.sessions.set(id, session);
     }
-    const updated = { ...existing, status };
-    this.sessions.set(id, updated);
-    return updated;
-  }
-
-  get(id: string): StudySessionSummary | null {
-    return this.sessions.get(id) || null;
+    return session;
   }
 }

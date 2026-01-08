@@ -1,41 +1,48 @@
 import { Injectable } from '@nestjs/common';
 
-export interface StudyPlanObjective {
+export interface EvalPlanItem {
   id?: string;
   title: string;
   difficulty: string;
-  mcqs: Array<{
-    question: string;
+  type: string;
+  items: Array<{
+    prompt: string;
     options: string[];
     correctIdx: number;
     explanation?: string | null;
     hint?: string | null;
+    hasImage?: boolean;
+    imagePrompt?: string | null;
   }>;
 }
 
-export interface StudyPlan {
+export interface EvalPlan {
   difficulty: string;
-  requestedCards: number;
-  objectives: StudyPlanObjective[];
+  requestedItems: number;
+  includeImages: boolean;
+  evals: EvalPlanItem[];
   notes?: string;
 }
 
 @Injectable()
 export class AiStudyPlanService {
-  buildPlan(params: { description: string; difficulty: string; cardTarget: number }): StudyPlan {
+  buildPlan(params: { description: string; difficulty: string; itemTarget: number; includeImages?: boolean }): EvalPlan {
     const difficulty = params.difficulty || 'medium';
-    const requestedCards = Math.max(0, params.cardTarget || 0);
+    const requestedItems = Math.max(0, params.itemTarget || 0);
+    const includeImages = params.includeImages || false;
     const description = params.description?.trim();
-    const title = description ? `Focus: ${description}` : 'Study plan';
+    const title = description ? `Focus: ${description}` : 'Evaluation plan';
 
     return {
       difficulty,
-      requestedCards,
-      objectives: [
+      requestedItems,
+      includeImages,
+      evals: [
         {
           title,
           difficulty,
-          mcqs: [],
+          type: 'mcq',
+          items: [],
         },
       ],
     };
