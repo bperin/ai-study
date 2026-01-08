@@ -1,12 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Storage } from '@google-cloud/storage';
+import { DocumentsRepository } from '../documents/documents.repository';
+import { FileSearchService } from './file-search.service';
+import { DocumentIntentService } from '../../genai/services/document-intent.service';
 
 @Injectable()
 export class GcsService {
   private storage: Storage;
   private bucketName: string;
+  private readonly logger = new Logger(GcsService.name);
 
-  constructor() {
+  constructor(
+    private readonly documentsRepository: DocumentsRepository,
+    private readonly fileSearchService: FileSearchService,
+    private readonly documentIntentService: DocumentIntentService,
+  ) {
     this.bucketName = process.env.GCP_BUCKET_NAME || '';
     if (!this.bucketName) {
       throw new Error('GCP_BUCKET_NAME environment variable is not set.');
@@ -86,9 +94,11 @@ export class GcsService {
         storagePath: filePath,
       });
 
+      // Run the learning intent pipeline
       void this.runLearningIntentPipeline({
         documentId: document.id,
         documentTitle: document.title || document.filename,
+        userId: document.userId,
         fileSearchStoreName: uploadResult.storeId,
       });
     } catch (error: any) {
@@ -106,6 +116,23 @@ export class GcsService {
       userId: document.userId,
       subjectId: (document as any).subjectId,
     };
+  }
+
+  /**
+   * Run the learning intent extraction pipeline
+   */
+  private async runLearningIntentPipeline(params: {
+    documentId: string;
+    documentTitle: string;
+    userId: string;
+    fileSearchStoreName?: string;
+  }): Promise<void> {
+    try {
+      await this.documentIntentService.extractDocumentIntents(params);
+      this.logger.log(`Successfully extracted intents for document ${params.documentId}`);
+    } catch (error) {
+      this.logger.error(`Failed to run intent pipeline for document ${params.documentId}: ${error.message}`);
+    }
   }
 
   getBucketName(): string {

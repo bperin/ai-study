@@ -1,15 +1,23 @@
-import { Module, Global } from '@nestjs/common';
-import { UploadsController } from './uploads.controller';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { GcsService } from './gcs.service';
-import { DocumentsRepositoryModule } from '../documents/documents.repository.module';
-import { GenAiModule } from '../../infrastructure/genai/genai.module';
 import { FileSearchService } from './file-search.service';
+import { DocumentsModule } from '../documents/documents.module';
+import { GenAIModule } from '../../genai/genai.module';
 
-@Global()
 @Module({
-  imports: [DocumentsRepositoryModule, GenAiModule],
-  controllers: [UploadsController],
-  providers: [FileSearchService, GcsService],
-  exports: [FileSearchService, GcsService],
+  imports: [
+    ConfigModule,
+    DocumentsModule,
+    GenAIModule,
+  ],
+  providers: [
+    GcsService,
+    FileSearchService,
+  ],
+  exports: [
+    GcsService,
+    FileSearchService,
+  ],
 })
 export class UploadsModule {}

@@ -12,6 +12,8 @@ import { TestsModule } from './domain/study-tests/tests.module';
 import { UploadsModule } from './domain/uploads/uploads.module';
 import { DocumentsModule } from './domain/documents/documents.module';
 import { GenAiModule } from './infrastructure/genai/genai.module';
+import { GenAIModule } from './genai/genai.module';
+import { ArtifactsModule } from './domain/artifacts/artifacts.module';
 import { QueueModule } from './domain/queue/queue.module';
 import { SystemModule } from './domain/system/system.module';
 import configuration from './config/configuration';
@@ -47,6 +49,8 @@ import { validate } from './config/validate';
     UploadsModule,
     DocumentsModule,
     GenAiModule,
+    GenAIModule,
+    ArtifactsModule,
     QueueModule,
     SystemModule,
   ],
