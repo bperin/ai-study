@@ -1,6 +1,6 @@
 /**
  * Prompts for the GenAI services in the new architecture
- * 
+ *
  * Core principles:
  * - Fewer prompts, stronger contracts, clearer phase boundaries
  * - JSON-only outputs with strong schemas

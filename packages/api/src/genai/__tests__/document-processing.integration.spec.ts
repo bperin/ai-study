@@ -70,9 +70,7 @@ describe('Document Processing Pipeline Integration', () => {
       { name: 'Supervised Learning', weight: 0.6, questionCount: 6 },
       { name: 'Neural Networks', weight: 0.4, questionCount: 4 },
     ],
-    questionTypes: [
-      { type: 'multiple_choice', count: 10 },
-    ],
+    questionTypes: [{ type: 'multiple_choice', count: 10 }],
     difficulty: {
       easy: 0.3,
       medium: 0.5,
@@ -96,12 +94,7 @@ describe('Document Processing Pipeline Integration', () => {
       {
         type: 'multiple_choice',
         prompt: 'Which of the following is a supervised learning algorithm?',
-        options: [
-          'K-means clustering',
-          'Linear regression',
-          'Principal component analysis',
-          'Autoencoders',
-        ],
+        options: ['K-means clustering', 'Linear regression', 'Principal component analysis', 'Autoencoders'],
         correctIdx: 1,
         hint: 'Think about algorithms that use labeled data for training.',
         explanation: 'Linear regression is a supervised learning algorithm because it uses labeled data to predict a continuous output.',
@@ -143,13 +136,13 @@ describe('Document Processing Pipeline Integration', () => {
 
   // Mock for GoogleGenAI
   const mockGenerateContent = jest.fn();
-  
+
   beforeEach(async () => {
     jest.clearAllMocks();
-    
+
     // Reset the mock implementation for generateContent
     mockGenerateContent.mockReset();
-    
+
     // First call (intent analysis) returns the intents
     mockGenerateContent.mockImplementationOnce(async () => ({
       response: {
@@ -157,7 +150,7 @@ describe('Document Processing Pipeline Integration', () => {
         promptFeedback: { tokenCount: 150 },
       },
     }));
-    
+
     // Second call (intent builder) returns the structured intents
     mockGenerateContent.mockImplementationOnce(async () => ({
       response: {
@@ -165,7 +158,7 @@ describe('Document Processing Pipeline Integration', () => {
         promptFeedback: { tokenCount: 180 },
       },
     }));
-    
+
     // Third call (plan generation) returns the plan
     mockGenerateContent.mockImplementationOnce(async () => ({
       response: {
@@ -173,7 +166,7 @@ describe('Document Processing Pipeline Integration', () => {
         promptFeedback: { tokenCount: 200 },
       },
     }));
-    
+
     // Fourth call (evaluation generation) returns the evaluation
     mockGenerateContent.mockImplementationOnce(async () => ({
       response: {
@@ -185,7 +178,7 @@ describe('Document Processing Pipeline Integration', () => {
     const mockGetGenerativeModel = jest.fn().mockReturnValue({
       generateContent: mockGenerateContent,
     });
-    
+
     const mockGoogleGenAI = jest.fn().mockImplementation(() => {
       return {
         getGenerativeModel: mockGetGenerativeModel,
@@ -197,14 +190,7 @@ describe('Document Processing Pipeline Integration', () => {
     }));
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        DocumentIntentService,
-        EvalPlanService,
-        EvalGenerationService,
-        { provide: ArtifactsService, useValue: mockArtifactsService },
-        { provide: EvalSessionsService, useValue: mockEvalSessionsService },
-        { provide: ConfigService, useValue: mockConfigService },
-      ],
+      providers: [DocumentIntentService, EvalPlanService, EvalGenerationService, { provide: ArtifactsService, useValue: mockArtifactsService }, { provide: EvalSessionsService, useValue: mockEvalSessionsService }, { provide: ConfigService, useValue: mockConfigService }],
     }).compile();
 
     documentIntentService = module.get<DocumentIntentService>(DocumentIntentService);
@@ -230,14 +216,14 @@ describe('Document Processing Pipeline Integration', () => {
         type: ArtifactType.INTENTS,
         documentId,
         userId,
-      })
+      }),
     );
     expect(mockArtifactsService.updateArtifact).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
         status: ArtifactStatus.READY,
         json: mockIntents,
-      })
+      }),
     );
 
     // Step 2: Generate evaluation plan
@@ -258,7 +244,7 @@ describe('Document Processing Pipeline Integration', () => {
         meta: expect.objectContaining({
           sessionId,
         }),
-      })
+      }),
     );
     expect(mockEvalSessionsService.updateSessionPlan).toHaveBeenCalledWith(sessionId, mockPlan);
 
@@ -278,14 +264,14 @@ describe('Document Processing Pipeline Integration', () => {
         documentId,
         evalId,
         userId,
-      })
+      }),
     );
     expect(mockArtifactsService.updateArtifact).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
         status: ArtifactStatus.READY,
         json: mockEvaluation,
-      })
+      }),
     );
 
     // Verify that createArtifact was called for the evaluation item
@@ -296,7 +282,7 @@ describe('Document Processing Pipeline Integration', () => {
         evalId,
         userId,
         json: mockEvaluation.items[0],
-      })
+      }),
     );
 
     // Verify the total number of artifacts created
@@ -316,7 +302,7 @@ describe('Document Processing Pipeline Integration', () => {
         documentTitle,
         userId,
         fileSearchStoreName,
-      })
+      }),
     ).rejects.toThrow('API error during intent extraction');
 
     // Verify that the artifact was marked as failed
@@ -325,7 +311,7 @@ describe('Document Processing Pipeline Integration', () => {
       expect.objectContaining({
         status: ArtifactStatus.FAILED,
         error: 'API error during intent extraction',
-      })
+      }),
     );
 
     // Reset the mock for the next test
@@ -358,7 +344,7 @@ describe('Document Processing Pipeline Integration', () => {
         sessionId,
         documentId,
         userId,
-      })
+      }),
     ).rejects.toThrow('API error during plan generation');
 
     // Verify that the artifact was marked as failed
@@ -367,7 +353,7 @@ describe('Document Processing Pipeline Integration', () => {
       expect.objectContaining({
         status: ArtifactStatus.FAILED,
         error: 'API error during plan generation',
-      })
+      }),
     );
   });
 });

@@ -9,24 +9,8 @@ import { ArtifactsModule } from '../domain/artifacts/artifacts.module';
 import { EvalSessionsModule } from '../domain/eval-sessions/eval-sessions.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    ArtifactsModule,
-    EvalSessionsModule,
-  ],
-  providers: [
-    DocumentIntentService,
-    EvalPlanService,
-    EvalGenerationService,
-    TestAnalysisService,
-    TestHintService,
-  ],
-  exports: [
-    DocumentIntentService,
-    EvalPlanService,
-    EvalGenerationService,
-    TestAnalysisService,
-    TestHintService,
-  ],
+  imports: [ConfigModule, ArtifactsModule, EvalSessionsModule],
+  providers: [DocumentIntentService, EvalPlanService, EvalGenerationService, TestAnalysisService, TestHintService],
+  exports: [DocumentIntentService, EvalPlanService, EvalGenerationService, TestAnalysisService, TestHintService],
 })
 export class GenAIModule {}

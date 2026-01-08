@@ -121,12 +121,7 @@ export class GcsService {
   /**
    * Run the learning intent extraction pipeline
    */
-  private async runLearningIntentPipeline(params: {
-    documentId: string;
-    documentTitle: string;
-    userId: string;
-    fileSearchStoreName?: string;
-  }): Promise<void> {
+  private async runLearningIntentPipeline(params: { documentId: string; documentTitle: string; userId: string; fileSearchStoreName?: string }): Promise<void> {
     try {
       await this.documentIntentService.extractDocumentIntents(params);
       this.logger.log(`Successfully extracted intents for document ${params.documentId}`);

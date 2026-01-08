@@ -71,10 +71,10 @@ describe('DocumentIntentService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    
+
     // Reset the mock implementation for generateContent
     mockGenerateContent.mockReset();
-    
+
     // First call returns the analysis response
     mockGenerateContent.mockImplementationOnce(async () => ({
       response: {
@@ -82,7 +82,7 @@ describe('DocumentIntentService', () => {
         promptFeedback: { tokenCount: 120 },
       },
     }));
-    
+
     // Second call returns the structured intents
     mockGenerateContent.mockImplementationOnce(async () => ({
       response: {
@@ -96,11 +96,7 @@ describe('DocumentIntentService', () => {
     }));
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        DocumentIntentService,
-        { provide: ArtifactsService, useValue: mockArtifactsService },
-        { provide: ConfigService, useValue: mockConfigService },
-      ],
+      providers: [DocumentIntentService, { provide: ArtifactsService, useValue: mockArtifactsService }, { provide: ConfigService, useValue: mockConfigService }],
     }).compile();
 
     service = module.get<DocumentIntentService>(DocumentIntentService);
@@ -170,7 +166,7 @@ describe('DocumentIntentService', () => {
           documentId: 'doc-123',
           documentTitle: 'Machine Learning Guide',
           userId: 'user-456',
-        })
+        }),
       ).rejects.toThrow('API error');
 
       // Check that updateArtifact was called with the correct error parameters
@@ -203,7 +199,7 @@ describe('DocumentIntentService', () => {
           documentId: 'doc-123',
           documentTitle: 'Machine Learning Guide',
           userId: 'user-456',
-        })
+        }),
       ).rejects.toThrow('Failed to extract JSON from Gemini response');
 
       // Check that updateArtifact was called with the correct error parameters

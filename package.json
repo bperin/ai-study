@@ -1,0 +1,17 @@
+{
+    "name": "ai-study-root",
+    "private": true,
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "workspaces": [
+        "packages/*"
+    ],
+    "scripts": {
+        "build:frontend": "npm run build --workspace @memorang/web",
+        "codegen": "npm run codegen --workspace @memorang/web",
+        "codegen:build": "npm run codegen --workspace @memorang/web && npm run build --workspace @memorang/web",
+        "start:backend": "npm run dev --workspace @memorang/api",
+        "start:frontend": "npm run dev --workspace @memorang/web"
+    }
+}

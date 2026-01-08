@@ -30,17 +30,7 @@ export class ArtifactsController {
   @Get()
   @ApiOperation({ summary: 'Find artifacts by criteria' })
   @ApiResponse({ status: 200, description: 'List of artifacts', type: [ArtifactDto] })
-  async findMany(
-    @Query('type') type?: ArtifactType,
-    @Query('status') status?: ArtifactStatus,
-    @Query('documentId') documentId?: string,
-    @Query('evalId') evalId?: string,
-    @Query('evalItemId') evalItemId?: string,
-    @Query('attemptId') attemptId?: string,
-    @Query('userId') userId?: string,
-    @Query('skip') skip?: number,
-    @Query('take') take?: number,
-  ): Promise<ArtifactDto[]> {
+  async findMany(@Query('type') type?: ArtifactType, @Query('status') status?: ArtifactStatus, @Query('documentId') documentId?: string, @Query('evalId') evalId?: string, @Query('evalItemId') evalItemId?: string, @Query('attemptId') attemptId?: string, @Query('userId') userId?: string, @Query('skip') skip?: number, @Query('take') take?: number): Promise<ArtifactDto[]> {
     return this.artifactsService.findArtifacts({
       type,
       status,

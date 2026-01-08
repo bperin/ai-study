@@ -6,18 +6,8 @@ import { DocumentsModule } from '../documents/documents.module';
 import { GenAIModule } from '../../genai/genai.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    DocumentsModule,
-    GenAIModule,
-  ],
-  providers: [
-    GcsService,
-    FileSearchService,
-  ],
-  exports: [
-    GcsService,
-    FileSearchService,
-  ],
+  imports: [ConfigModule, DocumentsModule, GenAIModule],
+  providers: [GcsService, FileSearchService],
+  exports: [GcsService, FileSearchService],
 })
 export class UploadsModule {}

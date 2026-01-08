@@ -71,13 +71,7 @@ export class ArtifactsService {
   /**
    * Find the latest artifact of a specific type
    */
-  async findLatestArtifactByType(
-    type: ArtifactType,
-    documentId?: string,
-    evalId?: string,
-    evalItemId?: string,
-    attemptId?: string
-  ): Promise<Artifact | null> {
+  async findLatestArtifactByType(type: ArtifactType, documentId?: string, evalId?: string, evalItemId?: string, attemptId?: string): Promise<Artifact | null> {
     return this.artifactsRepository.findLatestByType(type, documentId, evalId, evalItemId, attemptId);
   }
 

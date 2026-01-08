@@ -9,6 +9,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
+    "dev": "npm run start:dev",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
     "dev:fast": "ts-node -r tsconfig-paths/register src/main.ts",

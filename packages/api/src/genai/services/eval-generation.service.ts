@@ -22,12 +22,7 @@ export class EvalGenerationService {
   /**
    * Generate a complete evaluation with items based on document content, intents, and plan
    */
-  async generateEvaluation(params: {
-    evalId: string;
-    documentId: string;
-    userId: string;
-    plan: any;
-  }): Promise<any> {
+  async generateEvaluation(params: { evalId: string; documentId: string; userId: string; plan: any }): Promise<any> {
     const { evalId, documentId, userId, plan } = params;
 
     // Create a pending artifact to track the evaluation generation
@@ -37,7 +32,7 @@ export class EvalGenerationService {
       documentId,
       evalId,
       userId,
-      meta: { 
+      meta: {
         planId: plan.id,
         startTime: new Date().toISOString(),
       },
@@ -80,7 +75,7 @@ export class EvalGenerationService {
       if (evaluation.items && Array.isArray(evaluation.items)) {
         for (let i = 0; i < evaluation.items.length; i++) {
           const item = evaluation.items[i];
-          
+
           // Create an artifact for the item
           await this.artifactsService.createArtifact({
             type: ArtifactType.EVAL_ITEM,
@@ -117,7 +112,7 @@ export class EvalGenerationService {
       return evaluation;
     } catch (error) {
       this.logger.error(`Failed to generate evaluation for eval ${evalId}: ${error.message}`);
-      
+
       // Mark the artifact as failed
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
@@ -136,10 +131,7 @@ export class EvalGenerationService {
   /**
    * Generate evaluation content using Gemini
    */
-  private async generateEvalContent(
-    intents: any,
-    plan: any,
-  ): Promise<{ evaluation: any, metrics: any }> {
+  private async generateEvalContent(intents: any, plan: any): Promise<{ evaluation: any; metrics: any }> {
     const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Format the intents and plan for the prompt
@@ -167,7 +159,7 @@ export class EvalGenerationService {
     if (result.response.promptFeedback?.tokenCount) {
       inputTokenCount = result.response.promptFeedback.tokenCount;
     }
-    
+
     // Estimate output tokens (rough approximation)
     outputTokenCount = Math.ceil(text.length / 4);
 
@@ -179,14 +171,14 @@ export class EvalGenerationService {
 
     try {
       const evaluation = JSON.parse(jsonMatch[0]);
-      
+
       return {
         evaluation,
         metrics: {
           model: this.MODEL_NAME,
           inputTokens: inputTokenCount,
           outputTokens: outputTokenCount,
-        }
+        },
       };
     } catch (error) {
       throw new Error(`Failed to parse JSON from Gemini response: ${error.message}`);

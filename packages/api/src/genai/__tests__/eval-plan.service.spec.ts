@@ -16,25 +16,24 @@ jest.mock('@google/genai', () => {
             generateContent: jest.fn().mockImplementation(async () => {
               return {
                 response: {
-                  text: () => JSON.stringify({
-                    title: 'Test Evaluation',
-                    description: 'A test evaluation plan',
-                    topics: [
-                      { name: 'Topic 1', weight: 0.6, questionCount: 6 },
-                      { name: 'Topic 2', weight: 0.4, questionCount: 4 },
-                    ],
-                    questionTypes: [
-                      { type: 'multiple_choice', count: 10 },
-                    ],
-                    difficulty: {
-                      easy: 0.3,
-                      medium: 0.5,
-                      hard: 0.2,
-                    },
-                    estimatedTime: '20 minutes',
-                    includeImages: true,
-                    imageCount: 2,
-                  }),
+                  text: () =>
+                    JSON.stringify({
+                      title: 'Test Evaluation',
+                      description: 'A test evaluation plan',
+                      topics: [
+                        { name: 'Topic 1', weight: 0.6, questionCount: 6 },
+                        { name: 'Topic 2', weight: 0.4, questionCount: 4 },
+                      ],
+                      questionTypes: [{ type: 'multiple_choice', count: 10 }],
+                      difficulty: {
+                        easy: 0.3,
+                        medium: 0.5,
+                        hard: 0.2,
+                      },
+                      estimatedTime: '20 minutes',
+                      includeImages: true,
+                      imageCount: 2,
+                    }),
                   promptFeedback: {
                     tokenCount: 150,
                   },
@@ -111,7 +110,7 @@ describe('EvalPlanService', () => {
         timeLimitMins: 20,
         userPreferences: { tone: 'friendly' },
       };
-      
+
       const mockIntents = {
         topics: ['Topic 1', 'Topic 2'],
         concepts: ['Concept 1', 'Concept 2'],

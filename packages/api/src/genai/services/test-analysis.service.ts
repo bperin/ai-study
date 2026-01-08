@@ -22,15 +22,7 @@ export class TestAnalysisService {
   /**
    * Analyze a test attempt and provide feedback
    */
-  async analyzeTestAttempt(params: {
-    attemptId: string;
-    evalId: string;
-    documentId: string;
-    userId: string;
-    answers: any[];
-    correctAnswers: any[];
-    wrongAnswers: any[];
-  }): Promise<any> {
+  async analyzeTestAttempt(params: { attemptId: string; evalId: string; documentId: string; userId: string; answers: any[]; correctAnswers: any[]; wrongAnswers: any[] }): Promise<any> {
     const { attemptId, evalId, documentId, userId, answers, correctAnswers, wrongAnswers } = params;
 
     // Create a pending artifact to track the analysis
@@ -76,7 +68,7 @@ export class TestAnalysisService {
       return analysis;
     } catch (error) {
       this.logger.error(`Failed to analyze test attempt ${attemptId}: ${error.message}`);
-      
+
       // Mark the artifact as failed
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
@@ -95,11 +87,7 @@ export class TestAnalysisService {
   /**
    * Generate test analysis using Gemini
    */
-  private async generateAnalysis(
-    answers: any[],
-    correctAnswers: any[],
-    wrongAnswers: any[],
-  ): Promise<{ analysis: any, metrics: any }> {
+  private async generateAnalysis(answers: any[], correctAnswers: any[], wrongAnswers: any[]): Promise<{ analysis: any; metrics: any }> {
     const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Format the answers for the prompt
@@ -135,7 +123,7 @@ export class TestAnalysisService {
     if (result.response.promptFeedback?.tokenCount) {
       inputTokenCount = result.response.promptFeedback.tokenCount;
     }
-    
+
     // Estimate output tokens (rough approximation)
     outputTokenCount = Math.ceil(text.length / 4);
 
@@ -147,14 +135,14 @@ export class TestAnalysisService {
 
     try {
       const analysis = JSON.parse(jsonMatch[0]);
-      
+
       return {
         analysis,
         metrics: {
           model: this.MODEL_NAME,
           inputTokens: inputTokenCount,
           outputTokens: outputTokenCount,
-        }
+        },
       };
     } catch (error) {
       throw new Error(`Failed to parse JSON from Gemini response: ${error.message}`);

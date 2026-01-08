@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EvalSession, Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { 
-  IEvalSessionRepository, 
-  CreateEvalSessionDto, 
-  UpdateEvalSessionDto, 
-  FindEvalSessionsOptions 
-} from './interfaces/eval-session.repository.interface';
+import { IEvalSessionRepository, CreateEvalSessionDto, UpdateEvalSessionDto, FindEvalSessionsOptions } from './interfaces/eval-session.repository.interface';
 
 @Injectable()
 export class EvalSessionsRepository implements IEvalSessionRepository {
@@ -38,7 +33,7 @@ export class EvalSessionsRepository implements IEvalSessionRepository {
 
   async findByUserId(userId: string, options?: FindEvalSessionsOptions): Promise<EvalSession[]> {
     const where: Prisma.EvalSessionWhereInput = { userId };
-    
+
     if (options?.status) {
       where.status = options.status;
     }
@@ -53,7 +48,7 @@ export class EvalSessionsRepository implements IEvalSessionRepository {
 
   async update(id: string, data: UpdateEvalSessionDto): Promise<EvalSession> {
     const updateData: Prisma.EvalSessionUpdateInput = {};
-    
+
     if (data.userPreferences !== undefined) updateData.userPreferences = data.userPreferences as Prisma.JsonValue;
     if (data.proposedPlan !== undefined) updateData.proposedPlan = data.proposedPlan as Prisma.JsonValue;
     if (data.planStatus !== undefined) updateData.planStatus = data.planStatus;
@@ -79,7 +74,7 @@ export class EvalSessionsRepository implements IEvalSessionRepository {
 
   async count(userId?: string): Promise<number> {
     const where: Prisma.EvalSessionWhereInput = {};
-    
+
     if (userId) {
       where.userId = userId;
     }

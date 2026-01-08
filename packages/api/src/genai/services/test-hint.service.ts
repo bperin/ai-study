@@ -22,13 +22,7 @@ export class TestHintService {
   /**
    * Generate a hint for a specific question during a test attempt
    */
-  async generateHint(params: {
-    attemptId: string;
-    evalItemId: string;
-    userId: string;
-    question: string;
-    options: string[];
-  }): Promise<string> {
+  async generateHint(params: { attemptId: string; evalItemId: string; userId: string; question: string; options: string[] }): Promise<string> {
     const { attemptId, evalItemId, userId, question, options } = params;
 
     // Create a pending artifact to track the hint generation
@@ -38,7 +32,7 @@ export class TestHintService {
       evalItemId,
       attemptId,
       userId,
-      meta: { 
+      meta: {
         type: 'hint',
         startTime: new Date().toISOString(),
       },
@@ -74,7 +68,7 @@ export class TestHintService {
       return hint;
     } catch (error) {
       this.logger.error(`Failed to generate hint for question ${evalItemId}: ${error.message}`);
-      
+
       // Mark the artifact as failed
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
@@ -93,10 +87,7 @@ export class TestHintService {
   /**
    * Generate hint text using Gemini
    */
-  private async generateHintText(
-    question: string,
-    options: string[],
-  ): Promise<{ hint: string, metrics: any }> {
+  private async generateHintText(question: string, options: string[]): Promise<{ hint: string; metrics: any }> {
     const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     const prompt = TEST_ASSISTANCE_HINT_INSTRUCTION(question, options);
@@ -112,7 +103,7 @@ export class TestHintService {
     if (result.response.promptFeedback?.tokenCount) {
       inputTokenCount = result.response.promptFeedback.tokenCount;
     }
-    
+
     // Estimate output tokens (rough approximation)
     outputTokenCount = Math.ceil(text.length / 4);
 
@@ -122,7 +113,7 @@ export class TestHintService {
         model: this.MODEL_NAME,
         inputTokens: inputTokenCount,
         outputTokens: outputTokenCount,
-      }
+      },
     };
   }
 }

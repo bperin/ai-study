@@ -24,11 +24,7 @@ export class EvalPlanService {
   /**
    * Generate an evaluation plan based on document intents and user preferences
    */
-  async generateEvalPlan(params: {
-    sessionId: string;
-    documentId: string;
-    userId: string;
-  }): Promise<any> {
+  async generateEvalPlan(params: { sessionId: string; documentId: string; userId: string }): Promise<any> {
     const { sessionId, documentId, userId } = params;
 
     // Mark the session as generating
@@ -40,7 +36,7 @@ export class EvalPlanService {
       status: ArtifactStatus.GENERATING,
       documentId,
       userId,
-      meta: { 
+      meta: {
         sessionId,
         startTime: new Date().toISOString(),
       },
@@ -94,7 +90,7 @@ export class EvalPlanService {
       return plan;
     } catch (error) {
       this.logger.error(`Failed to generate eval plan for session ${sessionId}: ${error.message}`);
-      
+
       // Mark the artifact as failed
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
@@ -122,8 +118,8 @@ export class EvalPlanService {
       includeImages?: boolean;
       imageCount?: number;
       timeLimitMins?: number;
-    }
-  ): Promise<{ plan: any, metrics: any }> {
+    },
+  ): Promise<{ plan: any; metrics: any }> {
     const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Format the intents and constraints for the prompt
@@ -155,7 +151,7 @@ export class EvalPlanService {
     if (result.response.promptFeedback?.tokenCount) {
       inputTokenCount = result.response.promptFeedback.tokenCount;
     }
-    
+
     // Estimate output tokens (rough approximation)
     outputTokenCount = Math.ceil(text.length / 4);
 
@@ -167,14 +163,14 @@ export class EvalPlanService {
 
     try {
       const plan = JSON.parse(jsonMatch[0]);
-      
+
       return {
         plan,
         metrics: {
           model: this.MODEL_NAME,
           inputTokens: inputTokenCount,
           outputTokens: outputTokenCount,
-        }
+        },
       };
     } catch (error) {
       throw new Error(`Failed to parse JSON from Gemini response: ${error.message}`);

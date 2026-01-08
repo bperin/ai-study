@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Artifact, ArtifactStatus, ArtifactType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { 
-  IArtifactRepository, 
-  CreateArtifactDto, 
-  UpdateArtifactDto, 
-  FindArtifactsOptions 
-} from './interfaces/artifact.repository.interface';
+import { IArtifactRepository, CreateArtifactDto, UpdateArtifactDto, FindArtifactsOptions } from './interfaces/artifact.repository.interface';
 
 @Injectable()
 export class ArtifactsRepository implements IArtifactRepository {
@@ -80,13 +75,7 @@ export class ArtifactsRepository implements IArtifactRepository {
     });
   }
 
-  async findLatestByType(
-    type: ArtifactType, 
-    documentId?: string, 
-    evalId?: string, 
-    evalItemId?: string, 
-    attemptId?: string
-  ): Promise<Artifact | null> {
+  async findLatestByType(type: ArtifactType, documentId?: string, evalId?: string, evalItemId?: string, attemptId?: string): Promise<Artifact | null> {
     const where: Prisma.ArtifactWhereInput = { type };
 
     if (documentId) where.documentId = documentId;
@@ -100,11 +89,7 @@ export class ArtifactsRepository implements IArtifactRepository {
     });
   }
 
-  async countByType(
-    type: ArtifactType, 
-    documentId?: string, 
-    evalId?: string
-  ): Promise<number> {
+  async countByType(type: ArtifactType, documentId?: string, evalId?: string): Promise<number> {
     const where: Prisma.ArtifactWhereInput = { type };
 
     if (documentId) where.documentId = documentId;

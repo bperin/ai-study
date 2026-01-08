@@ -23,12 +23,7 @@ export class DocumentIntentService {
    * Extract learning intents from a document
    * This is the first step in the document processing pipeline
    */
-  async extractDocumentIntents(params: {
-    documentId: string;
-    documentTitle: string;
-    userId: string;
-    fileSearchStoreName?: string;
-  }): Promise<any> {
+  async extractDocumentIntents(params: { documentId: string; documentTitle: string; userId: string; fileSearchStoreName?: string }): Promise<any> {
     const { documentId, documentTitle, userId, fileSearchStoreName } = params;
 
     // Create a pending artifact to track the intent extraction
@@ -37,7 +32,7 @@ export class DocumentIntentService {
       status: ArtifactStatus.GENERATING,
       documentId,
       userId,
-      meta: { 
+      meta: {
         title: documentTitle,
         fileSearchStoreName,
         startTime: new Date().toISOString(),
@@ -74,7 +69,7 @@ export class DocumentIntentService {
       return intents;
     } catch (error) {
       this.logger.error(`Failed to extract intents for document ${documentId}: ${error.message}`);
-      
+
       // Mark the artifact as failed
       await this.artifactsService.updateArtifact(artifact.id, {
         status: ArtifactStatus.FAILED,
@@ -93,7 +88,7 @@ export class DocumentIntentService {
   /**
    * Generate intents using Gemini
    */
-  private async generateIntents(documentTitle: string, fileSearchStoreName?: string): Promise<{ intents: any, metrics: any }> {
+  private async generateIntents(documentTitle: string, fileSearchStoreName?: string): Promise<{ intents: any; metrics: any }> {
     const model = this.genAI.getGenerativeModel({ model: this.MODEL_NAME });
 
     // Use the prompt from our prompts file
@@ -112,7 +107,7 @@ export class DocumentIntentService {
       if (result.response.promptFeedback?.tokenCount) {
         inputTokenCount = result.response.promptFeedback.tokenCount;
       }
-      
+
       // Estimate output tokens (rough approximation)
       outputTokenCount = Math.ceil(text.length / 4);
 
@@ -134,7 +129,7 @@ export class DocumentIntentService {
           inputTokens: inputTokenCount,
           outputTokens: outputTokenCount,
           fileSearchStoreName,
-        }
+        },
       };
     } catch (error) {
       this.logger.error(`Intent generation error: ${error.message}`);
@@ -150,7 +145,7 @@ export class DocumentIntentService {
 
     // Use the builder prompt
     const prompt = LEARNING_INTENT_BUILDER_INSTRUCTION(documentTitle);
-    
+
     // Add the raw intents to the prompt
     const fullPrompt = `
     ${prompt}

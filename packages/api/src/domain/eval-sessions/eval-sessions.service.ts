@@ -16,7 +16,7 @@ export class EvalSessionsService {
    */
   async createSession(createDto: CreateEvalSessionDto): Promise<EvalSession> {
     this.logger.debug(`Creating evaluation session for user ${createDto.userId}`);
-    
+
     // Set default values for optional fields
     const sessionData = {
       ...createDto,
@@ -54,7 +54,7 @@ export class EvalSessionsService {
   async updateSession(id: string, updateDto: UpdateEvalSessionDto): Promise<EvalSession> {
     // Ensure session exists
     await this.getSessionById(id);
-    
+
     // If includeImages is set to false, reset imageCount to 0
     if (updateDto.includeImages === false) {
       updateDto.imageCount = 0;
@@ -69,7 +69,7 @@ export class EvalSessionsService {
   async updateSessionPlan(id: string, proposedPlan: any): Promise<EvalSession> {
     // Ensure session exists
     await this.getSessionById(id);
-    
+
     return this.evalSessionsRepository.update(id, {
       proposedPlan,
       planStatus: 'ready',
@@ -83,7 +83,7 @@ export class EvalSessionsService {
   async markSessionAsGenerating(id: string): Promise<EvalSession> {
     // Ensure session exists
     await this.getSessionById(id);
-    
+
     return this.evalSessionsRepository.update(id, {
       planStatus: 'generating',
     });
@@ -95,7 +95,7 @@ export class EvalSessionsService {
   async markSessionAsCompleted(id: string): Promise<EvalSession> {
     // Ensure session exists
     await this.getSessionById(id);
-    
+
     return this.evalSessionsRepository.update(id, {
       status: 'completed',
     });
@@ -107,7 +107,7 @@ export class EvalSessionsService {
   async deleteSession(id: string): Promise<EvalSession> {
     // Ensure session exists
     await this.getSessionById(id);
-    
+
     return this.evalSessionsRepository.delete(id);
   }
 

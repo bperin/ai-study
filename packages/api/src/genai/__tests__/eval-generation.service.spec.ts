@@ -37,9 +37,7 @@ describe('EvalGenerationService', () => {
       { name: 'Supervised Learning', weight: 0.6, questionCount: 6 },
       { name: 'Neural Networks', weight: 0.4, questionCount: 4 },
     ],
-    questionTypes: [
-      { type: 'multiple_choice', count: 10 },
-    ],
+    questionTypes: [{ type: 'multiple_choice', count: 10 }],
     difficulty: {
       easy: 0.3,
       medium: 0.5,
@@ -63,12 +61,7 @@ describe('EvalGenerationService', () => {
       {
         type: 'multiple_choice',
         prompt: 'Which of the following is a supervised learning algorithm?',
-        options: [
-          'K-means clustering',
-          'Linear regression',
-          'Principal component analysis',
-          'Autoencoders',
-        ],
+        options: ['K-means clustering', 'Linear regression', 'Principal component analysis', 'Autoencoders'],
         correctIdx: 1,
         hint: 'Think about algorithms that use labeled data for training.',
         explanation: 'Linear regression is a supervised learning algorithm because it uses labeled data to predict a continuous output.',
@@ -84,12 +77,7 @@ describe('EvalGenerationService', () => {
       {
         type: 'multiple_choice',
         prompt: 'What is the purpose of activation functions in neural networks?',
-        options: [
-          'To initialize weights',
-          'To introduce non-linearity',
-          'To normalize inputs',
-          'To reduce overfitting',
-        ],
+        options: ['To initialize weights', 'To introduce non-linearity', 'To normalize inputs', 'To reduce overfitting'],
         correctIdx: 1,
         hint: 'Consider what would happen if a neural network only had linear operations.',
         explanation: 'Activation functions introduce non-linearity into the network, allowing it to learn complex patterns.',
@@ -129,11 +117,11 @@ describe('EvalGenerationService', () => {
       promptFeedback: { tokenCount: 250 },
     },
   }));
-  
+
   const mockGetGenerativeModel = jest.fn().mockReturnValue({
     generateContent: mockGenerateContent,
   });
-  
+
   const mockGoogleGenAI = jest.fn().mockImplementation(() => {
     return {
       getGenerativeModel: mockGetGenerativeModel,
@@ -142,17 +130,13 @@ describe('EvalGenerationService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    
+
     jest.mock('@google/genai', () => ({
       GoogleGenAI: mockGoogleGenAI,
     }));
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        EvalGenerationService,
-        { provide: ArtifactsService, useValue: mockArtifactsService },
-        { provide: ConfigService, useValue: mockConfigService },
-      ],
+      providers: [EvalGenerationService, { provide: ArtifactsService, useValue: mockArtifactsService }, { provide: ConfigService, useValue: mockConfigService }],
     }).compile();
 
     service = module.get<EvalGenerationService>(EvalGenerationService);
@@ -208,7 +192,7 @@ describe('EvalGenerationService', () => {
 
       // Check that createArtifact was called for each item
       expect(mockArtifactsService.createArtifact).toHaveBeenCalledTimes(4); // 1 for eval + 2 for items + 1 for image
-      
+
       // Check that createArtifact was called for the items
       expect(mockArtifactsService.createArtifact).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -218,9 +202,9 @@ describe('EvalGenerationService', () => {
           evalId: 'eval-123',
           userId: 'user-456',
           json: mockGeneratedEval.items[0],
-        })
+        }),
       );
-      
+
       expect(mockArtifactsService.createArtifact).toHaveBeenCalledWith(
         expect.objectContaining({
           type: ArtifactType.EVAL_ITEM,
@@ -229,7 +213,7 @@ describe('EvalGenerationService', () => {
           evalId: 'eval-123',
           userId: 'user-456',
           json: mockGeneratedEval.items[1],
-        })
+        }),
       );
 
       // Check that createArtifact was called for the image
@@ -241,7 +225,7 @@ describe('EvalGenerationService', () => {
           evalId: 'eval-123',
           userId: 'user-456',
           text: mockGeneratedEval.items[1].imagePrompt,
-        })
+        }),
       );
 
       // Check that the result is the generated evaluation
@@ -259,7 +243,7 @@ describe('EvalGenerationService', () => {
           documentId: 'doc-123',
           userId: 'user-456',
           plan: mockEvalPlan,
-        })
+        }),
       ).rejects.toThrow('No intents found for this document');
 
       // Check that updateArtifact was called with the correct error parameters
@@ -287,7 +271,7 @@ describe('EvalGenerationService', () => {
           documentId: 'doc-123',
           userId: 'user-456',
           plan: mockEvalPlan,
-        })
+        }),
       ).rejects.toThrow('API error');
 
       // Check that updateArtifact was called with the correct error parameters
@@ -320,7 +304,7 @@ describe('EvalGenerationService', () => {
           documentId: 'doc-123',
           userId: 'user-456',
           plan: mockEvalPlan,
-        })
+        }),
       ).rejects.toThrow('Failed to extract JSON from Gemini response');
 
       // Check that updateArtifact was called with the correct error parameters
