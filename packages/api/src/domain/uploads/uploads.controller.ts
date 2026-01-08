@@ -17,7 +17,7 @@ export class UploadsController {
   @Post('sign')
   @ApiResponse({ status: 201, type: UploadUrlResponseDto })
   createSignedUploadUrl(@Body() body: CreateUploadUrlDto, @Request() req): Promise<UploadUrlResponseDto> {
-    return this.gcsService.createSignedUploadUrl(body.fileName, body.contentType);
+    return this.gcsService.generateUploadUrl(body.fileName, body.contentType, req.user.userId);
   }
 
   @Post('confirm')

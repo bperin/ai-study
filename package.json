@@ -15,8 +15,7 @@
         "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
         "test": "npm run test:api && npm run test:web",
         "test:api": "cd packages/api && npm test",
-        "test:web": "cd packages/web && npm test",
-        "postbuild:api": "npm run codegen"
+        "test:web": "cd packages/web && npm test"
     },
     "devDependencies": {
         "concurrently": "^8.2.0"
