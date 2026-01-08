@@ -24,7 +24,7 @@ export class TestAnalysisProcessor extends WorkerHost {
         where: { id: testId },
         include: {
           answers: {
-            include: { mcq: true },
+            include: { evalItem: true },
           },
         },
       });
@@ -39,16 +39,16 @@ export class TestAnalysisProcessor extends WorkerHost {
       const missedQuestions = attempt.answers
         .filter((answer: any) => !answer.isCorrect)
         .map((answer: any) => ({
-          questionText: answer.mcq.question,
-          selectedAnswer: answer.mcq.options[answer.selectedIdx],
-          correctAnswer: answer.mcq.options[answer.mcq.correctIdx],
-          explanation: answer.mcq.explanation || '',
+          questionText: answer.evalItem.prompt,
+          selectedAnswer: answer.evalItem.options[answer.selectedIdx],
+          correctAnswer: answer.evalItem.options[answer.evalItem.correctIdx],
+          explanation: answer.evalItem.explanation || '',
         }));
 
       const allAnswers = attempt.answers.map((answer: any) => ({
-        questionText: answer.mcq.question,
-        selectedAnswer: answer.mcq.options[answer.selectedIdx],
-        correctAnswer: answer.mcq.options[answer.mcq.correctIdx],
+        questionText: answer.evalItem.prompt,
+        selectedAnswer: answer.evalItem.options[answer.selectedIdx],
+        correctAnswer: answer.evalItem.options[answer.evalItem.correctIdx],
         isCorrect: answer.isCorrect,
       }));
 

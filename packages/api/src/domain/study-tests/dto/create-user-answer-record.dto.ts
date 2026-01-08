@@ -5,7 +5,7 @@ export class CreateUserAnswerRecordDto {
   attemptId: string;
 
   @ApiProperty()
-  mcqId: string;
+  evalItemId: string;
 
   @ApiProperty()
   selectedIdx: number;

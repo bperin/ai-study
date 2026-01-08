@@ -34,7 +34,7 @@ export interface TestSessionState {
     {
       correct: number;
       total: number;
-      objectiveTitle: string;
+      evalTitle: string;
     }
   >;
 
@@ -57,14 +57,14 @@ export class TestTakingService {
   /**
    * Initialize or Resume a test session
    */
-  async getOrStartSession(userId: string, pdfId: string): Promise<TestSessionState> {
+  async getOrStartSession(userId: string, evalId: string): Promise<TestSessionState> {
     // Check for existing incomplete attempt
-    let attempt = await this.testsRepository.findActiveAttempt(userId, pdfId);
+    let attempt = await this.testsRepository.findActiveAttempt(userId, evalId);
 
     if (!attempt) {
       // Create new attempt
-      const totalQuestions = await this.testsRepository.countMcqsByDocumentId(pdfId);
-      const newAttempt = await this.testsRepository.createAttempt(userId, pdfId, totalQuestions, 0);
+      const totalQuestions = await this.testsRepository.countEvalItemsByEvalId(evalId);
+      const newAttempt = await this.testsRepository.createAttempt(userId, evalId, totalQuestions, 0);
       return this.rehydrateState(newAttempt);
     }
 
@@ -94,7 +94,7 @@ export class TestTakingService {
     let currentStreak = 0;
     let longestStreak = 0;
     let totalTimeSpent = 0;
-    const topicScores = new Map<string, { correct: number; total: number; objectiveTitle: string }>();
+    const topicScores = new Map<string, { correct: number; total: number; evalTitle: string }>();
 
     const processedAnswers = dbAnswers.map((a: any, index: number) => {
       const isCorrect = a.isCorrect;
@@ -109,20 +109,20 @@ export class TestTakingService {
       totalTimeSpent += a.timeSpent;
 
       // Topic scores
-      if (a.mcq) {
-        const topicId = a.mcq.objectiveId;
-        const currentScore = topicScores.get(topicId) || { correct: 0, total: 0, objectiveTitle: a.mcq.objective.title };
+      if (a.evalItem) {
+        const evalId = a.evalItem.evalId;
+        const currentScore = topicScores.get(evalId) || { correct: 0, total: 0, evalTitle: a.evalItem.eval?.title || 'Unknown Eval' };
         currentScore.total++;
         if (isCorrect) currentScore.correct++;
-        topicScores.set(topicId, currentScore);
+        topicScores.set(evalId, currentScore);
       }
 
       return {
-        questionId: a.mcqId,
+        questionId: a.evalItemId,
         questionNumber: index + 1,
-        questionText: a.mcq?.question || '',
+        questionText: a.evalItem?.prompt || '',
         selectedAnswer: a.selectedIdx,
-        correctAnswer: a.mcq?.correctIdx || 0,
+        correctAnswer: a.evalItem?.correctIdx || 0,
         isCorrect,
         timeSpent: a.timeSpent,
         hintsUsed: a.hintsUsed,
@@ -157,7 +157,7 @@ export class TestTakingService {
     const state = await this.rehydrateState(attempt);
 
     // Get question details
-    const question = await this.testsRepository.findMcqById(questionId);
+    const question = await this.testsRepository.findEvalItemById(questionId);
 
     if (!question) {
       throw new Error('Question not found');
@@ -241,12 +241,12 @@ export class TestTakingService {
   private substituteBrackets(template: string, state: TestSessionState): string {
     const weakTopics = Array.from(state.topicScores.entries())
       .filter(([_, score]) => score.total > 0 && score.correct / score.total < 0.6)
-      .map(([_, score]) => score.objectiveTitle)
+      .map(([_, score]) => score.evalTitle)
       .join(', ');
 
     const strongTopics = Array.from(state.topicScores.entries())
       .filter(([_, score]) => score.total > 0 && score.correct / score.total >= 0.8)
-      .map(([_, score]) => score.objectiveTitle)
+      .map(([_, score]) => score.evalTitle)
       .join(', ');
 
     const currentTopic =
@@ -254,7 +254,7 @@ export class TestTakingService {
         ? (() => {
             // Find topic from topicScores
             for (const [_, score] of state.topicScores.entries()) {
-              return score.objectiveTitle;
+              return score.evalTitle;
             }
             return '';
           })()

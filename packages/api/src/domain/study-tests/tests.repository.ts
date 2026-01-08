@@ -85,7 +85,7 @@ export class TestsRepository {
 
   async createAttempt(userId: string, evalId: string, total: number, score: number = 0, percentage?: number | null) {
     const eval_ = await this.prisma.eval.findUnique({ where: { id: evalId } });
-    
+
     return this.prisma.testAttempt.create({
       data: {
         userId,
@@ -218,24 +218,24 @@ export class TestsRepository {
       where: { documentId },
       select: { id: true },
     });
-    
-    const evalIds = evals.map(e => e.id);
-    
+
+    const evalIds = evals.map((e) => e.id);
+
     // Delete all user answers for attempts on these evals
     await this.prisma.userAnswer.deleteMany({
       where: { attempt: { evalId: { in: evalIds } } },
     });
-    
+
     // Delete all attempts for these evals
     await this.prisma.testAttempt.deleteMany({
       where: { evalId: { in: evalIds } },
     });
-    
+
     // Delete all eval items for these evals
     await this.prisma.evalItem.deleteMany({
       where: { evalId: { in: evalIds } },
     });
-    
+
     // Delete all evals for this document
     await this.prisma.eval.deleteMany({
       where: { documentId },
