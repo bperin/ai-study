@@ -3,7 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { ArtifactsService } from './artifacts.service';
 import { ArtifactDto } from './dto/artifact.dto';
 import { CreateArtifactDto } from './dto/create-artifact.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
+
 import { ArtifactType, ArtifactStatus } from '@prisma/client';
 
 @ApiTags('artifacts')
@@ -30,17 +31,7 @@ export class ArtifactsController {
   @Get()
   @ApiOperation({ summary: 'Find artifacts by criteria' })
   @ApiResponse({ status: 200, description: 'List of artifacts', type: [ArtifactDto] })
-  async findMany(
-    @Query('type') type?: ArtifactType,
-    @Query('status') status?: ArtifactStatus,
-    @Query('documentId') documentId?: string,
-    @Query('evalId') evalId?: string,
-    @Query('evalItemId') evalItemId?: string,
-    @Query('attemptId') attemptId?: string,
-    @Query('userId') userId?: string,
-    @Query('skip') skip?: number,
-    @Query('take') take?: number,
-  ): Promise<ArtifactDto[]> {
+  async findMany(@Query('type') type?: ArtifactType, @Query('status') status?: ArtifactStatus, @Query('documentId') documentId?: string, @Query('evalId') evalId?: string, @Query('evalItemId') evalItemId?: string, @Query('attemptId') attemptId?: string, @Query('userId') userId?: string, @Query('skip') skip?: number, @Query('take') take?: number): Promise<ArtifactDto[]> {
     return this.artifactsService.findArtifacts({
       type,
       status,

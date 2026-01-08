@@ -4,7 +4,7 @@ import { EvalSessionsService } from './eval-sessions.service';
 import { EvalSessionDto } from './dto/eval-session.dto';
 import { CreateEvalSessionDto } from './dto/create-eval-session.dto';
 import { UpdateEvalSessionDto } from './dto/update-eval-session.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 
 @ApiTags('eval-sessions')
 @Controller('eval-sessions')
@@ -25,12 +25,7 @@ export class EvalSessionsController {
   @Get()
   @ApiOperation({ summary: 'Get all evaluation sessions for the current user' })
   @ApiResponse({ status: 200, description: 'List of evaluation sessions', type: [EvalSessionDto] })
-  async findAll(
-    @Request() req,
-    @Query('status') status?: string,
-    @Query('skip') skip?: number,
-    @Query('take') take?: number,
-  ): Promise<EvalSessionDto[]> {
+  async findAll(@Request() req, @Query('status') status?: string, @Query('skip') skip?: number, @Query('take') take?: number): Promise<EvalSessionDto[]> {
     return this.evalSessionsService.getUserSessions(req.user.id, {
       status,
       skip: skip ? Number(skip) : undefined,
@@ -48,10 +43,7 @@ export class EvalSessionsController {
   @Put(':id')
   @ApiOperation({ summary: 'Update an evaluation session' })
   @ApiResponse({ status: 200, description: 'The updated evaluation session', type: EvalSessionDto })
-  async update(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateEvalSessionDto,
-  ): Promise<EvalSessionDto> {
+  async update(@Param('id') id: string, @Body() updateDto: UpdateEvalSessionDto): Promise<EvalSessionDto> {
     return this.evalSessionsService.updateSession(id, updateDto);
   }
 
